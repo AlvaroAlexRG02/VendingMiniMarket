@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Gestión de inventario del sistema Vending Mini Market"
+    >
+
+    <title>Inventario | Vending Mini Market</title>
+
+    <!-- Hoja de estilos general -->
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <!-- Biblioteca de iconos -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+        <!-- Logo del sistema -->
+        <div class="logo-sistema">
+
+            <a href="../dashboard/dashboard.html">
+
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+
+            </a>
+
+        </div>
+
+        <!-- Menú lateral -->
+        <nav class="nav-lateral">
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a
+                href="inventario.html"
+                class="activo"
+            >
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <!-- Cerrar sesión -->
+        <div class="pie-barra-lateral">
+
+            <a href="../index.html">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         COLUMNA PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <!-- ==========================================
+             BARRA SUPERIOR
+        =========================================== -->
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir o cerrar el menú lateral"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Ver notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="contador">0</span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+                        <strong>Administrador</strong>
+                        <span>admin@vending.com</span>
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO PRINCIPAL
+        =========================================== -->
+
+        <main class="contenido-app">
+
+            <!-- Encabezado de la página -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+                    <h1>Inventario</h1>
+
+                    <p>
+                        Gestión de stock y movimientos de productos
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="selector-fecha"
+                >
+                    <i class="fa-regular fa-calendar"></i>
+
+                    Fecha actual
+
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+
+            </div>
+
+            <!-- ==========================================
+                 TARJETAS DE RESUMEN
+            =========================================== -->
+
+            <section class="grilla-estadisticas">
+
+                <!-- Stock total -->
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Stock total
+                            </div>
+
+                            <div class="tarjeta-estadistica-valor">
+                                0
+
+                                <span
+                                    style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: var(--texto-secundario);
+                                    "
+                                >
+                                    unidades
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Productos disponibles
+                    </div>
+
+                </article>
+
+                <!-- Stock crítico -->
+
+                <article class="tarjeta-estadistica borde-naranja">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Stock crítico
+                            </div>
+
+                            <div class="tarjeta-estadistica-valor">
+                                0
+
+                                <span
+                                    style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: var(--texto-secundario);
+                                    "
+                                >
+                                    productos
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Requieren abastecimiento
+                    </div>
+
+                </article>
+
+                <!-- Productos agotados -->
+
+                <article class="tarjeta-estadistica borde-rojo">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-box-open"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Productos agotados
+                            </div>
+
+                            <div class="tarjeta-estadistica-valor">
+                                0
+
+                                <span
+                                    style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: var(--texto-secundario);
+                                    "
+                                >
+                                    productos
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Sin existencias
+                    </div>
+
+                </article>
+
+                <!-- Movimientos del día -->
+
+                <article class="tarjeta-estadistica borde-morado">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Movimientos del día
+                            </div>
+
+                            <div class="tarjeta-estadistica-valor">
+                                0
+
+                                <span
+                                    style="
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: var(--texto-secundario);
+                                    "
+                                >
+                                    movimientos
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Entradas, salidas y ajustes
+                    </div>
+
+                </article>
+
+            </section>
+
+            <!-- ==========================================
+                 PANEL DE INVENTARIO
+            =========================================== -->
+
+            <section class="panel">
+
+                <!-- Filtros -->
+
+                <div class="barra-filtros">
+
+                    <div class="campo-busqueda-filtro">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <input
+                            type="search"
+                            id="buscarInventario"
+                            placeholder="Buscar producto..."
+                        >
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroUbicacion">
+                            Ubicación
+                        </label>
+
+                        <select id="filtroUbicacion">
+
+                            <option value="">
+                                Todas las ubicaciones
+                            </option>
+
+                            <option value="bodega-principal">
+                                Bodega principal
+                            </option>
+
+                            <option value="mini-market-centro">
+                                Mini Market Centro
+                            </option>
+
+                            <option value="mini-market-sur">
+                                Mini Market Sur
+                            </option>
+
+                            <option value="oficina-principal">
+                                Oficina principal
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroCategoria">
+                            Categoría
+                        </label>
+
+                        <select id="filtroCategoria">
+
+                            <option value="">
+                                Todas las categorías
+                            </option>
+
+                            <option value="bebidas">
+                                Bebidas
+                            </option>
+
+                            <option value="snacks">
+                                Snacks
+                            </option>
+
+                            <option value="alimentos">
+                                Alimentos
+                            </option>
+
+                            <option value="dulces">
+                                Dulces
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroEstado">
+                            Estado
+                        </label>
+
+                        <select id="filtroEstado">
+
+                            <option value="">
+                                Todos los estados
+                            </option>
+
+                            <option value="normal">
+                                Normal
+                            </option>
+
+                            <option value="stock-bajo">
+                                Stock bajo
+                            </option>
+
+                            <option value="critico">
+                                Crítico
+                            </option>
+
+                            <option value="agotado">
+                                Agotado
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <!-- Botones de inventario -->
+
+                <div
+                    style="
+                        display: flex;
+                        gap: 12px;
+                        margin-bottom: 20px;
+                        flex-wrap: wrap;
+                    "
+                >
+
+                    <a
+                        href="movimientos.html"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-plus"></i>
+                        Registrar movimiento
+                    </a>
+
+                    <a
+                        href="movimientos.html"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-pen-to-square"></i>
+                        Ajuste
+                    </a>
+
+                    <a
+                        href="movimientos.html"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-trash"></i>
+                        Merma
+                    </a>
+
+                    <a
+                        href="movimientos.html"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-right-left"></i>
+                        Traslado
+                    </a>
+
+                </div>
+
+                <!-- ==========================================
+                     TABLA DEL INVENTARIO
+                =========================================== -->
+
+                <div style="overflow-x: auto;">
+
+                    <table class="tabla-datos">
+
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Ubicación</th>
+                                <th>Stock actual</th>
+                                <th>Stock mínimo</th>
+                                <th>Estado</th>
+                                <th>Último movimiento</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="tablaInventario">
+
+                            <!-- La tabla comienza sin productos -->
+
+                            <tr>
+
+                                <td
+                                    colspan="7"
+                                    style="
+                                        text-align: center;
+                                        padding: 55px 20px;
+                                        color: var(--texto-secundario);
+                                    "
+                                >
+
+                                    <i
+                                        class="fa-solid fa-box-open"
+                                        style="
+                                            display: block;
+                                            margin-bottom: 14px;
+                                            font-size: 38px;
+                                            color: var(--texto-tenue);
+                                        "
+                                    ></i>
+
+                                    <strong
+                                        style="
+                                            display: block;
+                                            margin-bottom: 7px;
+                                            color: var(--texto-principal);
+                                            font-size: 15px;
+                                        "
+                                    >
+                                        No hay productos registrados
+                                    </strong>
+
+                                    <span>
+                                        Los productos aparecerán aquí cuando
+                                        sean agregados al inventario.
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!-- ==========================================
+                     PIE DE LA TABLA
+                =========================================== -->
+
+                <div class="paginacion">
+
+                    <span id="textoPaginacionInventario">
+                        No hay productos registrados
+                    </span>
+
+                    <div class="paginacion-controles">
+
+                        <button
+                            type="button"
+                            disabled
+                            aria-label="Página anterior"
+                        >
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled
+                            aria-label="Página siguiente"
+                        >
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- JavaScript general -->
+    <script src="../js/app.js"></script>
+
+</body>
+</html>

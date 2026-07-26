@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Registro y consulta de movimientos de inventario"
+    >
+
+    <title>
+        Movimientos de inventario | Vending Mini Market
+    </title>
+
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+       <div class="logo-sistema">
+
+    <a href="../dashboard/dashboard.html">
+
+        <img
+            src="../img/logo/logo-vending.jpeg"
+            alt="Logo de Vending Mini Market"
+            class="imagen-logo-sistema"
+        >
+
+    </a>
+
+</div>
+
+        <nav class="nav-lateral">
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a
+                href="inventario.html"
+                class="activo"
+            >
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <div class="pie-barra-lateral">
+
+            <a href="../index.html">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         COLUMNA PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <!-- Barra superior -->
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir menú"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="contador">0</span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+                        <strong>Administrador</strong>
+                        <span>admin@vending.com</span>
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO PRINCIPAL
+        =========================================== -->
+
+        <main class="contenido-app">
+
+            <!-- Encabezado -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+                    <h1>Movimientos de inventario</h1>
+
+                    <p>
+                        Registra y consulta entradas, salidas,
+                        ajustes, mermas y traslados de productos.
+                    </p>
+                </div>
+
+                <a
+                    href="inventario.html"
+                    class="boton boton-borde"
+                >
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Volver al inventario
+                </a>
+
+            </div>
+
+            <!-- ==========================================
+                 TARJETAS DE RESUMEN
+            =========================================== -->
+
+            <section class="grilla-estadisticas">
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">
+                                Entradas del día
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="totalEntradas"
+                            >
+                                0
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Unidades ingresadas
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-verde">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">
+                                Salidas del día
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="totalSalidas"
+                            >
+                                0
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Unidades retiradas
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-naranja">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-sliders"></i>
+                        </div>
+
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">
+                                Ajustes realizados
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="totalAjustes"
+                            >
+                                0
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Movimientos de ajuste
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-rojo">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </div>
+
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">
+                                Mermas registradas
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="totalMermas"
+                            >
+                                0
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Productos dañados o vencidos
+                    </div>
+
+                </article>
+
+            </section>
+
+            <!-- ==========================================
+                 FORMULARIO DE MOVIMIENTO
+            =========================================== -->
+
+            <section
+                class="panel"
+                style="margin-bottom: 20px;"
+            >
+
+                <div class="panel-encabezado">
+
+                    <div>
+                        <h2>Registrar movimiento</h2>
+
+                        <p
+                            style="
+                                margin: 4px 0 0;
+                                font-size: 13px;
+                                color: var(--texto-secundario);
+                            "
+                        >
+                            Complete los datos para actualizar
+                            el inventario.
+                        </p>
+                    </div>
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                    </div>
+
+                </div>
+
+                <form id="formularioMovimiento">
+
+                    <div class="cuadricula-formulario">
+
+                        <!-- Tipo de movimiento -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="tipoMovimiento">
+                                Tipo de movimiento
+                            </label>
+
+                            <select
+                                id="tipoMovimiento"
+                                name="tipoMovimiento"
+                                required
+                            >
+                                <option value="">
+                                    Seleccione un tipo
+                                </option>
+
+                                <option value="entrada">
+                                    Entrada
+                                </option>
+
+                                <option value="salida">
+                                    Salida
+                                </option>
+
+                                <option value="ajuste">
+                                    Ajuste
+                                </option>
+
+                                <option value="merma">
+                                    Merma
+                                </option>
+
+                                <option value="traslado">
+                                    Traslado
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Producto -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="productoMovimiento">
+                                Producto
+                            </label>
+
+                            <select
+                                id="productoMovimiento"
+                                name="productoMovimiento"
+                                required
+                            >
+                                <option value="">
+                                    Seleccione un producto
+                                </option>
+
+                                <option value="coca-cola">
+                                    Coca-Cola 355 ml
+                                </option>
+
+                                <option value="agua">
+                                    Agua 600 ml
+                                </option>
+
+                                <option value="papas">
+                                    Papas clásicas 42 g
+                                </option>
+
+                                <option value="chocolate">
+                                    Chocolate 50 g
+                                </option>
+
+                                <option value="jugo-naranja">
+                                    Jugo de naranja 350 ml
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Ubicación de origen -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="ubicacionOrigen">
+                                Ubicación de origen
+                            </label>
+
+                            <select
+                                id="ubicacionOrigen"
+                                name="ubicacionOrigen"
+                                required
+                            >
+                                <option value="">
+                                    Seleccione una ubicación
+                                </option>
+
+                                <option value="bodega-principal">
+                                    Bodega principal
+                                </option>
+
+                                <option value="mini-market-centro">
+                                    Mini Market Centro
+                                </option>
+
+                                <option value="mini-market-sur">
+                                    Mini Market Sur
+                                </option>
+
+                                <option value="oficina-principal">
+                                    Oficina principal
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Ubicación de destino -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="ubicacionDestino">
+                                Ubicación de destino
+                            </label>
+
+                            <select
+                                id="ubicacionDestino"
+                                name="ubicacionDestino"
+                            >
+                                <option value="">
+                                    No aplica
+                                </option>
+
+                                <option value="bodega-principal">
+                                    Bodega principal
+                                </option>
+
+                                <option value="mini-market-centro">
+                                    Mini Market Centro
+                                </option>
+
+                                <option value="mini-market-sur">
+                                    Mini Market Sur
+                                </option>
+
+                                <option value="oficina-principal">
+                                    Oficina principal
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Cantidad -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="cantidadMovimiento">
+                                Cantidad
+                            </label>
+
+                            <input
+                                type="number"
+                                id="cantidadMovimiento"
+                                name="cantidadMovimiento"
+                                min="1"
+                                step="1"
+                                placeholder="Ingrese la cantidad"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Fecha -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="fechaMovimiento">
+                                Fecha del movimiento
+                            </label>
+
+                            <input
+                                type="date"
+                                id="fechaMovimiento"
+                                name="fechaMovimiento"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Referencia -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="referenciaMovimiento">
+                                Referencia
+                            </label>
+
+                            <input
+                                type="text"
+                                id="referenciaMovimiento"
+                                name="referenciaMovimiento"
+                                placeholder="Ingrese una referencia"
+                                maxlength="30"
+                            >
+
+                        </div>
+
+                        <!-- Responsable -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="responsableMovimiento">
+                                Responsable
+                            </label>
+
+                            <select
+                                id="responsableMovimiento"
+                                name="responsableMovimiento"
+                                required
+                            >
+                                <option value="">
+                                    Seleccione un responsable
+                                </option>
+
+                                <option value="carlos-ramirez">
+                                    Carlos Ramírez
+                                </option>
+
+                                <option value="maria-lopez">
+                                    María López
+                                </option>
+
+                                <option value="juan-perez">
+                                    Juan Pérez
+                                </option>
+
+                                <option value="ana-torres">
+                                    Ana Torres
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Observaciones -->
+
+                        <div class="grupo-formulario campo-completo">
+
+                            <label for="observacionesMovimiento">
+                                Motivo u observaciones
+                            </label>
+
+                            <textarea
+                                id="observacionesMovimiento"
+                                name="observacionesMovimiento"
+                                rows="4"
+                                maxlength="300"
+                                placeholder="Describa el motivo del movimiento..."
+                            ></textarea>
+
+                        </div>
+
+                    </div>
+
+                    <div class="acciones-formulario">
+
+                        <button
+                            type="reset"
+                            class="boton boton-borde"
+                        >
+                            <i class="fa-solid fa-eraser"></i>
+                            Limpiar
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="boton boton-azul"
+                        >
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            Registrar movimiento
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+            <!-- ==========================================
+                 HISTORIAL DE MOVIMIENTOS
+            =========================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+                        <h2>Historial de movimientos</h2>
+
+                        <p
+                            style="
+                                margin: 4px 0 0;
+                                font-size: 13px;
+                                color: var(--texto-secundario);
+                            "
+                        >
+                            Consulte los movimientos registrados
+                            en el inventario.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-file-export"></i>
+                        Exportar
+                    </button>
+
+                </div>
+
+                <!-- Filtros -->
+
+                <div class="barra-filtros">
+
+                    <div class="campo-busqueda-filtro">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <input
+                            type="search"
+                            id="buscarMovimiento"
+                            placeholder="Buscar producto o referencia..."
+                        >
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroTipoMovimiento">
+                            Tipo
+                        </label>
+
+                        <select id="filtroTipoMovimiento">
+
+                            <option value="">
+                                Todos los tipos
+                            </option>
+
+                            <option value="entrada">
+                                Entrada
+                            </option>
+
+                            <option value="salida">
+                                Salida
+                            </option>
+
+                            <option value="ajuste">
+                                Ajuste
+                            </option>
+
+                            <option value="merma">
+                                Merma
+                            </option>
+
+                            <option value="traslado">
+                                Traslado
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroUbicacion">
+                            Ubicación
+                        </label>
+
+                        <select id="filtroUbicacion">
+
+                            <option value="">
+                                Todas las ubicaciones
+                            </option>
+
+                            <option value="bodega-principal">
+                                Bodega principal
+                            </option>
+
+                            <option value="mini-market-centro">
+                                Mini Market Centro
+                            </option>
+
+                            <option value="mini-market-sur">
+                                Mini Market Sur
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroFecha">
+                            Fecha
+                        </label>
+
+                        <input
+                            type="date"
+                            id="filtroFecha"
+                        >
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="boton boton-borde"
+                        id="botonLimpiarFiltros"
+                    >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        Limpiar filtros
+                    </button>
+
+                </div>
+
+                <!-- Tabla -->
+
+                <div style="overflow-x: auto;">
+
+                    <table class="tabla-datos">
+
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Referencia</th>
+                                <th>Producto</th>
+                                <th>Tipo</th>
+                                <th>Origen</th>
+                                <th>Destino</th>
+                                <th>Cantidad</th>
+                                <th>Responsable</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="tablaMovimientos">
+
+                            <tr>
+
+                                <td
+                                    colspan="9"
+                                    style="
+                                        text-align: center;
+                                        padding: 50px 20px;
+                                        color: var(--texto-secundario);
+                                    "
+                                >
+
+                                    <i
+                                        class="fa-solid fa-box-open"
+                                        style="
+                                            display: block;
+                                            font-size: 34px;
+                                            margin-bottom: 12px;
+                                            color: var(--texto-tenue);
+                                        "
+                                    ></i>
+
+                                    <strong
+                                        style="
+                                            display: block;
+                                            margin-bottom: 6px;
+                                            color: var(--texto-principal);
+                                        "
+                                    >
+                                        No hay movimientos registrados
+                                    </strong>
+
+                                    <span>
+                                        Los movimientos aparecerán aquí
+                                        después de registrarlos.
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!-- Paginación -->
+
+                <div class="paginacion">
+
+                    <span>
+                        No hay movimientos registrados
+                    </span>
+
+                    <div class="paginacion-controles">
+
+                        <button
+                            type="button"
+                            disabled
+                            aria-label="Página anterior"
+                        >
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="activo"
+                            disabled
+                        >
+                            1
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled
+                            aria-label="Página siguiente"
+                        >
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="../js/app.js"></script>
+
+</body>
+</html>

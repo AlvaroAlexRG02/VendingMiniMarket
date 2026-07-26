@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Inicio de sesión del sistema Vending Mini Market"
+    >
+
+    <title>Iniciar sesión | Vending Mini Market</title>
+
+    <!-- Hoja de estilos principal -->
+    <link rel="stylesheet" href="css/estilos.css">
+
+    <!-- Biblioteca de iconos Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-login">
+
+    <main class="contenedor-login">
+
+        <!-- ==========================================
+             PANEL IZQUIERDO: INFORMACIÓN DEL SISTEMA
+        =========================================== -->
+
+        <section class="panel-login-marca">
+
+            <!-- Logo del sistema -->
+            <div class="logo-login">
+
+    <img
+        src="img/logo/logo-vending.jpeg"
+        alt="Logo de Vending Mini Market"
+        class="logo-login-imagen"
+    >
+
+</div>
+            <!-- Información descriptiva -->
+            <div class="contenido-marca-login">
+
+                <div class="linea-login"></div>
+
+                <h2>
+                    Gestión inteligente para tu mini market
+                </h2>
+
+                <p>
+                    Administra productos, controla el inventario,
+                    registra ventas, gestiona compras y consulta
+                    reportes desde un solo lugar.
+                </p>
+
+            </div>
+
+            <!-- Mensaje de seguridad -->
+            <div class="seguridad-login">
+
+                <div class="seguridad-login-icono">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+
+                <div class="seguridad-login-texto">
+                    <strong>Sistema seguro y confiable</strong>
+
+                    <p>
+                        Tus datos se encuentran protegidos.
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ==========================================
+             PANEL DERECHO: FORMULARIO DE ACCESO
+        =========================================== -->
+
+        <section class="panel-login-formulario">
+
+            <div class="tarjeta-login">
+
+                <!-- Icono superior -->
+                <div class="icono-login">
+                    <i class="fa-solid fa-cube"></i>
+                </div>
+
+                <!-- Encabezado -->
+                <header class="encabezado-login">
+
+                    <h2>Iniciar sesión</h2>
+
+                    <p>
+                        Bienvenido al sistema Vending Mini Market
+                    </p>
+
+                </header>
+
+                <!-- Formulario -->
+                <form
+                    id="formularioLogin"
+                    class="formulario-login"
+                    action="dashboard/dashboard.html"
+                    method="get"
+                >
+
+                    <!-- Usuario -->
+                    <div class="grupo-formulario">
+
+                        <label for="usuario">
+                            Usuario o correo
+                        </label>
+
+                        <div class="campo-con-icono">
+
+                            <i class="fa-regular fa-user"></i>
+
+                            <input
+                                type="text"
+                                id="usuario"
+                                name="usuario"
+                                placeholder="Ingrese su usuario o correo"
+                                autocomplete="username"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div class="grupo-formulario">
+
+                        <label for="contrasena">
+                            Contraseña
+                        </label>
+
+                        <div class="campo-con-icono">
+
+                            <i class="fa-solid fa-lock"></i>
+
+                            <input
+                                type="password"
+                                id="contrasena"
+                                name="contrasena"
+                                placeholder="Ingrese su contraseña"
+                                autocomplete="current-password"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                id="botonMostrarContrasena"
+                                class="boton-mostrar-contrasena"
+                                aria-label="Mostrar u ocultar contraseña"
+                                title="Mostrar contraseña"
+                            >
+                                <i
+                                    id="iconoContrasena"
+                                    class="fa-regular fa-eye"
+                                ></i>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Opciones adicionales -->
+                    <div class="opciones-login">
+
+                        <label class="opcion-recordar">
+
+                            <input
+                                type="checkbox"
+                                id="recordarme"
+                                name="recordarme"
+                            >
+
+                            <span>Recordarme</span>
+
+                        </label>
+
+                        <a
+                            href="#"
+                            class="enlace-recuperar"
+                        >
+                            ¿Olvidó su contraseña?
+                        </a>
+
+                    </div>
+
+                    <!-- Mensaje de validación -->
+                    <p
+                        id="mensajeLogin"
+                        class="mensaje-login"
+                        aria-live="polite"
+                    ></p>
+
+                    <!-- Botón de ingreso -->
+                    <button
+                        type="submit"
+                        class="boton-principal boton-ingresar"
+                    >
+                        <span>Ingresar</span>
+
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+
+                </form>
+
+            </div>
+
+            <!-- Decoración de fondo -->
+            <div
+                class="decoracion-login"
+                aria-hidden="true"
+            >
+
+                <div class="maquina-decorativa">
+
+                    <div class="maquina-ventana">
+
+                        <div class="producto-decorativo"></div>
+                        <div class="producto-decorativo"></div>
+                        <div class="producto-decorativo"></div>
+
+                        <div class="producto-decorativo"></div>
+                        <div class="producto-decorativo"></div>
+                        <div class="producto-decorativo"></div>
+
+                        <div class="producto-decorativo"></div>
+                        <div class="producto-decorativo"></div>
+                        <div class="producto-decorativo"></div>
+
+                    </div>
+
+                    <div class="maquina-controles">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Pie de página -->
+            <footer class="pie-login">
+
+                <p>
+                    &copy; 2026 Vending Mini Market.
+                    Todos los derechos reservados.
+                </p>
+
+            </footer>
+
+        </section>
+
+    </main>
+
+    <!-- Archivo JavaScript principal -->
+    <script src="js/app.js"></script>
+
+</body>
+</html>
