@@ -18,7 +18,7 @@
     <!-- Hoja de estilos principal -->
     <link rel="stylesheet" href="../css/estilos.css">
 
-    <!-- Biblioteca de iconos -->
+    <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -34,9 +34,13 @@
     <aside class="barra-lateral">
 
         <!-- Logo del sistema -->
+
         <div class="logo-sistema">
 
-            <a href="dashboard.html">
+            <a
+                href="dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
 
                 <img
                     src="../img/logo/logo-vending.jpeg"
@@ -48,12 +52,17 @@
 
         </div>
 
-        <!-- Menú principal -->
-        <nav class="nav-lateral">
+        <!-- Navegación principal -->
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
 
             <a
                 href="dashboard.html"
                 class="activo"
+                aria-current="page"
             >
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
@@ -67,11 +76,6 @@
             <a href="../inventario/inventario.html">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
             </a>
 
             <a href="../ventas/ventas.html">
@@ -97,9 +101,13 @@
         </nav>
 
         <!-- Cerrar sesión -->
+
         <div class="pie-barra-lateral">
 
-            <a href="../index.html">
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Cerrar sesión
             </a>
@@ -128,17 +136,23 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
 
+            <!-- Buscador general -->
+
             <div class="buscador-superior">
 
                 <i class="fa-solid fa-magnifying-glass"></i>
 
                 <input
                     type="search"
+                    id="buscadorGeneralDashboard"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
+                    autocomplete="off"
                 >
 
             </div>
+
+            <!-- Acciones y perfil -->
 
             <div class="acciones-superiores">
 
@@ -149,7 +163,11 @@
                 >
                     <i class="fa-regular fa-bell"></i>
 
-                    <span class="contador">
+                    <span
+                        class="contador"
+                        id="contadorNotificacionesDashboard"
+                        aria-label="0 notificaciones"
+                    >
                         0
                     </span>
                 </button>
@@ -157,8 +175,20 @@
                 <div class="perfil-superior">
 
                     <div class="perfil-superior-texto">
-                        <strong>Administrador</strong>
-                        <span>admin@vending.com</span>
+
+                        <!--
+                            Estos datos se actualizarán luego
+                            según el usuario que inicie sesión.
+                        -->
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
                     </div>
 
                     <i class="fa-solid fa-chevron-down"></i>
@@ -175,28 +205,68 @@
 
         <main class="contenido-app">
 
-            <!-- Encabezado -->
+            <!-- ==========================================
+                 ENCABEZADO DEL DASHBOARD
+            =========================================== -->
 
             <div class="encabezado-pagina">
 
                 <div>
+
                     <h1>Dashboard</h1>
 
-                    <p>
+                    <p id="mensajeBienvenidaDashboard">
                         Bienvenido al sistema Vending Mini Market
                     </p>
+
                 </div>
 
-                <button
-                    type="button"
-                    class="selector-fecha"
-                >
-                    <i class="fa-regular fa-calendar"></i>
+                <!-- Filtros principales -->
 
-                    Fecha actual
+                <div class="acciones-dashboard">
 
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
+                    <div class="selector-filtro selector-dashboard">
+
+                        <label for="filtroTiendaDashboard">
+                            Tienda
+                        </label>
+
+                        <select id="filtroTiendaDashboard">
+
+                            <option value="">
+                                Todas las tiendas
+                            </option>
+
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
+                            </option>
+
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
+                            </option>
+
+                            <option value="Ultralag">
+                                Ultralag
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro selector-dashboard">
+
+                        <label for="fechaDashboard">
+                            Fecha
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaDashboard"
+                        >
+
+                    </div>
+
+                </div>
 
             </div>
 
@@ -204,7 +274,10 @@
                  TARJETAS ESTADÍSTICAS
             =========================================== -->
 
-            <section class="grilla-estadisticas">
+            <section
+                class="grilla-estadisticas"
+                aria-label="Resumen general del sistema"
+            >
 
                 <!-- Productos -->
 
@@ -305,25 +378,25 @@
 
                 </article>
 
-                <!-- Pedidos pendientes -->
+                <!-- Movimientos -->
 
                 <article class="tarjeta-estadistica borde-morado">
 
                     <div class="tarjeta-estadistica-encabezado">
 
                         <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-cart-shopping"></i>
+                            <i class="fa-solid fa-arrow-right-arrow-left"></i>
                         </div>
 
                         <div>
 
                             <div class="tarjeta-estadistica-titulo">
-                                Pedidos pendientes
+                                Movimientos de hoy
                             </div>
 
                             <div
                                 class="tarjeta-estadistica-valor"
-                                id="totalPedidosDashboard"
+                                id="totalMovimientosDashboard"
                             >
                                 0
                             </div>
@@ -333,7 +406,7 @@
                     </div>
 
                     <div class="tarjeta-estadistica-cambio">
-                        Pedidos que requieren seguimiento
+                        Entradas, salidas, ajustes y traslados
                     </div>
 
                 </article>
@@ -346,13 +419,23 @@
 
             <section class="grilla-dos-columnas">
 
-                <!-- Últimos movimientos -->
+                <!-- ==========================================
+                     ÚLTIMOS MOVIMIENTOS
+                =========================================== -->
 
                 <article class="panel">
 
                     <div class="panel-encabezado">
 
-                        <h2>Últimos movimientos</h2>
+                        <div>
+
+                            <h2>Últimos movimientos</h2>
+
+                            <p class="descripcion-panel">
+                                Actividad reciente del inventario.
+                            </p>
+
+                        </div>
 
                         <a
                             href="../inventario/movimientos.html"
@@ -365,57 +448,46 @@
 
                     </div>
 
-                    <div style="overflow-x: auto;">
+                    <div class="contenedor-tabla">
 
                         <table class="tabla-datos">
 
+                            <caption class="texto-solo-lectores">
+                                Últimos movimientos de inventario
+                            </caption>
+
                             <thead>
                                 <tr>
-                                    <th>Fecha y hora</th>
-                                    <th>Tipo</th>
-                                    <th>Descripción</th>
-                                    <th>Referencia</th>
-                                    <th>Usuario</th>
+                                    <th scope="col">Fecha y hora</th>
+                                    <th scope="col">Tipo</th>
+                                    <th scope="col">Descripción</th>
+                                    <th scope="col">Referencia</th>
+                                    <th scope="col">Usuario</th>
                                 </tr>
                             </thead>
 
                             <tbody id="tablaMovimientosDashboard">
 
-                                <tr>
+                                <tr id="filaSinMovimientosDashboard">
 
-                                    <td
-                                        colspan="5"
-                                        style="
-                                            text-align: center;
-                                            padding: 55px 20px;
-                                            color: var(--texto-secundario);
-                                        "
-                                    >
+                                    <td colspan="5">
 
-                                        <i
-                                            class="fa-solid fa-arrow-right-arrow-left"
-                                            style="
-                                                display: block;
-                                                margin-bottom: 14px;
-                                                font-size: 36px;
-                                                color: var(--texto-tenue);
-                                            "
-                                        ></i>
+                                        <div class="estado-vacio-tabla">
 
-                                        <strong
-                                            style="
-                                                display: block;
-                                                margin-bottom: 7px;
-                                                color: var(--texto-principal);
-                                            "
-                                        >
-                                            No hay movimientos registrados
-                                        </strong>
+                                            <i
+                                                class="fa-solid fa-arrow-right-arrow-left"
+                                            ></i>
 
-                                        <span>
-                                            Los movimientos recientes
-                                            aparecerán en esta sección.
-                                        </span>
+                                            <strong>
+                                                No hay movimientos registrados
+                                            </strong>
+
+                                            <span>
+                                                Los movimientos recientes
+                                                aparecerán en esta sección.
+                                            </span>
+
+                                        </div>
 
                                     </td>
 
@@ -429,19 +501,31 @@
 
                 </article>
 
-                <!-- Alertas -->
+                <!-- ==========================================
+                     ALERTAS
+                =========================================== -->
 
                 <article class="panel">
 
                     <div class="panel-encabezado">
 
-                        <h2>Alertas</h2>
+                        <div>
+
+                            <h2>Alertas</h2>
+
+                            <p class="descripcion-panel">
+                                Avisos que requieren atención.
+                            </p>
+
+                        </div>
 
                         <a
                             href="../alertas/alertas.html"
                             class="enlace-ver-todo"
                         >
                             Ver todas
+
+                            <i class="fa-solid fa-chevron-right"></i>
                         </a>
 
                     </div>
@@ -452,30 +536,13 @@
                     >
 
                         <div
-                            style="
-                                text-align: center;
-                                padding: 45px 20px;
-                                color: var(--texto-secundario);
-                            "
+                            class="estado-vacio-tabla"
+                            id="mensajeSinAlertasDashboard"
                         >
 
-                            <i
-                                class="fa-regular fa-bell"
-                                style="
-                                    display: block;
-                                    margin-bottom: 14px;
-                                    font-size: 36px;
-                                    color: var(--texto-tenue);
-                                "
-                            ></i>
+                            <i class="fa-regular fa-bell"></i>
 
-                            <strong
-                                style="
-                                    display: block;
-                                    margin-bottom: 7px;
-                                    color: var(--texto-principal);
-                                "
-                            >
+                            <strong>
                                 No hay alertas registradas
                             </strong>
 

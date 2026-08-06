@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Gestión de facturas de proveedores del sistema Vending Mini Market"
+    >
+
+    <title>Facturas | Vending Mini Market</title>
+
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+        <div class="logo-sistema">
+
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+            </a>
+
+        </div>
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a
+                href="compras.html"
+                class="activo"
+            >
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <div class="pie-barra-lateral">
+
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         COLUMNA PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir o cerrar menú lateral"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    id="buscadorGeneralFacturas"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                    autocomplete="off"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Consultar notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span
+                        class="contador"
+                        id="contadorNotificacionesFacturas"
+                    >
+                        0
+                    </span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO
+        =========================================== -->
+
+        <main class="contenido-app">
+
+            <!-- Encabezado -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+
+                    <h1>Facturas de proveedores</h1>
+
+                    <p>
+                        Registra las facturas recibidas y controla
+                        su estado de pago.
+                    </p>
+
+                </div>
+
+                <div class="acciones-encabezado-facturas">
+
+                    <a
+                        href="compras.html"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Volver a compras
+                    </a>
+
+                    <button
+                        type="button"
+                        id="botonNuevaFactura"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        Nueva factura
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- Mensaje -->
+
+            <div
+                id="mensajeFacturas"
+                class="mensaje-producto"
+                aria-live="polite"
+                hidden
+            ></div>
+
+            <!-- ==========================================
+                 RESUMEN
+            =========================================== -->
+
+            <section
+                class="grilla-estadisticas"
+                aria-label="Resumen de facturas"
+            >
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Total de facturas
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="totalFacturas"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Documentos registrados
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-naranja">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Facturas pendientes
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="facturasPendientes"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Pendientes de pago
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-verde">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Facturas pagadas
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="facturasPagadas"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Pagos completados
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-morado">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Monto facturado
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="montoTotalFacturas"
+                            >
+                                ₡0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Total acumulado
+                    </div>
+
+                </article>
+
+            </section>
+
+            <!-- ==========================================
+                 LISTADO DE FACTURAS
+            =========================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>Facturas registradas</h2>
+
+                        <p class="descripcion-panel">
+                            Consulta los documentos emitidos
+                            por los proveedores.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <!-- Filtros -->
+
+                <div class="barra-filtros">
+
+                    <div class="campo-busqueda-filtro">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <label
+                            for="buscarFactura"
+                            class="texto-solo-lectores"
+                        >
+                            Buscar factura
+                        </label>
+
+                        <input
+                            type="search"
+                            id="buscarFactura"
+                            placeholder="Buscar por número, proveedor o compra..."
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroProveedorFactura">
+                            Proveedor
+                        </label>
+
+                        <select id="filtroProveedorFactura">
+
+                            <option value="">
+                                Todos los proveedores
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroTiendaFactura">
+                            Tienda
+                        </label>
+
+                        <select id="filtroTiendaFactura">
+
+                            <option value="">
+                                Todas las tiendas
+                            </option>
+
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
+                            </option>
+
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
+                            </option>
+
+                            <option value="Ultralag">
+                                Ultralag
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroEstadoFactura">
+                            Estado
+                        </label>
+
+                        <select id="filtroEstadoFactura">
+
+                            <option value="">
+                                Todos los estados
+                            </option>
+
+                            <option value="Pendiente">
+                                Pendiente
+                            </option>
+
+                            <option value="Pagada">
+                                Pagada
+                            </option>
+
+                            <option value="Vencida">
+                                Vencida
+                            </option>
+
+                            <option value="Anulada">
+                                Anulada
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroFechaFactura">
+                            Fecha
+                        </label>
+
+                        <input
+                            type="date"
+                            id="filtroFechaFactura"
+                        >
+
+                    </div>
+
+                    <button
+                        type="button"
+                        id="botonLimpiarFiltrosFacturas"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        Limpiar filtros
+                    </button>
+
+                </div>
+
+                <p
+                    id="resultadoBusquedaFacturas"
+                    class="resultado-busqueda-productos"
+                    aria-live="polite"
+                ></p>
+
+                <!-- Tabla -->
+
+                <div
+                    id="contenedorTablaFacturas"
+                    class="contenedor-tabla"
+                    hidden
+                >
+
+                    <table class="tabla-datos tabla-facturas">
+
+                        <caption class="texto-solo-lectores">
+                            Facturas de proveedores registradas
+                        </caption>
+
+                        <thead>
+
+                            <tr>
+                                <th scope="col">Factura</th>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Vencimiento</th>
+                                <th scope="col">Proveedor</th>
+                                <th scope="col">Compra</th>
+                                <th scope="col">Tienda</th>
+                                <th scope="col">Subtotal</th>
+                                <th scope="col">Impuesto</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="cuerpoTablaFacturas">
+                            <!-- JavaScript agregará las facturas -->
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!-- Sin facturas -->
+
+                <div
+                    id="mensajeSinFacturas"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-file-circle-xmark"></i>
+
+                    <h3>
+                        No hay facturas registradas
+                    </h3>
+
+                    <p>
+                        Registra una factura recibida de un proveedor
+                        para comenzar el control de pagos.
+                    </p>
+
+                    <button
+                        type="button"
+                        id="botonPrimeraFactura"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        Registrar factura
+                    </button>
+
+                </div>
+
+                <!-- Sin resultados -->
+
+                <div
+                    id="mensajeSinResultadosFacturas"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <h3>
+                        No se encontraron facturas
+                    </h3>
+
+                    <p>
+                        Cambia los filtros o el texto de búsqueda.
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- ==========================================
+         MODAL: NUEVA FACTURA
+    =========================================== -->
+
+    <div
+        id="modalFactura"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-factura
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-factura-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalFactura"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+
+                    <h2 id="tituloModalFactura">
+                        Nueva factura
+                    </h2>
+
+                    <p>
+                        Registra los datos del documento
+                        recibido del proveedor.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalFactura"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar formulario"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <form id="formularioFactura">
+
+                <input
+                    type="hidden"
+                    id="idFactura"
+                >
+
+                <div class="cuadricula-formulario">
+
+                    <!-- Número de factura -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="numeroFactura">
+                            Número de factura
+                        </label>
+
+                        <input
+                            type="text"
+                            id="numeroFactura"
+                            name="numeroFactura"
+                            placeholder="Ejemplo: FE-001254"
+                            maxlength="50"
+                            autocomplete="off"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Fecha -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="fechaFactura">
+                            Fecha de emisión
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaFactura"
+                            name="fechaFactura"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Vencimiento -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="fechaVencimientoFactura">
+                            Fecha de vencimiento
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaVencimientoFactura"
+                            name="fechaVencimientoFactura"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Proveedor -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="proveedorFactura">
+                            Proveedor
+                        </label>
+
+                        <input
+                            type="text"
+                            id="proveedorFactura"
+                            name="proveedorFactura"
+                            placeholder="Ingrese el proveedor"
+                            maxlength="100"
+                            autocomplete="off"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Compra relacionada -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="compraRelacionadaFactura">
+                            Compra relacionada
+                        </label>
+
+                        <select
+                            id="compraRelacionadaFactura"
+                            name="compraRelacionadaFactura"
+                        >
+
+                            <option value="">
+                                Sin compra relacionada
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Tienda -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="tiendaFactura">
+                            Tienda
+                        </label>
+
+                        <select
+                            id="tiendaFactura"
+                            name="tiendaFactura"
+                            required
+                        >
+
+                            <option value="">
+                                Seleccione una tienda
+                            </option>
+
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
+                            </option>
+
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
+                            </option>
+
+                            <option value="Ultralag">
+                                Ultralag
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Subtotal -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="subtotalFactura">
+                            Subtotal
+                        </label>
+
+                        <input
+                            type="number"
+                            id="subtotalFactura"
+                            name="subtotalFactura"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Impuesto -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="impuestoFactura">
+                            Impuesto
+                        </label>
+
+                        <input
+                            type="number"
+                            id="impuestoFactura"
+                            name="impuestoFactura"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Total -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="totalFactura">
+                            Total
+                        </label>
+
+                        <input
+                            type="number"
+                            id="totalFactura"
+                            name="totalFactura"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            readonly
+                        >
+
+                    </div>
+
+                    <!-- Estado -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="estadoFactura">
+                            Estado
+                        </label>
+
+                        <select
+                            id="estadoFactura"
+                            name="estadoFactura"
+                            required
+                        >
+
+                            <option value="Pendiente">
+                                Pendiente
+                            </option>
+
+                            <option value="Pagada">
+                                Pagada
+                            </option>
+
+                            <option value="Vencida">
+                                Vencida
+                            </option>
+
+                            <option value="Anulada">
+                                Anulada
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Método de pago -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="metodoPagoFactura">
+                            Método de pago
+                        </label>
+
+                        <select
+                            id="metodoPagoFactura"
+                            name="metodoPagoFactura"
+                        >
+
+                            <option value="">
+                                Pendiente de pago
+                            </option>
+
+                            <option value="Efectivo">
+                                Efectivo
+                            </option>
+
+                            <option value="Transferencia">
+                                Transferencia
+                            </option>
+
+                            <option value="Tarjeta">
+                                Tarjeta
+                            </option>
+
+                            <option value="SINPE">
+                                SINPE
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Fecha de pago -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="fechaPagoFactura">
+                            Fecha de pago
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaPagoFactura"
+                            name="fechaPagoFactura"
+                        >
+
+                    </div>
+
+                </div>
+
+                <!-- Archivo -->
+
+                <div class="grupo-formulario">
+
+                    <label for="archivoFactura">
+                        Archivo de la factura
+                    </label>
+
+                    <input
+                        type="file"
+                        id="archivoFactura"
+                        name="archivoFactura"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                    >
+
+                    <small class="texto-ayuda">
+                        Formatos permitidos: PDF, JPG, JPEG o PNG.
+                    </small>
+
+                </div>
+
+                <!-- Archivo seleccionado -->
+
+                <div
+                    id="informacionArchivoFactura"
+                    class="informacion-archivo-factura"
+                    hidden
+                >
+
+                    <div>
+
+                        <i class="fa-solid fa-file-invoice"></i>
+
+                        <div>
+
+                            <strong id="nombreArchivoFactura">
+                                Archivo seleccionado
+                            </strong>
+
+                            <span id="detalleArchivoFactura">
+                                -
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        id="botonQuitarArchivoFactura"
+                        class="boton-cerrar-archivo"
+                        aria-label="Quitar archivo"
+                    >
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+
+                </div>
+
+                <!-- Observaciones -->
+
+                <div class="grupo-formulario">
+
+                    <label for="observacionesFactura">
+                        Observaciones
+                    </label>
+
+                    <textarea
+                        id="observacionesFactura"
+                        name="observacionesFactura"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Ingrese observaciones adicionales"
+                    ></textarea>
+
+                </div>
+
+                <!-- Resumen -->
+
+                <div class="resumen-factura-formulario">
+
+                    <div>
+
+                        <span>Subtotal</span>
+
+                        <strong id="resumenSubtotalFactura">
+                            ₡0
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>Impuesto</span>
+
+                        <strong id="resumenImpuestoFactura">
+                            ₡0
+                        </strong>
+
+                    </div>
+
+                    <div class="total-factura-formulario">
+
+                        <span>Total</span>
+
+                        <strong id="resumenTotalFactura">
+                            ₡0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <p
+                    id="mensajeFormularioFactura"
+                    class="mensaje-login"
+                    aria-live="polite"
+                ></p>
+
+                <div class="acciones-modal-producto">
+
+                    <button
+                        type="button"
+                        id="botonCancelarFactura"
+                        class="boton boton-borde"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Guardar factura
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+    <script src="../js/app.js"></script>
+
+</body>
+</html>

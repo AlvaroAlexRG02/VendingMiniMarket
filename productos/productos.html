@@ -15,8 +15,10 @@
 
     <title>Productos | Vending Mini Market</title>
 
+    <!-- Hoja de estilos principal -->
     <link rel="stylesheet" href="../css/estilos.css">
 
+    <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -30,6 +32,8 @@
     =========================================== -->
 
     <aside class="barra-lateral">
+
+        <!-- Logo del sistema -->
 
         <div class="logo-sistema">
 
@@ -47,6 +51,8 @@
             </a>
 
         </div>
+
+        <!-- Navegación principal -->
 
         <nav
             class="nav-lateral"
@@ -72,11 +78,6 @@
                 Inventario
             </a>
 
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
-            </a>
-
             <a href="../ventas/ventas.html">
                 <i class="fa-solid fa-chart-column"></i>
                 Ventas
@@ -99,9 +100,14 @@
 
         </nav>
 
+        <!-- Cerrar sesión -->
+
         <div class="pie-barra-lateral">
 
-            <a href="../index/index.html">
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Cerrar sesión
             </a>
@@ -116,6 +122,10 @@
 
     <div class="columna-principal">
 
+        <!-- ==========================================
+             BARRA SUPERIOR
+        =========================================== -->
+
         <header class="barra-superior">
 
             <button
@@ -126,17 +136,23 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
 
+            <!-- Buscador general -->
+
             <div class="buscador-superior">
 
                 <i class="fa-solid fa-magnifying-glass"></i>
 
                 <input
                     type="search"
+                    id="buscadorGeneralProductos"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
+                    autocomplete="off"
                 >
 
             </div>
+
+            <!-- Acciones y perfil -->
 
             <div class="acciones-superiores">
 
@@ -149,17 +165,26 @@
 
                     <span
                         class="contador"
+                        id="contadorNotificacionesProductos"
                         aria-label="0 notificaciones"
                     >
                         0
                     </span>
+
                 </button>
 
                 <div class="perfil-superior">
 
                     <div class="perfil-superior-texto">
-                        <strong>Administrador</strong>
-                        <span>admin@vending.com</span>
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
                     </div>
 
                     <i class="fa-solid fa-chevron-down"></i>
@@ -170,6 +195,10 @@
 
         </header>
 
+        <!-- ==========================================
+             CONTENIDO DE PRODUCTOS
+        =========================================== -->
+
         <main class="contenido-app">
 
             <!-- ==========================================
@@ -179,12 +208,14 @@
             <div class="encabezado-pagina">
 
                 <div>
+
                     <h1>Productos</h1>
 
                     <p>
                         Consulta y administra los productos
                         registrados en el sistema.
                     </p>
+
                 </div>
 
                 <a
@@ -198,13 +229,15 @@
             </div>
 
             <!-- ==========================================
-                 RESUMEN
+                 RESUMEN DE PRODUCTOS
             =========================================== -->
 
             <section
                 class="resumen-productos"
                 aria-label="Resumen de productos"
             >
+
+                <!-- Total -->
 
                 <article class="tarjeta-estadistica">
 
@@ -213,11 +246,18 @@
                     </div>
 
                     <div>
+
                         <span>Total de productos</span>
-                        <strong id="totalProductos">0</strong>
+
+                        <strong id="totalProductos">
+                            0
+                        </strong>
+
                     </div>
 
                 </article>
+
+                <!-- Activos -->
 
                 <article class="tarjeta-estadistica">
 
@@ -226,11 +266,18 @@
                     </div>
 
                     <div>
+
                         <span>Productos activos</span>
-                        <strong id="productosActivos">0</strong>
+
+                        <strong id="productosActivos">
+                            0
+                        </strong>
+
                     </div>
 
                 </article>
+
+                <!-- Inactivos -->
 
                 <article class="tarjeta-estadistica">
 
@@ -239,11 +286,18 @@
                     </div>
 
                     <div>
+
                         <span>Productos inactivos</span>
-                        <strong id="productosInactivos">0</strong>
+
+                        <strong id="productosInactivos">
+                            0
+                        </strong>
+
                     </div>
 
                 </article>
+
+                <!-- Stock bajo -->
 
                 <article class="tarjeta-estadistica">
 
@@ -252,8 +306,13 @@
                     </div>
 
                     <div>
+
                         <span>Productos con stock bajo</span>
-                        <strong id="productosStockBajo">0</strong>
+
+                        <strong id="productosStockBajo">
+                            0
+                        </strong>
+
                     </div>
 
                 </article>
@@ -266,22 +325,30 @@
 
             <section class="panel">
 
+                <!-- Encabezado del panel -->
+
                 <div class="panel-encabezado">
 
                     <div>
+
                         <h2>Catálogo de productos</h2>
 
                         <p class="descripcion-panel">
                             Busca productos por nombre, categoría,
                             proveedor o código.
                         </p>
+
                     </div>
 
                 </div>
 
-                <!-- Filtros -->
+                <!-- ==========================================
+                     FILTROS
+                =========================================== -->
 
                 <div class="barra-filtros productos-filtros">
+
+                    <!-- Búsqueda -->
 
                     <div class="campo-busqueda-productos">
 
@@ -303,6 +370,8 @@
 
                     </div>
 
+                    <!-- Categoría -->
+
                     <div class="campo-filtro-producto">
 
                         <label for="filtroCategoriaProducto">
@@ -310,12 +379,16 @@
                         </label>
 
                         <select id="filtroCategoriaProducto">
+
                             <option value="">
                                 Todas las categorías
                             </option>
+
                         </select>
 
                     </div>
+
+                    <!-- Estado -->
 
                     <div class="campo-filtro-producto">
 
@@ -341,6 +414,8 @@
 
                     </div>
 
+                    <!-- Limpiar -->
+
                     <button
                         type="button"
                         id="botonLimpiarFiltrosProductos"
@@ -352,7 +427,7 @@
 
                 </div>
 
-                <!-- Mensaje de resultado -->
+                <!-- Resultado de búsqueda -->
 
                 <p
                     id="resultadoBusquedaProductos"
@@ -360,7 +435,9 @@
                     aria-live="polite"
                 ></p>
 
-                <!-- Tabla -->
+                <!-- ==========================================
+                     TABLA DE PRODUCTOS
+                =========================================== -->
 
                 <div
                     id="contenedorTablaProductos"
@@ -374,6 +451,7 @@
                         </caption>
 
                         <thead>
+
                             <tr>
                                 <th scope="col">Producto</th>
                                 <th scope="col">Código</th>
@@ -385,17 +463,25 @@
                                 <th scope="col">Estado</th>
                                 <th scope="col">Acciones</th>
                             </tr>
+
                         </thead>
 
                         <tbody id="cuerpoTablaProductos">
-                            <!-- Los datos se agregan con JavaScript -->
+
+                            <!--
+                                JavaScript agrega los productos
+                                registrados en esta sección.
+                            -->
+
                         </tbody>
 
                     </table>
 
                 </div>
 
-                <!-- Estado vacío -->
+                <!-- ==========================================
+                     SIN PRODUCTOS
+                =========================================== -->
 
                 <div
                     id="mensajeSinProductos"
@@ -405,7 +491,9 @@
 
                     <i class="fa-solid fa-box-open"></i>
 
-                    <h3>No hay productos registrados</h3>
+                    <h3>
+                        No hay productos registrados
+                    </h3>
 
                     <p>
                         Registra el primer producto para que aparezca
@@ -422,7 +510,9 @@
 
                 </div>
 
-                <!-- Sin resultados -->
+                <!-- ==========================================
+                     SIN RESULTADOS
+                =========================================== -->
 
                 <div
                     id="mensajeSinResultadosProductos"
@@ -432,10 +522,13 @@
 
                     <i class="fa-solid fa-magnifying-glass"></i>
 
-                    <h3>No se encontraron coincidencias</h3>
+                    <h3>
+                        No se encontraron coincidencias
+                    </h3>
 
                     <p>
-                        Cambia el texto de búsqueda o limpia los filtros.
+                        Cambia el texto de búsqueda o limpia
+                        los filtros seleccionados.
                     </p>
 
                 </div>
@@ -446,7 +539,9 @@
 
     </div>
 
-    <!-- Cuadro de confirmación -->
+    <!-- ==========================================
+         MODAL DE CAMBIO DE ESTADO
+    =========================================== -->
 
     <div
         id="modalEstadoProducto"
@@ -500,6 +595,7 @@
 
     </div>
 
+    <!-- JavaScript general -->
     <script src="../js/app.js"></script>
 
 </body>

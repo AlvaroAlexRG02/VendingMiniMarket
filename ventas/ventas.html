@@ -15,10 +15,8 @@
 
     <title>Ventas | Vending Mini Market</title>
 
-    <!-- Hoja de estilos principal -->
     <link rel="stylesheet" href="../css/estilos.css">
 
-    <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -39,13 +37,11 @@
                 href="../dashboard/dashboard.html"
                 aria-label="Ir al Dashboard"
             >
-
                 <img
                     src="../img/logo/logo-vending.jpeg"
                     alt="Logo de Vending Mini Market"
                     class="imagen-logo-sistema"
                 >
-
             </a>
 
         </div>
@@ -68,11 +64,6 @@
             <a href="../inventario/inventario.html">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
             </a>
 
             <a
@@ -103,7 +94,10 @@
 
         <div class="pie-barra-lateral">
 
-            <a href="../index/index.html">
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Cerrar sesión
             </a>
@@ -113,7 +107,7 @@
     </aside>
 
     <!-- ==========================================
-         CONTENIDO PRINCIPAL
+         COLUMNA PRINCIPAL
     =========================================== -->
 
     <div class="columna-principal">
@@ -138,8 +132,10 @@
 
                 <input
                     type="search"
+                    id="buscadorGeneralVentas"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
+                    autocomplete="off"
                 >
 
             </div>
@@ -155,6 +151,7 @@
 
                     <span
                         class="contador"
+                        id="contadorNotificacionesVentas"
                         aria-label="0 notificaciones"
                     >
                         0
@@ -164,8 +161,15 @@
                 <div class="perfil-superior">
 
                     <div class="perfil-superior-texto">
-                        <strong>Administrador</strong>
-                        <span>admin@vending.com</span>
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
                     </div>
 
                     <i class="fa-solid fa-chevron-down"></i>
@@ -177,7 +181,7 @@
         </header>
 
         <!-- ==========================================
-             CONTENIDO DE VENTAS
+             CONTENIDO
         =========================================== -->
 
         <main class="contenido-app">
@@ -187,15 +191,22 @@
             <div class="encabezado-pagina">
 
                 <div>
+
                     <h1>Ventas</h1>
 
                     <p>
                         Consulta ventas, registra ingresos manuales
                         e importa información proveniente de Nayax.
                     </p>
+
                 </div>
 
                 <div class="acciones-encabezado-ventas">
+
+                    <!--
+                        El botón abrirá directamente el selector
+                        de archivos de Windows.
+                    -->
 
                     <button
                         type="button"
@@ -205,6 +216,13 @@
                         <i class="fa-solid fa-file-import"></i>
                         Importar Nayax
                     </button>
+
+                    <input
+                        type="file"
+                        id="archivoVentasNayax"
+                        accept=".csv,.xlsx,.xls"
+                        hidden
+                    >
 
                     <button
                         type="button"
@@ -225,6 +243,39 @@
                     </button>
 
                 </div>
+
+            </div>
+
+            <!-- Archivo Nayax seleccionado -->
+
+            <div
+                id="informacionArchivoNayax"
+                class="informacion-archivo-nayax"
+                hidden
+            >
+
+                <div>
+
+                    <i class="fa-solid fa-file-excel"></i>
+
+                    <div>
+                        <strong id="nombreArchivoNayax">
+                            Archivo seleccionado
+                        </strong>
+
+                        <span id="detalleArchivoNayax"></span>
+                    </div>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="botonQuitarArchivoNayax"
+                    class="boton-cerrar-archivo"
+                    aria-label="Quitar archivo seleccionado"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
 
             </div>
 
@@ -253,11 +304,13 @@
                     </div>
 
                     <div>
+
                         <span>Ventas del día</span>
 
                         <strong id="totalVentasDia">
                             ₡0
                         </strong>
+
                     </div>
 
                 </article>
@@ -269,11 +322,13 @@
                     </div>
 
                     <div>
+
                         <span>Transacciones</span>
 
                         <strong id="cantidadVentasDia">
                             0
                         </strong>
+
                     </div>
 
                 </article>
@@ -285,11 +340,13 @@
                     </div>
 
                     <div>
+
                         <span>Pendientes de validar</span>
 
                         <strong id="ventasPendientes">
                             0
                         </strong>
+
                     </div>
 
                 </article>
@@ -301,11 +358,13 @@
                     </div>
 
                     <div>
+
                         <span>Diferencia de caja</span>
 
                         <strong id="diferenciaCajaDia">
                             ₡0
                         </strong>
+
                     </div>
 
                 </article>
@@ -313,7 +372,7 @@
             </section>
 
             <!-- ==========================================
-                 FILTROS Y TABLA
+                 REGISTRO DE VENTAS
             =========================================== -->
 
             <section class="panel">
@@ -321,12 +380,14 @@
                 <div class="panel-encabezado">
 
                     <div>
+
                         <h2>Registro de ventas</h2>
 
                         <p class="descripcion-panel">
                             Consulta las ventas manuales y los registros
                             importados desde Nayax.
                         </p>
+
                     </div>
 
                 </div>
@@ -393,16 +454,16 @@
                                 Todas las tiendas
                             </option>
 
-                            <option value="Mini Market Centro">
-                                Mini Market Centro
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
                             </option>
 
-                            <option value="Mini Market Sur">
-                                Mini Market Sur
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
                             </option>
 
-                            <option value="Oficina principal">
-                                Oficina principal
+                            <option value="Ultralag">
+                                Ultralag
                             </option>
 
                         </select>
@@ -525,6 +586,7 @@
                         </caption>
 
                         <thead>
+
                             <tr>
                                 <th scope="col">Número</th>
                                 <th scope="col">Fecha y hora</th>
@@ -537,17 +599,16 @@
                                 <th scope="col">Estado</th>
                                 <th scope="col">Acciones</th>
                             </tr>
+
                         </thead>
 
-                        <tbody id="cuerpoTablaVentas">
-                            <!-- JavaScript insertará las ventas aquí -->
-                        </tbody>
+                        <tbody id="cuerpoTablaVentas"></tbody>
 
                     </table>
 
                 </div>
 
-                <!-- Estado vacío -->
+                <!-- Sin ventas -->
 
                 <div
                     id="mensajeSinVentas"
@@ -556,7 +617,9 @@
 
                     <i class="fa-solid fa-receipt"></i>
 
-                    <h3>No hay ventas registradas</h3>
+                    <h3>
+                        No hay ventas registradas
+                    </h3>
 
                     <p>
                         Registra una venta manual o importa los
@@ -584,7 +647,9 @@
 
                     <i class="fa-solid fa-magnifying-glass"></i>
 
-                    <h3>No se encontraron ventas</h3>
+                    <h3>
+                        No se encontraron ventas
+                    </h3>
 
                     <p>
                         Cambia los criterios de búsqueda o limpia
@@ -600,7 +665,7 @@
     </div>
 
     <!-- ==========================================
-         MODAL: REGISTRAR VENTA MANUAL
+         MODAL: REGISTRAR VENTA
     =========================================== -->
 
     <div
@@ -624,6 +689,7 @@
             <div class="encabezado-modal-venta">
 
                 <div>
+
                     <h2 id="tituloModalVenta">
                         Registrar venta manual
                     </h2>
@@ -631,6 +697,7 @@
                     <p>
                         Registra una venta realizada fuera de Nayax.
                     </p>
+
                 </div>
 
                 <button
@@ -666,16 +733,16 @@
                                 Seleccione una tienda
                             </option>
 
-                            <option value="Mini Market Centro">
-                                Mini Market Centro
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
                             </option>
 
-                            <option value="Mini Market Sur">
-                                Mini Market Sur
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
                             </option>
 
-                            <option value="Oficina principal">
-                                Oficina principal
+                            <option value="Ultralag">
+                                Ultralag
                             </option>
 
                         </select>
@@ -725,9 +792,11 @@
                             name="productoVenta"
                             required
                         >
+
                             <option value="">
                                 Seleccione un producto
                             </option>
+
                         </select>
 
                     </div>
@@ -752,7 +821,7 @@
 
                     </div>
 
-                    <!-- Precio unitario -->
+                    <!-- Precio -->
 
                     <div class="grupo-formulario">
 
@@ -808,6 +877,7 @@
                             name="referenciaSinpeVenta"
                             placeholder="Ingrese el número de referencia"
                             maxlength="60"
+                            autocomplete="off"
                         >
 
                     </div>
@@ -838,17 +908,23 @@
 
                     <div>
                         <span>Subtotal</span>
-                        <strong id="subtotalFormularioVenta">₡0</strong>
+                        <strong id="subtotalFormularioVenta">
+                            ₡0
+                        </strong>
                     </div>
 
                     <div>
                         <span>Impuesto</span>
-                        <strong id="impuestoFormularioVenta">₡0</strong>
+                        <strong id="impuestoFormularioVenta">
+                            ₡0
+                        </strong>
                     </div>
 
                     <div class="total-formulario-venta">
                         <span>Total</span>
-                        <strong id="totalFormularioVenta">₡0</strong>
+                        <strong id="totalFormularioVenta">
+                            ₡0
+                        </strong>
                     </div>
 
                 </div>
@@ -886,119 +962,6 @@
     </div>
 
     <!-- ==========================================
-         MODAL: IMPORTAR VENTAS NAYAX
-    =========================================== -->
-
-    <div
-        id="modalImportarNayax"
-        class="modal-producto"
-        hidden
-    >
-
-        <div
-            class="modal-producto-fondo"
-            data-cerrar-modal-nayax
-        ></div>
-
-        <section
-            class="modal-producto-contenido modal-venta-contenido"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tituloModalImportarNayax"
-        >
-
-            <div class="encabezado-modal-venta">
-
-                <div>
-                    <h2 id="tituloModalImportarNayax">
-                        Importar ventas de Nayax
-                    </h2>
-
-                    <p>
-                        Selecciona el archivo que contiene los
-                        registros de ventas.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    id="botonCerrarModalNayax"
-                    class="boton-cerrar-modal"
-                    aria-label="Cerrar importación"
-                >
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-
-            </div>
-
-            <form id="formularioImportarNayax">
-
-                <div class="grupo-formulario">
-
-                    <label for="archivoVentasNayax">
-                        Archivo de ventas
-                    </label>
-
-                    <input
-                        type="file"
-                        id="archivoVentasNayax"
-                        name="archivoVentasNayax"
-                        accept=".csv,.xlsx,.xls"
-                        required
-                    >
-
-                    <small class="texto-ayuda">
-                        El archivo será validado antes de confirmar
-                        la importación.
-                    </small>
-
-                </div>
-
-                <div class="aviso-importacion-nayax">
-
-                    <i class="fa-solid fa-circle-info"></i>
-
-                    <p>
-                        El sistema verificará el formato, los registros
-                        duplicados y la relación de los productos con
-                        el catálogo interno.
-                    </p>
-
-                </div>
-
-                <p
-                    id="mensajeImportacionNayax"
-                    class="mensaje-login"
-                    aria-live="polite"
-                ></p>
-
-                <div class="acciones-modal-producto">
-
-                    <button
-                        type="button"
-                        id="botonCancelarImportacionNayax"
-                        class="boton boton-borde"
-                    >
-                        Cancelar
-                    </button>
-
-                    <button
-                        type="submit"
-                        class="boton boton-azul"
-                    >
-                        <i class="fa-solid fa-file-import"></i>
-                        Validar archivo
-                    </button>
-
-                </div>
-
-            </form>
-
-        </section>
-
-    </div>
-
-    <!-- ==========================================
          MODAL: CIERRE DIARIO
     =========================================== -->
 
@@ -1023,6 +986,7 @@
             <div class="encabezado-modal-venta">
 
                 <div>
+
                     <h2 id="tituloModalCierreCaja">
                         Cierre diario
                     </h2>
@@ -1031,6 +995,7 @@
                         Registra los ingresos y diferencias
                         encontradas durante la jornada.
                     </p>
+
                 </div>
 
                 <button
@@ -1048,6 +1013,8 @@
 
                 <div class="cuadricula-formulario">
 
+                    <!-- Tienda -->
+
                     <div class="grupo-formulario">
 
                         <label for="tiendaCierreCaja">
@@ -1064,21 +1031,23 @@
                                 Seleccione una tienda
                             </option>
 
-                            <option value="Mini Market Centro">
-                                Mini Market Centro
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
                             </option>
 
-                            <option value="Mini Market Sur">
-                                Mini Market Sur
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
                             </option>
 
-                            <option value="Oficina principal">
-                                Oficina principal
+                            <option value="Ultralag">
+                                Ultralag
                             </option>
 
                         </select>
 
                     </div>
+
+                    <!-- Fecha -->
 
                     <div class="grupo-formulario">
 
@@ -1094,6 +1063,8 @@
                         >
 
                     </div>
+
+                    <!-- Efectivo -->
 
                     <div class="grupo-formulario">
 
@@ -1113,6 +1084,8 @@
 
                     </div>
 
+                    <!-- SINPE -->
+
                     <div class="grupo-formulario">
 
                         <label for="montoSinpeCierre">
@@ -1130,6 +1103,8 @@
                         >
 
                     </div>
+
+                    <!-- Tarjeta -->
 
                     <div class="grupo-formulario">
 
@@ -1149,6 +1124,8 @@
 
                     </div>
 
+                    <!-- Diferencia -->
+
                     <div class="grupo-formulario">
 
                         <label for="diferenciaCierreCaja">
@@ -1165,6 +1142,8 @@
                         >
 
                     </div>
+
+                    <!-- Observaciones -->
 
                     <div class="grupo-formulario campo-completo">
 
@@ -1216,7 +1195,6 @@
 
     </div>
 
-    <!-- Archivo JavaScript principal -->
     <script src="../js/app.js"></script>
 
 </body>

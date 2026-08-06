@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Gestión de compras del sistema Vending Mini Market"
+    >
+
+    <title>Compras | Vending Mini Market</title>
+
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+        <div class="logo-sistema">
+
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+            </a>
+
+        </div>
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a
+                href="compras.html"
+                class="activo"
+                aria-current="page"
+            >
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <div class="pie-barra-lateral">
+
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         COLUMNA PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <!-- ==========================================
+             BARRA SUPERIOR
+        =========================================== -->
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir o cerrar menú lateral"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    id="buscadorGeneralCompras"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                    autocomplete="off"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Consultar notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span
+                        class="contador"
+                        id="contadorNotificacionesCompras"
+                        aria-label="0 notificaciones"
+                    >
+                        0
+                    </span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO PRINCIPAL
+        =========================================== -->
+
+        <main class="contenido-app">
+
+            <!-- Encabezado -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+
+                    <h1>Compras</h1>
+
+                    <p>
+                        Administra las órdenes de compra,
+                        pedidos y facturas de proveedores.
+                    </p>
+
+                </div>
+
+                <div class="acciones-encabezado-compras">
+
+                    <a
+                        href="pedido.html"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                        Nuevo pedido
+                    </a>
+
+                    <a
+                        href="facturas.html"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        Ver facturas
+                    </a>
+
+                    <button
+                        type="button"
+                        id="botonNuevaCompra"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-cart-plus"></i>
+                        Nueva compra
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- Mensaje general -->
+
+            <div
+                id="mensajeCompras"
+                class="mensaje-producto"
+                aria-live="polite"
+                hidden
+            ></div>
+
+            <!-- ==========================================
+                 RESUMEN DE COMPRAS
+            =========================================== -->
+
+            <section
+                class="grilla-estadisticas"
+                aria-label="Resumen de compras"
+            >
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Total de compras
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="totalCompras"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Órdenes registradas
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-naranja">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Compras pendientes
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="comprasPendientes"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        En espera de recepción
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-verde">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Compras recibidas
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="comprasRecibidas"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Entregas completadas
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-morado">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Monto comprado
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="montoTotalCompras"
+                            >
+                                ₡0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Total acumulado
+                    </div>
+
+                </article>
+
+            </section>
+
+            <!-- ==========================================
+                 LISTADO DE COMPRAS
+            =========================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>Órdenes de compra</h2>
+
+                        <p class="descripcion-panel">
+                            Consulta las compras registradas
+                            y el estado de cada entrega.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <!-- Filtros -->
+
+                <div class="barra-filtros">
+
+                    <div class="campo-busqueda-filtro">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <label
+                            for="buscarCompra"
+                            class="texto-solo-lectores"
+                        >
+                            Buscar compra
+                        </label>
+
+                        <input
+                            type="search"
+                            id="buscarCompra"
+                            placeholder="Buscar por número, proveedor o referencia..."
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroProveedorCompra">
+                            Proveedor
+                        </label>
+
+                        <select id="filtroProveedorCompra">
+
+                            <option value="">
+                                Todos los proveedores
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroTiendaCompra">
+                            Tienda
+                        </label>
+
+                        <select id="filtroTiendaCompra">
+
+                            <option value="">
+                                Todas las tiendas
+                            </option>
+
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
+                            </option>
+
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
+                            </option>
+
+                            <option value="Ultralag">
+                                Ultralag
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroEstadoCompra">
+                            Estado
+                        </label>
+
+                        <select id="filtroEstadoCompra">
+
+                            <option value="">
+                                Todos los estados
+                            </option>
+
+                            <option value="Pendiente">
+                                Pendiente
+                            </option>
+
+                            <option value="Aprobada">
+                                Aprobada
+                            </option>
+
+                            <option value="Recibida">
+                                Recibida
+                            </option>
+
+                            <option value="Cancelada">
+                                Cancelada
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroFechaCompra">
+                            Fecha
+                        </label>
+
+                        <input
+                            type="date"
+                            id="filtroFechaCompra"
+                        >
+
+                    </div>
+
+                    <button
+                        type="button"
+                        id="botonLimpiarFiltrosCompras"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        Limpiar filtros
+                    </button>
+
+                </div>
+
+                <p
+                    id="resultadoBusquedaCompras"
+                    class="resultado-busqueda-productos"
+                    aria-live="polite"
+                ></p>
+
+                <!-- Tabla -->
+
+                <div
+                    id="contenedorTablaCompras"
+                    class="contenedor-tabla"
+                    hidden
+                >
+
+                    <table class="tabla-datos tabla-compras">
+
+                        <caption class="texto-solo-lectores">
+                            Órdenes de compra registradas
+                        </caption>
+
+                        <thead>
+
+                            <tr>
+                                <th scope="col">Número</th>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Proveedor</th>
+                                <th scope="col">Tienda</th>
+                                <th scope="col">Productos</th>
+                                <th scope="col">Subtotal</th>
+                                <th scope="col">Impuesto</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="cuerpoTablaCompras">
+                            <!-- JavaScript agregará las compras -->
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!-- Sin compras -->
+
+                <div
+                    id="mensajeSinCompras"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-cart-arrow-down"></i>
+
+                    <h3>
+                        No hay compras registradas
+                    </h3>
+
+                    <p>
+                        Registra una compra para comenzar
+                        a controlar los pedidos a proveedores.
+                    </p>
+
+                    <button
+                        type="button"
+                        id="botonPrimeraCompra"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-cart-plus"></i>
+                        Registrar compra
+                    </button>
+
+                </div>
+
+                <!-- Sin resultados -->
+
+                <div
+                    id="mensajeSinResultadosCompras"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <h3>
+                        No se encontraron compras
+                    </h3>
+
+                    <p>
+                        Cambia los filtros o el texto de búsqueda.
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- ==========================================
+         MODAL: NUEVA COMPRA
+    =========================================== -->
+
+    <div
+        id="modalCompra"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-compra
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-compra-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalCompra"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+
+                    <h2 id="tituloModalCompra">
+                        Nueva compra
+                    </h2>
+
+                    <p>
+                        Registra una compra realizada a un proveedor.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalCompra"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar formulario"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <form id="formularioCompra">
+
+                <input
+                    type="hidden"
+                    id="idCompra"
+                >
+
+                <div class="cuadricula-formulario">
+
+                    <!-- Número -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="numeroCompra">
+                            Número de compra
+                        </label>
+
+                        <input
+                            type="text"
+                            id="numeroCompra"
+                            name="numeroCompra"
+                            placeholder="Generado automáticamente"
+                            readonly
+                        >
+
+                    </div>
+
+                    <!-- Fecha -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="fechaCompra">
+                            Fecha de compra
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaCompra"
+                            name="fechaCompra"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Proveedor -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="proveedorCompra">
+                            Proveedor
+                        </label>
+
+                        <input
+                            type="text"
+                            id="proveedorCompra"
+                            name="proveedorCompra"
+                            placeholder="Ingrese el proveedor"
+                            maxlength="100"
+                            autocomplete="off"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Tienda -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="tiendaCompra">
+                            Tienda de destino
+                        </label>
+
+                        <select
+                            id="tiendaCompra"
+                            name="tiendaCompra"
+                            required
+                        >
+
+                            <option value="">
+                                Seleccione una tienda
+                            </option>
+
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
+                            </option>
+
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
+                            </option>
+
+                            <option value="Ultralag">
+                                Ultralag
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Referencia -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="referenciaCompra">
+                            Referencia
+                        </label>
+
+                        <input
+                            type="text"
+                            id="referenciaCompra"
+                            name="referenciaCompra"
+                            placeholder="Factura, cotización u orden"
+                            maxlength="80"
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <!-- Estado -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="estadoCompra">
+                            Estado
+                        </label>
+
+                        <select
+                            id="estadoCompra"
+                            name="estadoCompra"
+                            required
+                        >
+
+                            <option value="Pendiente">
+                                Pendiente
+                            </option>
+
+                            <option value="Aprobada">
+                                Aprobada
+                            </option>
+
+                            <option value="Recibida">
+                                Recibida
+                            </option>
+
+                            <option value="Cancelada">
+                                Cancelada
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <!-- Productos -->
+
+                <div class="seccion-productos-compra">
+
+                    <div class="encabezado-productos-compra">
+
+                        <div>
+
+                            <h3>Productos de la compra</h3>
+
+                            <p>
+                                Agrega los productos incluidos
+                                en la orden.
+                            </p>
+
+                        </div>
+
+                        <button
+                            type="button"
+                            id="botonAgregarProductoCompra"
+                            class="boton boton-borde"
+                        >
+                            <i class="fa-solid fa-plus"></i>
+                            Agregar producto
+                        </button>
+
+                    </div>
+
+                    <div
+                        id="listaProductosCompra"
+                        class="lista-productos-compra"
+                    >
+                        <!-- JavaScript agregará las filas -->
+                    </div>
+
+                    <div
+                        id="mensajeSinProductosCompra"
+                        class="mensaje-productos-compra"
+                    >
+                        Todavía no se han agregado productos.
+                    </div>
+
+                </div>
+
+                <!-- Observaciones -->
+
+                <div class="grupo-formulario">
+
+                    <label for="observacionesCompra">
+                        Observaciones
+                    </label>
+
+                    <textarea
+                        id="observacionesCompra"
+                        name="observacionesCompra"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Agrega observaciones adicionales"
+                    ></textarea>
+
+                </div>
+
+                <!-- Totales -->
+
+                <div class="resumen-compra-formulario">
+
+                    <div>
+
+                        <span>Subtotal</span>
+
+                        <strong id="subtotalCompra">
+                            ₡0
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>Impuesto</span>
+
+                        <strong id="impuestoCompra">
+                            ₡0
+                        </strong>
+
+                    </div>
+
+                    <div class="total-compra-formulario">
+
+                        <span>Total</span>
+
+                        <strong id="totalCompra">
+                            ₡0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <p
+                    id="mensajeFormularioCompra"
+                    class="mensaje-login"
+                    aria-live="polite"
+                ></p>
+
+                <div class="acciones-modal-producto">
+
+                    <button
+                        type="button"
+                        id="botonCancelarCompra"
+                        class="boton boton-borde"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Guardar compra
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+    <script src="../js/app.js"></script>
+
+</body>
+</html>

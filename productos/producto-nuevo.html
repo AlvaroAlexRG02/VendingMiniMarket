@@ -15,8 +15,10 @@
 
     <title>Nuevo producto | Vending Mini Market</title>
 
+    <!-- Hoja de estilos principal -->
     <link rel="stylesheet" href="../css/estilos.css">
 
+    <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -31,9 +33,14 @@
 
     <aside class="barra-lateral">
 
+        <!-- Logo -->
+
         <div class="logo-sistema">
 
-            <a href="../dashboard/dashboard.html">
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
 
                 <img
                     src="../img/logo/logo-vending.jpeg"
@@ -45,7 +52,12 @@
 
         </div>
 
-        <nav class="nav-lateral">
+        <!-- Navegación -->
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
 
             <a href="../dashboard/dashboard.html">
                 <i class="fa-solid fa-chart-pie"></i>
@@ -55,6 +67,7 @@
             <a
                 href="productos.html"
                 class="activo"
+                aria-current="page"
             >
                 <i class="fa-solid fa-box"></i>
                 Productos
@@ -63,11 +76,6 @@
             <a href="../inventario/inventario.html">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
             </a>
 
             <a href="../ventas/ventas.html">
@@ -92,9 +100,14 @@
 
         </nav>
 
+        <!-- Cerrar sesión -->
+
         <div class="pie-barra-lateral">
 
-            <a href="../index/index.html">
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Cerrar sesión
             </a>
@@ -109,17 +122,21 @@
 
     <div class="columna-principal">
 
-        <!-- Barra superior -->
+        <!-- ==========================================
+             BARRA SUPERIOR
+        =========================================== -->
 
         <header class="barra-superior">
 
             <button
                 type="button"
                 class="boton-menu"
-                aria-label="Abrir o cerrar menú"
+                aria-label="Abrir o cerrar menú lateral"
             >
                 <i class="fa-solid fa-bars"></i>
             </button>
+
+            <!-- Buscador general -->
 
             <div class="buscador-superior">
 
@@ -127,28 +144,47 @@
 
                 <input
                     type="search"
+                    id="buscadorGeneralProductoNuevo"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
+                    autocomplete="off"
                 >
 
             </div>
+
+            <!-- Acciones y perfil -->
 
             <div class="acciones-superiores">
 
                 <button
                     type="button"
                     class="boton-notificacion"
-                    aria-label="Notificaciones"
+                    aria-label="Consultar notificaciones"
                 >
                     <i class="fa-regular fa-bell"></i>
-                    <span class="contador">0</span>
+
+                    <span
+                        class="contador"
+                        id="contadorNotificacionesProductoNuevo"
+                        aria-label="0 notificaciones"
+                    >
+                        0
+                    </span>
+
                 </button>
 
                 <div class="perfil-superior">
 
                     <div class="perfil-superior-texto">
-                        <strong>Administrador</strong>
-                        <span>admin@vending.com</span>
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
                     </div>
 
                     <i class="fa-solid fa-chevron-down"></i>
@@ -170,12 +206,14 @@
             <div class="encabezado-pagina">
 
                 <div>
+
                     <h1>Nuevo producto</h1>
 
                     <p>
                         Registra un producto para utilizarlo
                         en productos, inventario y reportes.
                     </p>
+
                 </div>
 
                 <a
@@ -194,6 +232,7 @@
                 id="mensajeProducto"
                 class="mensaje-producto"
                 aria-live="polite"
+                hidden
             ></div>
 
             <!-- ==========================================
@@ -205,12 +244,14 @@
                 <div class="panel-encabezado">
 
                     <div>
+
                         <h2>Información del producto</h2>
 
                         <p class="descripcion-panel">
                             Complete los campos necesarios para
                             agregar el producto al sistema.
                         </p>
+
                     </div>
 
                     <div class="tarjeta-estadistica-icono">
@@ -237,6 +278,7 @@
                                 name="nombreProducto"
                                 placeholder="Ejemplo: Coca-Cola 600 ml"
                                 maxlength="100"
+                                autocomplete="off"
                                 required
                             >
 
@@ -256,6 +298,7 @@
                                 name="codigoProducto"
                                 placeholder="Ejemplo: COCA-600"
                                 maxlength="30"
+                                autocomplete="off"
                                 required
                             >
 
@@ -274,6 +317,7 @@
                                 name="categoriaProducto"
                                 required
                             >
+
                                 <option value="">
                                     Seleccione una categoría
                                 </option>
@@ -301,6 +345,7 @@
                                 <option value="Otros">
                                     Otros
                                 </option>
+
                             </select>
 
                         </div>
@@ -319,6 +364,7 @@
                                 name="proveedorProducto"
                                 placeholder="Nombre del proveedor"
                                 maxlength="100"
+                                autocomplete="off"
                                 required
                             >
 
@@ -404,12 +450,12 @@
 
                         </div>
 
-                        <!-- Ubicación -->
+                        <!-- Tienda -->
 
                         <div class="grupo-formulario">
 
                             <label for="ubicacionProducto">
-                                Ubicación
+                                Tienda
                             </label>
 
                             <select
@@ -417,25 +463,23 @@
                                 name="ubicacionProducto"
                                 required
                             >
+
                                 <option value="">
-                                    Seleccione una ubicación
+                                    Seleccione una tienda
                                 </option>
 
-                                <option value="Bodega principal">
-                                    Bodega principal
+                                <option value="Ultrapark 1">
+                                    Ultrapark 1
                                 </option>
 
-                                <option value="Mini Market Centro">
-                                    Mini Market Centro
+                                <option value="Ultrapark 2">
+                                    Ultrapark 2
                                 </option>
 
-                                <option value="Mini Market Sur">
-                                    Mini Market Sur
+                                <option value="Ultralag">
+                                    Ultralag
                                 </option>
 
-                                <option value="Oficina principal">
-                                    Oficina principal
-                                </option>
                             </select>
 
                         </div>
@@ -453,6 +497,7 @@
                                 name="estadoProducto"
                                 required
                             >
+
                                 <option value="Activo">
                                     Activo
                                 </option>
@@ -460,6 +505,7 @@
                                 <option value="Inactivo">
                                     Inactivo
                                 </option>
+
                             </select>
 
                         </div>
@@ -477,6 +523,7 @@
                                 name="impuestoProducto"
                                 required
                             >
+
                                 <option value="0">
                                     Exento
                                 </option>
@@ -496,6 +543,7 @@
                                 <option value="13">
                                     13%
                                 </option>
+
                             </select>
 
                         </div>
@@ -542,7 +590,7 @@
 
                     </div>
 
-                    <!-- Vista previa de imagen -->
+                    <!-- Vista previa -->
 
                     <div
                         id="contenedorVistaPrevia"
@@ -550,7 +598,9 @@
                         hidden
                     >
 
-                        <span>Vista previa</span>
+                        <span>
+                            Vista previa
+                        </span>
 
                         <img
                             id="vistaPreviaProducto"
@@ -591,6 +641,7 @@
 
     </div>
 
+    <!-- JavaScript general -->
     <script src="../js/app.js"></script>
 
 </body>

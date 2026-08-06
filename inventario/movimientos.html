@@ -17,8 +17,10 @@
         Movimientos de inventario | Vending Mini Market
     </title>
 
+    <!-- Hoja de estilos principal -->
     <link rel="stylesheet" href="../css/estilos.css">
 
+    <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -33,21 +35,31 @@
 
     <aside class="barra-lateral">
 
-       <div class="logo-sistema">
+        <!-- Logo -->
 
-    <a href="../dashboard/dashboard.html">
+        <div class="logo-sistema">
 
-        <img
-            src="../img/logo/logo-vending.jpeg"
-            alt="Logo de Vending Mini Market"
-            class="imagen-logo-sistema"
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
+
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+
+            </a>
+
+        </div>
+
+        <!-- Navegación principal -->
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
         >
-
-    </a>
-
-</div>
-
-        <nav class="nav-lateral">
 
             <a href="../dashboard/dashboard.html">
                 <i class="fa-solid fa-chart-pie"></i>
@@ -62,14 +74,10 @@
             <a
                 href="inventario.html"
                 class="activo"
+                aria-current="page"
             >
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
             </a>
 
             <a href="../ventas/ventas.html">
@@ -94,9 +102,14 @@
 
         </nav>
 
+        <!-- Cerrar sesión -->
+
         <div class="pie-barra-lateral">
 
-            <a href="../index.html">
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Cerrar sesión
             </a>
@@ -111,17 +124,21 @@
 
     <div class="columna-principal">
 
-        <!-- Barra superior -->
+        <!-- ==========================================
+             BARRA SUPERIOR
+        =========================================== -->
 
         <header class="barra-superior">
 
             <button
                 type="button"
                 class="boton-menu"
-                aria-label="Abrir menú"
+                aria-label="Abrir o cerrar menú lateral"
             >
                 <i class="fa-solid fa-bars"></i>
             </button>
+
+            <!-- Buscador general -->
 
             <div class="buscador-superior">
 
@@ -129,28 +146,47 @@
 
                 <input
                     type="search"
+                    id="buscadorGeneralMovimientos"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
+                    autocomplete="off"
                 >
 
             </div>
+
+            <!-- Acciones y perfil -->
 
             <div class="acciones-superiores">
 
                 <button
                     type="button"
                     class="boton-notificacion"
-                    aria-label="Notificaciones"
+                    aria-label="Consultar notificaciones"
                 >
                     <i class="fa-regular fa-bell"></i>
-                    <span class="contador">0</span>
+
+                    <span
+                        class="contador"
+                        id="contadorNotificacionesMovimientos"
+                        aria-label="0 notificaciones"
+                    >
+                        0
+                    </span>
+
                 </button>
 
                 <div class="perfil-superior">
 
                     <div class="perfil-superior-texto">
-                        <strong>Administrador</strong>
-                        <span>admin@vending.com</span>
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
                     </div>
 
                     <i class="fa-solid fa-chevron-down"></i>
@@ -167,17 +203,21 @@
 
         <main class="contenido-app">
 
-            <!-- Encabezado -->
+            <!-- ==========================================
+                 ENCABEZADO
+            =========================================== -->
 
             <div class="encabezado-pagina">
 
                 <div>
+
                     <h1>Movimientos de inventario</h1>
 
                     <p>
                         Registra y consulta entradas, salidas,
                         ajustes, mermas y traslados de productos.
                     </p>
+
                 </div>
 
                 <a
@@ -190,11 +230,25 @@
 
             </div>
 
+            <!-- Mensaje general -->
+
+            <div
+                id="mensajeMovimiento"
+                class="mensaje-producto"
+                aria-live="polite"
+                hidden
+            ></div>
+
             <!-- ==========================================
                  TARJETAS DE RESUMEN
             =========================================== -->
 
-            <section class="grilla-estadisticas">
+            <section
+                class="grilla-estadisticas"
+                aria-label="Resumen de movimientos"
+            >
+
+                <!-- Entradas -->
 
                 <article class="tarjeta-estadistica">
 
@@ -205,6 +259,7 @@
                         </div>
 
                         <div>
+
                             <div class="tarjeta-estadistica-titulo">
                                 Entradas del día
                             </div>
@@ -215,6 +270,7 @@
                             >
                                 0
                             </div>
+
                         </div>
 
                     </div>
@@ -225,6 +281,8 @@
 
                 </article>
 
+                <!-- Salidas -->
+
                 <article class="tarjeta-estadistica borde-verde">
 
                     <div class="tarjeta-estadistica-encabezado">
@@ -234,6 +292,7 @@
                         </div>
 
                         <div>
+
                             <div class="tarjeta-estadistica-titulo">
                                 Salidas del día
                             </div>
@@ -244,6 +303,7 @@
                             >
                                 0
                             </div>
+
                         </div>
 
                     </div>
@@ -254,6 +314,8 @@
 
                 </article>
 
+                <!-- Ajustes -->
+
                 <article class="tarjeta-estadistica borde-naranja">
 
                     <div class="tarjeta-estadistica-encabezado">
@@ -263,6 +325,7 @@
                         </div>
 
                         <div>
+
                             <div class="tarjeta-estadistica-titulo">
                                 Ajustes realizados
                             </div>
@@ -273,6 +336,7 @@
                             >
                                 0
                             </div>
+
                         </div>
 
                     </div>
@@ -283,6 +347,8 @@
 
                 </article>
 
+                <!-- Mermas -->
+
                 <article class="tarjeta-estadistica borde-rojo">
 
                     <div class="tarjeta-estadistica-encabezado">
@@ -292,6 +358,7 @@
                         </div>
 
                         <div>
+
                             <div class="tarjeta-estadistica-titulo">
                                 Mermas registradas
                             </div>
@@ -302,6 +369,7 @@
                             >
                                 0
                             </div>
+
                         </div>
 
                     </div>
@@ -326,18 +394,14 @@
                 <div class="panel-encabezado">
 
                     <div>
+
                         <h2>Registrar movimiento</h2>
 
-                        <p
-                            style="
-                                margin: 4px 0 0;
-                                font-size: 13px;
-                                color: var(--texto-secundario);
-                            "
-                        >
-                            Complete los datos para actualizar
-                            el inventario.
+                        <p class="descripcion-panel">
+                            Complete los datos necesarios para
+                            actualizar el inventario.
                         </p>
+
                     </div>
 
                     <div class="tarjeta-estadistica-icono">
@@ -363,6 +427,7 @@
                                 name="tipoMovimiento"
                                 required
                             >
+
                                 <option value="">
                                     Seleccione un tipo
                                 </option>
@@ -386,6 +451,7 @@
                                 <option value="traslado">
                                     Traslado
                                 </option>
+
                             </select>
 
                         </div>
@@ -403,39 +469,26 @@
                                 name="productoMovimiento"
                                 required
                             >
+
                                 <option value="">
                                     Seleccione un producto
                                 </option>
 
-                                <option value="coca-cola">
-                                    Coca-Cola 355 ml
-                                </option>
+                                <!--
+                                    JavaScript cargará aquí los productos
+                                    registrados y activos.
+                                -->
 
-                                <option value="agua">
-                                    Agua 600 ml
-                                </option>
-
-                                <option value="papas">
-                                    Papas clásicas 42 g
-                                </option>
-
-                                <option value="chocolate">
-                                    Chocolate 50 g
-                                </option>
-
-                                <option value="jugo-naranja">
-                                    Jugo de naranja 350 ml
-                                </option>
                             </select>
 
                         </div>
 
-                        <!-- Ubicación de origen -->
+                        <!-- Tienda de origen -->
 
                         <div class="grupo-formulario">
 
                             <label for="ubicacionOrigen">
-                                Ubicación de origen
+                                Tienda de origen
                             </label>
 
                             <select
@@ -443,60 +496,59 @@
                                 name="ubicacionOrigen"
                                 required
                             >
+
                                 <option value="">
-                                    Seleccione una ubicación
+                                    Seleccione una tienda
                                 </option>
 
-                                <option value="bodega-principal">
-                                    Bodega principal
+                                <option value="Ultrapark 1">
+                                    Ultrapark 1
                                 </option>
 
-                                <option value="mini-market-centro">
-                                    Mini Market Centro
+                                <option value="Ultrapark 2">
+                                    Ultrapark 2
                                 </option>
 
-                                <option value="mini-market-sur">
-                                    Mini Market Sur
+                                <option value="Ultralag">
+                                    Ultralag
                                 </option>
 
-                                <option value="oficina-principal">
-                                    Oficina principal
-                                </option>
                             </select>
 
                         </div>
 
-                        <!-- Ubicación de destino -->
+                        <!-- Tienda de destino -->
 
-                        <div class="grupo-formulario">
+                        <div
+                            class="grupo-formulario"
+                            id="grupoUbicacionDestino"
+                        >
 
                             <label for="ubicacionDestino">
-                                Ubicación de destino
+                                Tienda de destino
                             </label>
 
                             <select
                                 id="ubicacionDestino"
                                 name="ubicacionDestino"
                             >
+
                                 <option value="">
                                     No aplica
                                 </option>
 
-                                <option value="bodega-principal">
-                                    Bodega principal
+                                <option value="Ultrapark 1">
+                                    Ultrapark 1
                                 </option>
 
-                                <option value="mini-market-centro">
-                                    Mini Market Centro
+                                <option value="Ultrapark 2">
+                                    Ultrapark 2
                                 </option>
 
-                                <option value="mini-market-sur">
-                                    Mini Market Sur
+                                <option value="Ultralag">
+                                    Ultralag
                                 </option>
 
-                                <option value="oficina-principal">
-                                    Oficina principal
-                                </option>
                             </select>
 
                         </div>
@@ -550,8 +602,9 @@
                                 type="text"
                                 id="referenciaMovimiento"
                                 name="referenciaMovimiento"
-                                placeholder="Ingrese una referencia"
+                                placeholder="Ejemplo: MOV-001"
                                 maxlength="30"
+                                autocomplete="off"
                             >
 
                         </div>
@@ -569,25 +622,16 @@
                                 name="responsableMovimiento"
                                 required
                             >
+
                                 <option value="">
                                     Seleccione un responsable
                                 </option>
 
-                                <option value="carlos-ramirez">
-                                    Carlos Ramírez
-                                </option>
+                                <!--
+                                    El usuario que inició sesión se
+                                    cargará automáticamente con JavaScript.
+                                -->
 
-                                <option value="maria-lopez">
-                                    María López
-                                </option>
-
-                                <option value="juan-perez">
-                                    Juan Pérez
-                                </option>
-
-                                <option value="ana-torres">
-                                    Ana Torres
-                                </option>
                             </select>
 
                         </div>
@@ -612,10 +656,13 @@
 
                     </div>
 
+                    <!-- Acciones -->
+
                     <div class="acciones-formulario">
 
                         <button
                             type="reset"
+                            id="botonLimpiarMovimiento"
                             class="boton boton-borde"
                         >
                             <i class="fa-solid fa-eraser"></i>
@@ -645,22 +692,19 @@
                 <div class="panel-encabezado">
 
                     <div>
+
                         <h2>Historial de movimientos</h2>
 
-                        <p
-                            style="
-                                margin: 4px 0 0;
-                                font-size: 13px;
-                                color: var(--texto-secundario);
-                            "
-                        >
+                        <p class="descripcion-panel">
                             Consulte los movimientos registrados
                             en el inventario.
                         </p>
+
                     </div>
 
                     <button
                         type="button"
+                        id="botonExportarMovimientos"
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-file-export"></i>
@@ -669,21 +713,35 @@
 
                 </div>
 
-                <!-- Filtros -->
+                <!-- ==========================================
+                     FILTROS
+                =========================================== -->
 
                 <div class="barra-filtros">
+
+                    <!-- Búsqueda -->
 
                     <div class="campo-busqueda-filtro">
 
                         <i class="fa-solid fa-magnifying-glass"></i>
 
+                        <label
+                            for="buscarMovimiento"
+                            class="texto-solo-lectores"
+                        >
+                            Buscar movimiento
+                        </label>
+
                         <input
                             type="search"
                             id="buscarMovimiento"
-                            placeholder="Buscar producto o referencia..."
+                            placeholder="Buscar producto, referencia o responsable..."
+                            autocomplete="off"
                         >
 
                     </div>
+
+                    <!-- Tipo -->
 
                     <div class="selector-filtro">
 
@@ -721,33 +779,37 @@
 
                     </div>
 
+                    <!-- Tienda -->
+
                     <div class="selector-filtro">
 
-                        <label for="filtroUbicacion">
-                            Ubicación
+                        <label for="filtroUbicacionMovimiento">
+                            Tienda
                         </label>
 
-                        <select id="filtroUbicacion">
+                        <select id="filtroUbicacionMovimiento">
 
                             <option value="">
-                                Todas las ubicaciones
+                                Todas las tiendas
                             </option>
 
-                            <option value="bodega-principal">
-                                Bodega principal
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
                             </option>
 
-                            <option value="mini-market-centro">
-                                Mini Market Centro
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
                             </option>
 
-                            <option value="mini-market-sur">
-                                Mini Market Sur
+                            <option value="Ultralag">
+                                Ultralag
                             </option>
 
                         </select>
 
                     </div>
+
+                    <!-- Fecha -->
 
                     <div class="selector-filtro">
 
@@ -762,6 +824,8 @@
 
                     </div>
 
+                    <!-- Limpiar -->
+
                     <button
                         type="button"
                         class="boton boton-borde"
@@ -773,67 +837,51 @@
 
                 </div>
 
-                <!-- Tabla -->
+                <!-- Resultado -->
 
-                <div style="overflow-x: auto;">
+                <p
+                    id="resultadoBusquedaMovimientos"
+                    class="resultado-busqueda-productos"
+                    aria-live="polite"
+                ></p>
+
+                <!-- ==========================================
+                     TABLA
+                =========================================== -->
+
+                <div
+                    id="contenedorTablaMovimientos"
+                    class="contenedor-tabla"
+                >
 
                     <table class="tabla-datos">
 
+                        <caption class="texto-solo-lectores">
+                            Historial de movimientos de inventario
+                        </caption>
+
                         <thead>
+
                             <tr>
-                                <th>Fecha</th>
-                                <th>Referencia</th>
-                                <th>Producto</th>
-                                <th>Tipo</th>
-                                <th>Origen</th>
-                                <th>Destino</th>
-                                <th>Cantidad</th>
-                                <th>Responsable</th>
-                                <th>Acciones</th>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Referencia</th>
+                                <th scope="col">Producto</th>
+                                <th scope="col">Tipo</th>
+                                <th scope="col">Origen</th>
+                                <th scope="col">Destino</th>
+                                <th scope="col">Cantidad</th>
+                                <th scope="col">Responsable</th>
+                                <th scope="col">Acciones</th>
                             </tr>
+
                         </thead>
 
                         <tbody id="tablaMovimientos">
 
-                            <tr>
-
-                                <td
-                                    colspan="9"
-                                    style="
-                                        text-align: center;
-                                        padding: 50px 20px;
-                                        color: var(--texto-secundario);
-                                    "
-                                >
-
-                                    <i
-                                        class="fa-solid fa-box-open"
-                                        style="
-                                            display: block;
-                                            font-size: 34px;
-                                            margin-bottom: 12px;
-                                            color: var(--texto-tenue);
-                                        "
-                                    ></i>
-
-                                    <strong
-                                        style="
-                                            display: block;
-                                            margin-bottom: 6px;
-                                            color: var(--texto-principal);
-                                        "
-                                    >
-                                        No hay movimientos registrados
-                                    </strong>
-
-                                    <span>
-                                        Los movimientos aparecerán aquí
-                                        después de registrarlos.
-                                    </span>
-
-                                </td>
-
-                            </tr>
+                            <!--
+                                JavaScript agregará aquí los movimientos
+                                registrados.
+                            -->
 
                         </tbody>
 
@@ -841,11 +889,58 @@
 
                 </div>
 
-                <!-- Paginación -->
+                <!-- ==========================================
+                     SIN MOVIMIENTOS
+                =========================================== -->
+
+                <div
+                    id="mensajeSinMovimientos"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
+
+                    <h3>
+                        No hay movimientos registrados
+                    </h3>
+
+                    <p>
+                        Los movimientos aparecerán aquí después
+                        de registrarlos.
+                    </p>
+
+                </div>
+
+                <!-- ==========================================
+                     SIN RESULTADOS
+                =========================================== -->
+
+                <div
+                    id="mensajeSinResultadosMovimientos"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <h3>
+                        No se encontraron movimientos
+                    </h3>
+
+                    <p>
+                        Cambia los filtros o el texto de búsqueda.
+                    </p>
+
+                </div>
+
+                <!-- ==========================================
+                     PAGINACIÓN
+                =========================================== -->
 
                 <div class="paginacion">
 
-                    <span>
+                    <span id="textoPaginacionMovimientos">
                         No hay movimientos registrados
                     </span>
 
@@ -853,6 +948,7 @@
 
                         <button
                             type="button"
+                            id="botonPaginaAnteriorMovimientos"
                             disabled
                             aria-label="Página anterior"
                         >
@@ -861,6 +957,7 @@
 
                         <button
                             type="button"
+                            id="paginaActualMovimientos"
                             class="activo"
                             disabled
                         >
@@ -869,6 +966,7 @@
 
                         <button
                             type="button"
+                            id="botonPaginaSiguienteMovimientos"
                             disabled
                             aria-label="Página siguiente"
                         >
@@ -885,6 +983,7 @@
 
     </div>
 
+    <!-- JavaScript general -->
     <script src="../js/app.js"></script>
 
 </body>

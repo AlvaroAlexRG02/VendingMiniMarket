@@ -15,10 +15,8 @@
 
     <title>Iniciar sesión | Vending Mini Market</title>
 
-    <!-- Hoja de estilos principal -->
     <link rel="stylesheet" href="../css/estilos.css">
 
-    <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -30,12 +28,11 @@
     <main class="contenedor-login">
 
         <!-- ==========================================
-             PANEL IZQUIERDO: INFORMACIÓN DEL SISTEMA
+             PANEL IZQUIERDO
         =========================================== -->
 
         <section class="panel-login-marca">
 
-            <!-- Logo del sistema -->
             <div class="logo-login">
 
                 <img
@@ -46,7 +43,6 @@
 
             </div>
 
-            <!-- Información descriptiva -->
             <div class="contenido-marca-login">
 
                 <div class="linea-login"></div>
@@ -63,7 +59,6 @@
 
             </div>
 
-            <!-- Mensaje de seguridad -->
             <div class="seguridad-login">
 
                 <div class="seguridad-login-icono">
@@ -77,7 +72,7 @@
                     </strong>
 
                     <p>
-                        Tus datos se encuentran protegidos.
+                        El acceso está limitado a usuarios autorizados.
                     </p>
 
                 </div>
@@ -87,19 +82,17 @@
         </section>
 
         <!-- ==========================================
-             PANEL DERECHO: FORMULARIO DE ACCESO
+             PANEL DERECHO
         =========================================== -->
 
         <section class="panel-login-formulario">
 
             <div class="tarjeta-login">
 
-                <!-- Icono superior -->
                 <div class="icono-login">
                     <i class="fa-solid fa-cube"></i>
                 </div>
 
-                <!-- Encabezado -->
                 <header class="encabezado-login">
 
                     <h2>Iniciar sesión</h2>
@@ -110,15 +103,19 @@
 
                 </header>
 
-                <!-- Formulario -->
+                <!--
+                    No se utiliza action ni method.
+                    app.js valida los datos antes de ingresar.
+                -->
+
                 <form
                     id="formularioLogin"
                     class="formulario-login"
-                    action="../dashboard/dashboard.html"
-                    method="get"
+                    novalidate
                 >
 
-                    <!-- Usuario -->
+                    <!-- Usuario o correo -->
+
                     <div class="grupo-formulario">
 
                         <label for="usuario">
@@ -135,6 +132,7 @@
                                 name="usuario"
                                 placeholder="Ingrese su usuario o correo"
                                 autocomplete="username"
+                                maxlength="100"
                                 required
                             >
 
@@ -143,6 +141,7 @@
                     </div>
 
                     <!-- Contraseña -->
+
                     <div class="grupo-formulario">
 
                         <label for="contrasena">
@@ -159,6 +158,7 @@
                                 name="contrasena"
                                 placeholder="Ingrese su contraseña"
                                 autocomplete="current-password"
+                                maxlength="100"
                                 required
                             >
 
@@ -166,7 +166,7 @@
                                 type="button"
                                 id="botonMostrarContrasena"
                                 class="boton-mostrar-contrasena"
-                                aria-label="Mostrar u ocultar contraseña"
+                                aria-label="Mostrar contraseña"
                                 title="Mostrar contraseña"
                             >
 
@@ -181,7 +181,8 @@
 
                     </div>
 
-                    <!-- Opciones adicionales -->
+                    <!-- Opciones -->
+
                     <div class="opciones-login">
 
                         <label class="opcion-recordar">
@@ -198,23 +199,26 @@
 
                         </label>
 
-                        <a
-                            href="#"
-                            class="enlace-recuperar"
+                        <button
+                            type="button"
+                            id="botonRecuperarContrasena"
+                            class="enlace-recuperar boton-enlace-login"
                         >
                             ¿Olvidó su contraseña?
-                        </a>
+                        </button>
 
                     </div>
 
-                    <!-- Mensaje de validación -->
+                    <!-- Mensajes -->
+
                     <p
                         id="mensajeLogin"
                         class="mensaje-login"
                         aria-live="polite"
                     ></p>
 
-                    <!-- Botón de ingreso -->
+                    <!-- Ingresar -->
+
                     <button
                         type="submit"
                         class="boton-principal boton-ingresar"
@@ -232,7 +236,8 @@
 
             </div>
 
-            <!-- Decoración de fondo -->
+            <!-- Decoración -->
+
             <div
                 class="decoracion-login"
                 aria-hidden="true"
@@ -266,7 +271,6 @@
 
             </div>
 
-            <!-- Pie de página -->
             <footer class="pie-login">
 
                 <p>
@@ -280,7 +284,6 @@
 
     </main>
 
-    <!-- Archivo JavaScript principal -->
     <script src="../js/app.js"></script>
 
 </body>

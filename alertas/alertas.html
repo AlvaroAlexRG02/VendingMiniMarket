@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Consulta y gestión de alertas del sistema Vending Mini Market"
+    >
+
+    <title>Alertas | Vending Mini Market</title>
+
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+        <div class="logo-sistema">
+
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+            </a>
+
+        </div>
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a
+                href="alertas.html"
+                class="activo"
+                aria-current="page"
+            >
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <div class="pie-barra-lateral">
+
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         COLUMNA PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <!-- ==========================================
+             BARRA SUPERIOR
+        =========================================== -->
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir o cerrar menú lateral"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    id="buscadorGeneralAlertas"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                    autocomplete="off"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Consultar notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span
+                        class="contador"
+                        id="contadorNotificacionesAlertas"
+                        aria-label="0 notificaciones"
+                    >
+                        0
+                    </span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO
+        =========================================== -->
+
+        <main class="contenido-app">
+
+            <!-- Encabezado -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+
+                    <h1>Alertas</h1>
+
+                    <p>
+                        Consulta avisos de inventario, ventas,
+                        cierres de caja e importaciones pendientes.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="botonActualizarAlertas"
+                    class="boton boton-azul"
+                >
+                    <i class="fa-solid fa-rotate"></i>
+                    Actualizar alertas
+                </button>
+
+            </div>
+
+            <!-- Mensaje general -->
+
+            <div
+                id="mensajeAlertas"
+                class="mensaje-producto"
+                aria-live="polite"
+                hidden
+            ></div>
+
+            <!-- ==========================================
+                 RESUMEN
+            =========================================== -->
+
+            <section
+                class="grilla-estadisticas"
+                aria-label="Resumen de alertas"
+            >
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-bell"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Total de alertas
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="totalAlertas"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Avisos registrados
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-rojo">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Alertas críticas
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="alertasCriticas"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Requieren atención inmediata
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-naranja">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Alertas pendientes
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="alertasPendientes"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Avisos sin atender
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica borde-verde">
+
+                    <div class="tarjeta-estadistica-encabezado">
+
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="tarjeta-estadistica-titulo">
+                                Alertas atendidas
+                            </div>
+
+                            <div
+                                class="tarjeta-estadistica-valor"
+                                id="alertasAtendidas"
+                            >
+                                0
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="tarjeta-estadistica-cambio">
+                        Avisos revisados
+                    </div>
+
+                </article>
+
+            </section>
+
+            <!-- ==========================================
+                 LISTADO DE ALERTAS
+            =========================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>Alertas del sistema</h2>
+
+                        <p class="descripcion-panel">
+                            Revisa los eventos que requieren atención.
+                        </p>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        id="botonMarcarTodasAlertas"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-check-double"></i>
+                        Marcar todas como atendidas
+                    </button>
+
+                </div>
+
+                <!-- Filtros -->
+
+                <div class="barra-filtros">
+
+                    <div class="campo-busqueda-filtro">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <label
+                            for="buscarAlerta"
+                            class="texto-solo-lectores"
+                        >
+                            Buscar alerta
+                        </label>
+
+                        <input
+                            type="search"
+                            id="buscarAlerta"
+                            placeholder="Buscar por producto, tienda o descripción..."
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroTipoAlerta">
+                            Tipo
+                        </label>
+
+                        <select id="filtroTipoAlerta">
+
+                            <option value="">
+                                Todos los tipos
+                            </option>
+
+                            <option value="Inventario">
+                                Inventario
+                            </option>
+
+                            <option value="Venta">
+                                Venta
+                            </option>
+
+                            <option value="Cierre de caja">
+                                Cierre de caja
+                            </option>
+
+                            <option value="Nayax">
+                                Nayax
+                            </option>
+
+                            <option value="Movimiento">
+                                Movimiento
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroPrioridadAlerta">
+                            Prioridad
+                        </label>
+
+                        <select id="filtroPrioridadAlerta">
+
+                            <option value="">
+                                Todas las prioridades
+                            </option>
+
+                            <option value="Crítica">
+                                Crítica
+                            </option>
+
+                            <option value="Alta">
+                                Alta
+                            </option>
+
+                            <option value="Media">
+                                Media
+                            </option>
+
+                            <option value="Baja">
+                                Baja
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroTiendaAlerta">
+                            Tienda
+                        </label>
+
+                        <select id="filtroTiendaAlerta">
+
+                            <option value="">
+                                Todas las tiendas
+                            </option>
+
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
+                            </option>
+
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
+                            </option>
+
+                            <option value="Ultralag">
+                                Ultralag
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="selector-filtro">
+
+                        <label for="filtroEstadoAlerta">
+                            Estado
+                        </label>
+
+                        <select id="filtroEstadoAlerta">
+
+                            <option value="">
+                                Todos los estados
+                            </option>
+
+                            <option value="Pendiente">
+                                Pendiente
+                            </option>
+
+                            <option value="Atendida">
+                                Atendida
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        id="botonLimpiarFiltrosAlertas"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        Limpiar filtros
+                    </button>
+
+                </div>
+
+                <p
+                    id="resultadoBusquedaAlertas"
+                    class="resultado-busqueda-productos"
+                    aria-live="polite"
+                ></p>
+
+                <!-- Contenedor -->
+
+                <div
+                    id="listaAlertas"
+                    class="lista-alertas"
+                >
+                    <!-- JavaScript agregará las alertas -->
+                </div>
+
+                <!-- Estado vacío -->
+
+                <div
+                    id="mensajeSinAlertas"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-regular fa-bell-slash"></i>
+
+                    <h3>
+                        No hay alertas registradas
+                    </h3>
+
+                    <p>
+                        Los avisos del sistema aparecerán aquí
+                        cuando exista una situación que requiera atención.
+                    </p>
+
+                </div>
+
+                <!-- Sin resultados -->
+
+                <div
+                    id="mensajeSinResultadosAlertas"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <h3>
+                        No se encontraron alertas
+                    </h3>
+
+                    <p>
+                        Cambia los filtros o el texto de búsqueda.
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="../js/app.js"></script>
+
+</body>
+</html>

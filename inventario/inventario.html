@@ -15,10 +15,10 @@
 
     <title>Inventario | Vending Mini Market</title>
 
-    <!-- Hoja de estilos general -->
+    <!-- Hoja de estilos principal -->
     <link rel="stylesheet" href="../css/estilos.css">
 
-    <!-- Biblioteca de iconos -->
+    <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -33,10 +33,14 @@
 
     <aside class="barra-lateral">
 
-        <!-- Logo del sistema -->
+        <!-- Logo -->
+
         <div class="logo-sistema">
 
-            <a href="../dashboard/dashboard.html">
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
 
                 <img
                     src="../img/logo/logo-vending.jpeg"
@@ -48,8 +52,12 @@
 
         </div>
 
-        <!-- Menú lateral -->
-        <nav class="nav-lateral">
+        <!-- Navegación principal -->
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
 
             <a href="../dashboard/dashboard.html">
                 <i class="fa-solid fa-chart-pie"></i>
@@ -64,14 +72,10 @@
             <a
                 href="inventario.html"
                 class="activo"
+                aria-current="page"
             >
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
             </a>
 
             <a href="../ventas/ventas.html">
@@ -97,9 +101,13 @@
         </nav>
 
         <!-- Cerrar sesión -->
+
         <div class="pie-barra-lateral">
 
-            <a href="../index.html">
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion"
+            >
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Cerrar sesión
             </a>
@@ -128,34 +136,55 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
 
+            <!-- Buscador general -->
+
             <div class="buscador-superior">
 
                 <i class="fa-solid fa-magnifying-glass"></i>
 
                 <input
                     type="search"
+                    id="buscadorGeneralInventario"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
+                    autocomplete="off"
                 >
 
             </div>
+
+            <!-- Acciones y perfil -->
 
             <div class="acciones-superiores">
 
                 <button
                     type="button"
                     class="boton-notificacion"
-                    aria-label="Ver notificaciones"
+                    aria-label="Consultar notificaciones"
                 >
                     <i class="fa-regular fa-bell"></i>
-                    <span class="contador">0</span>
+
+                    <span
+                        class="contador"
+                        id="contadorNotificacionesInventario"
+                        aria-label="0 notificaciones"
+                    >
+                        0
+                    </span>
+
                 </button>
 
                 <div class="perfil-superior">
 
                     <div class="perfil-superior-texto">
-                        <strong>Administrador</strong>
-                        <span>admin@vending.com</span>
+
+                        <strong id="nombreUsuarioSuperior">
+                            Administrador
+                        </strong>
+
+                        <span id="correoUsuarioSuperior">
+                            admin@vending.com
+                        </span>
+
                     </div>
 
                     <i class="fa-solid fa-chevron-down"></i>
@@ -172,36 +201,41 @@
 
         <main class="contenido-app">
 
-            <!-- Encabezado de la página -->
+            <!-- ==========================================
+                 ENCABEZADO
+            =========================================== -->
 
             <div class="encabezado-pagina">
 
                 <div>
+
                     <h1>Inventario</h1>
 
                     <p>
-                        Gestión de stock y movimientos de productos
+                        Consulta el stock disponible por tienda
+                        y registra movimientos de inventario.
                     </p>
+
                 </div>
 
-                <button
-                    type="button"
-                    class="selector-fecha"
+                <a
+                    href="movimientos.html"
+                    class="boton boton-azul"
                 >
-                    <i class="fa-regular fa-calendar"></i>
-
-                    Fecha actual
-
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
+                    <i class="fa-solid fa-plus"></i>
+                    Registrar movimiento
+                </a>
 
             </div>
 
             <!-- ==========================================
-                 TARJETAS DE RESUMEN
+                 RESUMEN DE INVENTARIO
             =========================================== -->
 
-            <section class="grilla-estadisticas">
+            <section
+                class="grilla-estadisticas"
+                aria-label="Resumen del inventario"
+            >
 
                 <!-- Stock total -->
 
@@ -210,7 +244,7 @@
                     <div class="tarjeta-estadistica-encabezado">
 
                         <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-box"></i>
+                            <i class="fa-solid fa-boxes-stacked"></i>
                         </div>
 
                         <div>
@@ -220,17 +254,15 @@
                             </div>
 
                             <div class="tarjeta-estadistica-valor">
-                                0
 
-                                <span
-                                    style="
-                                        font-size: 13px;
-                                        font-weight: 500;
-                                        color: var(--texto-secundario);
-                                    "
-                                >
+                                <span id="totalStockInventario">
+                                    0
+                                </span>
+
+                                <span class="unidad-tarjeta">
                                     unidades
                                 </span>
+
                             </div>
 
                         </div>
@@ -238,7 +270,7 @@
                     </div>
 
                     <div class="tarjeta-estadistica-cambio">
-                        Productos disponibles
+                        Unidades disponibles
                     </div>
 
                 </article>
@@ -260,17 +292,15 @@
                             </div>
 
                             <div class="tarjeta-estadistica-valor">
-                                0
 
-                                <span
-                                    style="
-                                        font-size: 13px;
-                                        font-weight: 500;
-                                        color: var(--texto-secundario);
-                                    "
-                                >
+                                <span id="totalStockCriticoInventario">
+                                    0
+                                </span>
+
+                                <span class="unidad-tarjeta">
                                     productos
                                 </span>
+
                             </div>
 
                         </div>
@@ -283,7 +313,7 @@
 
                 </article>
 
-                <!-- Productos agotados -->
+                <!-- Agotados -->
 
                 <article class="tarjeta-estadistica borde-rojo">
 
@@ -300,17 +330,15 @@
                             </div>
 
                             <div class="tarjeta-estadistica-valor">
-                                0
 
-                                <span
-                                    style="
-                                        font-size: 13px;
-                                        font-weight: 500;
-                                        color: var(--texto-secundario);
-                                    "
-                                >
+                                <span id="totalProductosAgotadosInventario">
+                                    0
+                                </span>
+
+                                <span class="unidad-tarjeta">
                                     productos
                                 </span>
+
                             </div>
 
                         </div>
@@ -318,7 +346,7 @@
                     </div>
 
                     <div class="tarjeta-estadistica-cambio">
-                        Sin existencias
+                        Productos sin existencias
                     </div>
 
                 </article>
@@ -340,17 +368,15 @@
                             </div>
 
                             <div class="tarjeta-estadistica-valor">
-                                0
 
-                                <span
-                                    style="
-                                        font-size: 13px;
-                                        font-weight: 500;
-                                        color: var(--texto-secundario);
-                                    "
-                                >
+                                <span id="totalMovimientosDiaInventario">
+                                    0
+                                </span>
+
+                                <span class="unidad-tarjeta">
                                     movimientos
                                 </span>
+
                             </div>
 
                         </div>
@@ -358,7 +384,7 @@
                     </div>
 
                     <div class="tarjeta-estadistica-cambio">
-                        Entradas, salidas y ajustes
+                        Entradas, salidas, ajustes y traslados
                     </div>
 
                 </article>
@@ -371,53 +397,80 @@
 
             <section class="panel">
 
-                <!-- Filtros -->
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>Inventario por tienda</h2>
+
+                        <p class="descripcion-panel">
+                            Consulta las existencias registradas
+                            para cada producto y tienda.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <!-- ==========================================
+                     FILTROS
+                =========================================== -->
 
                 <div class="barra-filtros">
+
+                    <!-- Búsqueda -->
 
                     <div class="campo-busqueda-filtro">
 
                         <i class="fa-solid fa-magnifying-glass"></i>
 
+                        <label
+                            for="buscarInventario"
+                            class="texto-solo-lectores"
+                        >
+                            Buscar producto
+                        </label>
+
                         <input
                             type="search"
                             id="buscarInventario"
-                            placeholder="Buscar producto..."
+                            placeholder="Buscar por producto, código o proveedor..."
+                            autocomplete="off"
                         >
 
                     </div>
 
+                    <!-- Tienda -->
+
                     <div class="selector-filtro">
 
                         <label for="filtroUbicacion">
-                            Ubicación
+                            Tienda
                         </label>
 
                         <select id="filtroUbicacion">
 
                             <option value="">
-                                Todas las ubicaciones
+                                Todas las tiendas
                             </option>
 
-                            <option value="bodega-principal">
-                                Bodega principal
+                            <option value="Ultrapark 1">
+                                Ultrapark 1
                             </option>
 
-                            <option value="mini-market-centro">
-                                Mini Market Centro
+                            <option value="Ultrapark 2">
+                                Ultrapark 2
                             </option>
 
-                            <option value="mini-market-sur">
-                                Mini Market Sur
-                            </option>
-
-                            <option value="oficina-principal">
-                                Oficina principal
+                            <option value="Ultralag">
+                                Ultralag
                             </option>
 
                         </select>
 
                     </div>
+
+                    <!-- Categoría -->
 
                     <div class="selector-filtro">
 
@@ -431,30 +484,40 @@
                                 Todas las categorías
                             </option>
 
-                            <option value="bebidas">
+                            <option value="Bebidas">
                                 Bebidas
                             </option>
 
-                            <option value="snacks">
+                            <option value="Snacks">
                                 Snacks
                             </option>
 
-                            <option value="alimentos">
+                            <option value="Alimentos">
                                 Alimentos
                             </option>
 
-                            <option value="dulces">
+                            <option value="Dulces">
                                 Dulces
+                            </option>
+
+                            <option value="Lácteos">
+                                Lácteos
+                            </option>
+
+                            <option value="Otros">
+                                Otros
                             </option>
 
                         </select>
 
                     </div>
 
+                    <!-- Estado -->
+
                     <div class="selector-filtro">
 
                         <label for="filtroEstado">
-                            Estado
+                            Estado de stock
                         </label>
 
                         <select id="filtroEstado">
@@ -483,45 +546,67 @@
 
                     </div>
 
+                    <!-- Limpiar filtros -->
+
+                    <button
+                        type="button"
+                        id="botonLimpiarFiltrosInventario"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        Limpiar filtros
+                    </button>
+
                 </div>
 
-                <!-- Botones de inventario -->
+                <!-- Resultado -->
 
-                <div
-                    style="
-                        display: flex;
-                        gap: 12px;
-                        margin-bottom: 20px;
-                        flex-wrap: wrap;
-                    "
-                >
+                <p
+                    id="resultadoBusquedaInventario"
+                    class="resultado-busqueda-productos"
+                    aria-live="polite"
+                ></p>
+
+                <!-- ==========================================
+                     ACCIONES
+                =========================================== -->
+
+                <div class="acciones-inventario">
 
                     <a
-                        href="movimientos.html"
+                        href="movimientos.html?tipo=entrada"
                         class="boton boton-azul"
                     >
-                        <i class="fa-solid fa-plus"></i>
-                        Registrar movimiento
+                        <i class="fa-solid fa-arrow-down"></i>
+                        Entrada
                     </a>
 
                     <a
-                        href="movimientos.html"
+                        href="movimientos.html?tipo=salida"
                         class="boton boton-borde"
                     >
-                        <i class="fa-solid fa-pen-to-square"></i>
+                        <i class="fa-solid fa-arrow-up"></i>
+                        Salida
+                    </a>
+
+                    <a
+                        href="movimientos.html?tipo=ajuste"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-sliders"></i>
                         Ajuste
                     </a>
 
                     <a
-                        href="movimientos.html"
+                        href="movimientos.html?tipo=merma"
                         class="boton boton-borde"
                     >
-                        <i class="fa-solid fa-trash"></i>
+                        <i class="fa-solid fa-trash-can"></i>
                         Merma
                     </a>
 
                     <a
-                        href="movimientos.html"
+                        href="movimientos.html?tipo=traslado"
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-right-left"></i>
@@ -531,69 +616,41 @@
                 </div>
 
                 <!-- ==========================================
-                     TABLA DEL INVENTARIO
+                     TABLA
                 =========================================== -->
 
-                <div style="overflow-x: auto;">
+                <div
+                    id="contenedorTablaInventario"
+                    class="contenedor-tabla"
+                >
 
                     <table class="tabla-datos">
 
+                        <caption class="texto-solo-lectores">
+                            Inventario de productos por tienda
+                        </caption>
+
                         <thead>
+
                             <tr>
-                                <th>Producto</th>
-                                <th>Ubicación</th>
-                                <th>Stock actual</th>
-                                <th>Stock mínimo</th>
-                                <th>Estado</th>
-                                <th>Último movimiento</th>
-                                <th>Acciones</th>
+                                <th scope="col">Producto</th>
+                                <th scope="col">Código</th>
+                                <th scope="col">Tienda</th>
+                                <th scope="col">Stock actual</th>
+                                <th scope="col">Stock mínimo</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Último movimiento</th>
+                                <th scope="col">Acciones</th>
                             </tr>
+
                         </thead>
 
                         <tbody id="tablaInventario">
 
-                            <!-- La tabla comienza sin productos -->
-
-                            <tr>
-
-                                <td
-                                    colspan="7"
-                                    style="
-                                        text-align: center;
-                                        padding: 55px 20px;
-                                        color: var(--texto-secundario);
-                                    "
-                                >
-
-                                    <i
-                                        class="fa-solid fa-box-open"
-                                        style="
-                                            display: block;
-                                            margin-bottom: 14px;
-                                            font-size: 38px;
-                                            color: var(--texto-tenue);
-                                        "
-                                    ></i>
-
-                                    <strong
-                                        style="
-                                            display: block;
-                                            margin-bottom: 7px;
-                                            color: var(--texto-principal);
-                                            font-size: 15px;
-                                        "
-                                    >
-                                        No hay productos registrados
-                                    </strong>
-
-                                    <span>
-                                        Los productos aparecerán aquí cuando
-                                        sean agregados al inventario.
-                                    </span>
-
-                                </td>
-
-                            </tr>
+                            <!--
+                                JavaScript agregará aquí los productos
+                                registrados en el sistema.
+                            -->
 
                         </tbody>
 
@@ -602,7 +659,60 @@
                 </div>
 
                 <!-- ==========================================
-                     PIE DE LA TABLA
+                     INVENTARIO VACÍO
+                =========================================== -->
+
+                <div
+                    id="mensajeSinInventario"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-box-open"></i>
+
+                    <h3>
+                        No hay productos registrados
+                    </h3>
+
+                    <p>
+                        Los productos aparecerán en esta sección
+                        después de registrarlos.
+                    </p>
+
+                    <a
+                        href="../productos/producto-nuevo.html"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-plus"></i>
+                        Registrar producto
+                    </a>
+
+                </div>
+
+                <!-- ==========================================
+                     SIN RESULTADOS
+                =========================================== -->
+
+                <div
+                    id="mensajeSinResultadosInventario"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <h3>
+                        No se encontraron productos
+                    </h3>
+
+                    <p>
+                        Cambia los filtros o el texto de búsqueda.
+                    </p>
+
+                </div>
+
+                <!-- ==========================================
+                     PAGINACIÓN
                 =========================================== -->
 
                 <div class="paginacion">
@@ -615,6 +725,7 @@
 
                         <button
                             type="button"
+                            id="botonPaginaAnteriorInventario"
                             disabled
                             aria-label="Página anterior"
                         >
@@ -623,6 +734,7 @@
 
                         <button
                             type="button"
+                            id="botonPaginaSiguienteInventario"
                             disabled
                             aria-label="Página siguiente"
                         >
