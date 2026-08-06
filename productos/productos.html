@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Consulta y administración del catálogo de productos de Vending Mini Market"
+    >
+
+    <title>Productos | Vending Mini Market</title>
+
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+        <div class="logo-sistema">
+
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
+
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+
+            </a>
+
+        </div>
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a
+                href="productos.html"
+                class="activo"
+                aria-current="page"
+            >
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <div class="pie-barra-lateral">
+
+            <a href="../index/index.html">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         CONTENIDO PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir o cerrar menú lateral"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Consultar notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span
+                        class="contador"
+                        aria-label="0 notificaciones"
+                    >
+                        0
+                    </span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+                        <strong>Administrador</strong>
+                        <span>admin@vending.com</span>
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <main class="contenido-app">
+
+            <!-- ==========================================
+                 ENCABEZADO
+            =========================================== -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+                    <h1>Productos</h1>
+
+                    <p>
+                        Consulta y administra los productos
+                        registrados en el sistema.
+                    </p>
+                </div>
+
+                <a
+                    href="producto-nuevo.html"
+                    class="boton boton-azul"
+                >
+                    <i class="fa-solid fa-plus"></i>
+                    Nuevo producto
+                </a>
+
+            </div>
+
+            <!-- ==========================================
+                 RESUMEN
+            =========================================== -->
+
+            <section
+                class="resumen-productos"
+                aria-label="Resumen de productos"
+            >
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+
+                    <div>
+                        <span>Total de productos</span>
+                        <strong id="totalProductos">0</strong>
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+
+                    <div>
+                        <span>Productos activos</span>
+                        <strong id="productosActivos">0</strong>
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </div>
+
+                    <div>
+                        <span>Productos inactivos</span>
+                        <strong id="productosInactivos">0</strong>
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+
+                    <div>
+                        <span>Productos con stock bajo</span>
+                        <strong id="productosStockBajo">0</strong>
+                    </div>
+
+                </article>
+
+            </section>
+
+            <!-- ==========================================
+                 CATÁLOGO
+            =========================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+                        <h2>Catálogo de productos</h2>
+
+                        <p class="descripcion-panel">
+                            Busca productos por nombre, categoría,
+                            proveedor o código.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Filtros -->
+
+                <div class="barra-filtros productos-filtros">
+
+                    <div class="campo-busqueda-productos">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <label
+                            for="buscarProducto"
+                            class="texto-solo-lectores"
+                        >
+                            Buscar productos
+                        </label>
+
+                        <input
+                            type="search"
+                            id="buscarProducto"
+                            placeholder="Buscar por nombre, categoría, proveedor o código..."
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <div class="campo-filtro-producto">
+
+                        <label for="filtroCategoriaProducto">
+                            Categoría
+                        </label>
+
+                        <select id="filtroCategoriaProducto">
+                            <option value="">
+                                Todas las categorías
+                            </option>
+                        </select>
+
+                    </div>
+
+                    <div class="campo-filtro-producto">
+
+                        <label for="filtroEstadoProducto">
+                            Estado
+                        </label>
+
+                        <select id="filtroEstadoProducto">
+
+                            <option value="">
+                                Todos los estados
+                            </option>
+
+                            <option value="Activo">
+                                Activo
+                            </option>
+
+                            <option value="Inactivo">
+                                Inactivo
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        id="botonLimpiarFiltrosProductos"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        Limpiar filtros
+                    </button>
+
+                </div>
+
+                <!-- Mensaje de resultado -->
+
+                <p
+                    id="resultadoBusquedaProductos"
+                    class="resultado-busqueda-productos"
+                    aria-live="polite"
+                ></p>
+
+                <!-- Tabla -->
+
+                <div
+                    id="contenedorTablaProductos"
+                    class="contenedor-tabla"
+                >
+
+                    <table class="tabla-datos">
+
+                        <caption class="texto-solo-lectores">
+                            Catálogo de productos registrados
+                        </caption>
+
+                        <thead>
+                            <tr>
+                                <th scope="col">Producto</th>
+                                <th scope="col">Código</th>
+                                <th scope="col">Categoría</th>
+                                <th scope="col">Proveedor</th>
+                                <th scope="col">Costo</th>
+                                <th scope="col">IVA</th>
+                                <th scope="col">Stock</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="cuerpoTablaProductos">
+                            <!-- Los datos se agregan con JavaScript -->
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!-- Estado vacío -->
+
+                <div
+                    id="mensajeSinProductos"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-box-open"></i>
+
+                    <h3>No hay productos registrados</h3>
+
+                    <p>
+                        Registra el primer producto para que aparezca
+                        en el catálogo.
+                    </p>
+
+                    <a
+                        href="producto-nuevo.html"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-plus"></i>
+                        Registrar producto
+                    </a>
+
+                </div>
+
+                <!-- Sin resultados -->
+
+                <div
+                    id="mensajeSinResultadosProductos"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <h3>No se encontraron coincidencias</h3>
+
+                    <p>
+                        Cambia el texto de búsqueda o limpia los filtros.
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- Cuadro de confirmación -->
+
+    <div
+        id="modalEstadoProducto"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-producto
+        ></div>
+
+        <section
+            class="modal-producto-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalEstadoProducto"
+        >
+
+            <div class="modal-producto-icono">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+
+            <h2 id="tituloModalEstadoProducto">
+                Cambiar estado
+            </h2>
+
+            <p id="textoModalEstadoProducto"></p>
+
+            <div class="acciones-modal-producto">
+
+                <button
+                    type="button"
+                    id="botonCancelarEstadoProducto"
+                    class="boton boton-borde"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="button"
+                    id="botonConfirmarEstadoProducto"
+                    class="boton boton-azul"
+                >
+                    Confirmar
+                </button>
+
+            </div>
+
+        </section>
+
+    </div>
+
+    <script src="../js/app.js"></script>
+
+</body>
+</html>

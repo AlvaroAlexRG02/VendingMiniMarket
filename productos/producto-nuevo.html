@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Registro de productos del sistema Vending Mini Market"
+    >
+
+    <title>Nuevo producto | Vending Mini Market</title>
+
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+        <div class="logo-sistema">
+
+            <a href="../dashboard/dashboard.html">
+
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+
+            </a>
+
+        </div>
+
+        <nav class="nav-lateral">
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a
+                href="productos.html"
+                class="activo"
+            >
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <div class="pie-barra-lateral">
+
+            <a href="../index/index.html">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         COLUMNA PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <!-- Barra superior -->
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir o cerrar menú"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="contador">0</span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+                        <strong>Administrador</strong>
+                        <span>admin@vending.com</span>
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO
+        =========================================== -->
+
+        <main class="contenido-app">
+
+            <!-- Encabezado -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+                    <h1>Nuevo producto</h1>
+
+                    <p>
+                        Registra un producto para utilizarlo
+                        en productos, inventario y reportes.
+                    </p>
+                </div>
+
+                <a
+                    href="productos.html"
+                    class="boton boton-borde"
+                >
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Volver a productos
+                </a>
+
+            </div>
+
+            <!-- Mensaje de resultado -->
+
+            <div
+                id="mensajeProducto"
+                class="mensaje-producto"
+                aria-live="polite"
+            ></div>
+
+            <!-- ==========================================
+                 FORMULARIO
+            =========================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+                        <h2>Información del producto</h2>
+
+                        <p class="descripcion-panel">
+                            Complete los campos necesarios para
+                            agregar el producto al sistema.
+                        </p>
+                    </div>
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+
+                </div>
+
+                <form id="formularioProducto">
+
+                    <div class="cuadricula-formulario">
+
+                        <!-- Nombre -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="nombreProducto">
+                                Nombre del producto
+                            </label>
+
+                            <input
+                                type="text"
+                                id="nombreProducto"
+                                name="nombreProducto"
+                                placeholder="Ejemplo: Coca-Cola 600 ml"
+                                maxlength="100"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Código -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="codigoProducto">
+                                Código del producto
+                            </label>
+
+                            <input
+                                type="text"
+                                id="codigoProducto"
+                                name="codigoProducto"
+                                placeholder="Ejemplo: COCA-600"
+                                maxlength="30"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Categoría -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="categoriaProducto">
+                                Categoría
+                            </label>
+
+                            <select
+                                id="categoriaProducto"
+                                name="categoriaProducto"
+                                required
+                            >
+                                <option value="">
+                                    Seleccione una categoría
+                                </option>
+
+                                <option value="Bebidas">
+                                    Bebidas
+                                </option>
+
+                                <option value="Snacks">
+                                    Snacks
+                                </option>
+
+                                <option value="Alimentos">
+                                    Alimentos
+                                </option>
+
+                                <option value="Dulces">
+                                    Dulces
+                                </option>
+
+                                <option value="Lácteos">
+                                    Lácteos
+                                </option>
+
+                                <option value="Otros">
+                                    Otros
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Proveedor -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="proveedorProducto">
+                                Proveedor
+                            </label>
+
+                            <input
+                                type="text"
+                                id="proveedorProducto"
+                                name="proveedorProducto"
+                                placeholder="Nombre del proveedor"
+                                maxlength="100"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Precio de compra -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="precioCompraProducto">
+                                Precio de compra
+                            </label>
+
+                            <input
+                                type="number"
+                                id="precioCompraProducto"
+                                name="precioCompraProducto"
+                                min="0"
+                                step="0.01"
+                                placeholder="0.00"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Precio de venta -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="precioVentaProducto">
+                                Precio de venta
+                            </label>
+
+                            <input
+                                type="number"
+                                id="precioVentaProducto"
+                                name="precioVentaProducto"
+                                min="0"
+                                step="0.01"
+                                placeholder="0.00"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Stock inicial -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="stockProducto">
+                                Stock inicial
+                            </label>
+
+                            <input
+                                type="number"
+                                id="stockProducto"
+                                name="stockProducto"
+                                min="0"
+                                step="1"
+                                placeholder="0"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Stock mínimo -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="stockMinimoProducto">
+                                Stock mínimo
+                            </label>
+
+                            <input
+                                type="number"
+                                id="stockMinimoProducto"
+                                name="stockMinimoProducto"
+                                min="0"
+                                step="1"
+                                placeholder="0"
+                                required
+                            >
+
+                        </div>
+
+                        <!-- Ubicación -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="ubicacionProducto">
+                                Ubicación
+                            </label>
+
+                            <select
+                                id="ubicacionProducto"
+                                name="ubicacionProducto"
+                                required
+                            >
+                                <option value="">
+                                    Seleccione una ubicación
+                                </option>
+
+                                <option value="Bodega principal">
+                                    Bodega principal
+                                </option>
+
+                                <option value="Mini Market Centro">
+                                    Mini Market Centro
+                                </option>
+
+                                <option value="Mini Market Sur">
+                                    Mini Market Sur
+                                </option>
+
+                                <option value="Oficina principal">
+                                    Oficina principal
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Estado -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="estadoProducto">
+                                Estado
+                            </label>
+
+                            <select
+                                id="estadoProducto"
+                                name="estadoProducto"
+                                required
+                            >
+                                <option value="Activo">
+                                    Activo
+                                </option>
+
+                                <option value="Inactivo">
+                                    Inactivo
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Impuesto -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="impuestoProducto">
+                                Impuesto
+                            </label>
+
+                            <select
+                                id="impuestoProducto"
+                                name="impuestoProducto"
+                                required
+                            >
+                                <option value="0">
+                                    Exento
+                                </option>
+
+                                <option value="1">
+                                    1%
+                                </option>
+
+                                <option value="2">
+                                    2%
+                                </option>
+
+                                <option value="4">
+                                    4%
+                                </option>
+
+                                <option value="13">
+                                    13%
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <!-- Imagen -->
+
+                        <div class="grupo-formulario">
+
+                            <label for="imagenProducto">
+                                Imagen del producto
+                            </label>
+
+                            <input
+                                type="file"
+                                id="imagenProducto"
+                                name="imagenProducto"
+                                accept="image/png, image/jpeg, image/webp"
+                            >
+
+                            <small class="texto-ayuda">
+                                Utilice una imagen pequeña en formato
+                                PNG, JPG o WEBP.
+                            </small>
+
+                        </div>
+
+                        <!-- Descripción -->
+
+                        <div class="grupo-formulario campo-completo">
+
+                            <label for="descripcionProducto">
+                                Descripción
+                            </label>
+
+                            <textarea
+                                id="descripcionProducto"
+                                name="descripcionProducto"
+                                rows="4"
+                                maxlength="300"
+                                placeholder="Descripción u observaciones del producto..."
+                            ></textarea>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Vista previa de imagen -->
+
+                    <div
+                        id="contenedorVistaPrevia"
+                        class="contenedor-vista-previa"
+                        hidden
+                    >
+
+                        <span>Vista previa</span>
+
+                        <img
+                            id="vistaPreviaProducto"
+                            src=""
+                            alt="Vista previa del producto"
+                        >
+
+                    </div>
+
+                    <!-- Botones -->
+
+                    <div class="acciones-formulario">
+
+                        <button
+                            type="reset"
+                            id="botonLimpiarProducto"
+                            class="boton boton-borde"
+                        >
+                            <i class="fa-solid fa-eraser"></i>
+                            Limpiar
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="boton boton-azul"
+                        >
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            Guardar producto
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="../js/app.js"></script>
+
+</body>
+</html>

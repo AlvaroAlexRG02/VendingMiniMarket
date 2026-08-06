@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Registro, consulta e importación de ventas de Vending Mini Market"
+    >
+
+    <title>Ventas | Vending Mini Market</title>
+
+    <!-- Hoja de estilos principal -->
+    <link rel="stylesheet" href="../css/estilos.css">
+
+    <!-- Biblioteca de iconos Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-app">
+
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
+
+    <aside class="barra-lateral">
+
+        <div class="logo-sistema">
+
+            <a
+                href="../dashboard/dashboard.html"
+                aria-label="Ir al Dashboard"
+            >
+
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema"
+                >
+
+            </a>
+
+        </div>
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
+
+            <a href="../dashboard/dashboard.html">
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a
+                href="ventas.html"
+                class="activo"
+                aria-current="page"
+            >
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.html">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+        </nav>
+
+        <div class="pie-barra-lateral">
+
+            <a href="../index/index.html">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ==========================================
+         CONTENIDO PRINCIPAL
+    =========================================== -->
+
+    <div class="columna-principal">
+
+        <!-- ==========================================
+             BARRA SUPERIOR
+        =========================================== -->
+
+        <header class="barra-superior">
+
+            <button
+                type="button"
+                class="boton-menu"
+                aria-label="Abrir o cerrar menú lateral"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="search"
+                    placeholder="Buscar en el sistema..."
+                    aria-label="Buscar en el sistema"
+                >
+
+            </div>
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Consultar notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span
+                        class="contador"
+                        aria-label="0 notificaciones"
+                    >
+                        0
+                    </span>
+                </button>
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-texto">
+                        <strong>Administrador</strong>
+                        <span>admin@vending.com</span>
+                    </div>
+
+                    <i class="fa-solid fa-chevron-down"></i>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO DE VENTAS
+        =========================================== -->
+
+        <main class="contenido-app">
+
+            <!-- Encabezado -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+                    <h1>Ventas</h1>
+
+                    <p>
+                        Consulta ventas, registra ingresos manuales
+                        e importa información proveniente de Nayax.
+                    </p>
+                </div>
+
+                <div class="acciones-encabezado-ventas">
+
+                    <button
+                        type="button"
+                        id="botonImportarVentasNayax"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-file-import"></i>
+                        Importar Nayax
+                    </button>
+
+                    <button
+                        type="button"
+                        id="botonAbrirCierreCaja"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-cash-register"></i>
+                        Cierre diario
+                    </button>
+
+                    <button
+                        type="button"
+                        id="botonNuevaVenta"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-plus"></i>
+                        Registrar venta
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- Mensaje general -->
+
+            <div
+                id="mensajeVentas"
+                class="mensaje-producto"
+                aria-live="polite"
+                hidden
+            ></div>
+
+            <!-- ==========================================
+                 RESUMEN DE VENTAS
+            =========================================== -->
+
+            <section
+                class="resumen-ventas"
+                aria-label="Resumen de ventas"
+            >
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+
+                    <div>
+                        <span>Ventas del día</span>
+
+                        <strong id="totalVentasDia">
+                            ₡0
+                        </strong>
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+
+                    <div>
+                        <span>Transacciones</span>
+
+                        <strong id="cantidadVentasDia">
+                            0
+                        </strong>
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+
+                    <div>
+                        <span>Pendientes de validar</span>
+
+                        <strong id="ventasPendientes">
+                            0
+                        </strong>
+                    </div>
+
+                </article>
+
+                <article class="tarjeta-estadistica">
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+
+                    <div>
+                        <span>Diferencia de caja</span>
+
+                        <strong id="diferenciaCajaDia">
+                            ₡0
+                        </strong>
+                    </div>
+
+                </article>
+
+            </section>
+
+            <!-- ==========================================
+                 FILTROS Y TABLA
+            =========================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+                        <h2>Registro de ventas</h2>
+
+                        <p class="descripcion-panel">
+                            Consulta las ventas manuales y los registros
+                            importados desde Nayax.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Filtros -->
+
+                <div class="barra-filtros ventas-filtros">
+
+                    <div class="campo-busqueda-ventas">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <label
+                            for="buscarVenta"
+                            class="texto-solo-lectores"
+                        >
+                            Buscar ventas
+                        </label>
+
+                        <input
+                            type="search"
+                            id="buscarVenta"
+                            placeholder="Buscar por número, producto, tienda o usuario..."
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <div class="campo-filtro-venta">
+
+                        <label for="fechaDesdeVenta">
+                            Desde
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaDesdeVenta"
+                        >
+
+                    </div>
+
+                    <div class="campo-filtro-venta">
+
+                        <label for="fechaHastaVenta">
+                            Hasta
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaHastaVenta"
+                        >
+
+                    </div>
+
+                    <div class="campo-filtro-venta">
+
+                        <label for="filtroTiendaVenta">
+                            Tienda
+                        </label>
+
+                        <select id="filtroTiendaVenta">
+
+                            <option value="">
+                                Todas las tiendas
+                            </option>
+
+                            <option value="Mini Market Centro">
+                                Mini Market Centro
+                            </option>
+
+                            <option value="Mini Market Sur">
+                                Mini Market Sur
+                            </option>
+
+                            <option value="Oficina principal">
+                                Oficina principal
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="campo-filtro-venta">
+
+                        <label for="filtroOrigenVenta">
+                            Origen
+                        </label>
+
+                        <select id="filtroOrigenVenta">
+
+                            <option value="">
+                                Todos los orígenes
+                            </option>
+
+                            <option value="Manual">
+                                Venta manual
+                            </option>
+
+                            <option value="Nayax">
+                                Nayax
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="campo-filtro-venta">
+
+                        <label for="filtroMetodoPagoVenta">
+                            Método de pago
+                        </label>
+
+                        <select id="filtroMetodoPagoVenta">
+
+                            <option value="">
+                                Todos los métodos
+                            </option>
+
+                            <option value="Efectivo">
+                                Efectivo
+                            </option>
+
+                            <option value="SINPE">
+                                SINPE
+                            </option>
+
+                            <option value="Tarjeta">
+                                Tarjeta
+                            </option>
+
+                            <option value="Crédito prepago">
+                                Crédito prepago
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="campo-filtro-venta">
+
+                        <label for="filtroEstadoVenta">
+                            Estado
+                        </label>
+
+                        <select id="filtroEstadoVenta">
+
+                            <option value="">
+                                Todos los estados
+                            </option>
+
+                            <option value="Confirmada">
+                                Confirmada
+                            </option>
+
+                            <option value="Pendiente">
+                                Pendiente
+                            </option>
+
+                            <option value="Rechazada">
+                                Rechazada
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        id="botonLimpiarFiltrosVentas"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        Limpiar
+                    </button>
+
+                </div>
+
+                <p
+                    id="resultadoBusquedaVentas"
+                    class="resultado-busqueda-productos"
+                    aria-live="polite"
+                ></p>
+
+                <!-- Tabla -->
+
+                <div
+                    id="contenedorTablaVentas"
+                    class="contenedor-tabla"
+                    hidden
+                >
+
+                    <table class="tabla-datos tabla-ventas">
+
+                        <caption class="texto-solo-lectores">
+                            Registro de ventas del sistema
+                        </caption>
+
+                        <thead>
+                            <tr>
+                                <th scope="col">Número</th>
+                                <th scope="col">Fecha y hora</th>
+                                <th scope="col">Tienda</th>
+                                <th scope="col">Origen</th>
+                                <th scope="col">Método de pago</th>
+                                <th scope="col">Subtotal</th>
+                                <th scope="col">Impuesto</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="cuerpoTablaVentas">
+                            <!-- JavaScript insertará las ventas aquí -->
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!-- Estado vacío -->
+
+                <div
+                    id="mensajeSinVentas"
+                    class="estado-vacio-productos"
+                >
+
+                    <i class="fa-solid fa-receipt"></i>
+
+                    <h3>No hay ventas registradas</h3>
+
+                    <p>
+                        Registra una venta manual o importa los
+                        registros provenientes de Nayax.
+                    </p>
+
+                    <button
+                        type="button"
+                        id="botonPrimeraVenta"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-plus"></i>
+                        Registrar primera venta
+                    </button>
+
+                </div>
+
+                <!-- Sin resultados -->
+
+                <div
+                    id="mensajeSinResultadosVentas"
+                    class="estado-vacio-productos"
+                    hidden
+                >
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <h3>No se encontraron ventas</h3>
+
+                    <p>
+                        Cambia los criterios de búsqueda o limpia
+                        los filtros seleccionados.
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- ==========================================
+         MODAL: REGISTRAR VENTA MANUAL
+    =========================================== -->
+
+    <div
+        id="modalVenta"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-venta
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-venta-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalVenta"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+                    <h2 id="tituloModalVenta">
+                        Registrar venta manual
+                    </h2>
+
+                    <p>
+                        Registra una venta realizada fuera de Nayax.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalVenta"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar formulario"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <form id="formularioVenta">
+
+                <div class="cuadricula-formulario">
+
+                    <!-- Tienda -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="tiendaVenta">
+                            Tienda
+                        </label>
+
+                        <select
+                            id="tiendaVenta"
+                            name="tiendaVenta"
+                            required
+                        >
+
+                            <option value="">
+                                Seleccione una tienda
+                            </option>
+
+                            <option value="Mini Market Centro">
+                                Mini Market Centro
+                            </option>
+
+                            <option value="Mini Market Sur">
+                                Mini Market Sur
+                            </option>
+
+                            <option value="Oficina principal">
+                                Oficina principal
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Método de pago -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="metodoPagoVenta">
+                            Método de pago
+                        </label>
+
+                        <select
+                            id="metodoPagoVenta"
+                            name="metodoPagoVenta"
+                            required
+                        >
+
+                            <option value="">
+                                Seleccione un método
+                            </option>
+
+                            <option value="Efectivo">
+                                Efectivo
+                            </option>
+
+                            <option value="SINPE">
+                                SINPE
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Producto -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="productoVenta">
+                            Producto
+                        </label>
+
+                        <select
+                            id="productoVenta"
+                            name="productoVenta"
+                            required
+                        >
+                            <option value="">
+                                Seleccione un producto
+                            </option>
+                        </select>
+
+                    </div>
+
+                    <!-- Cantidad -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="cantidadVenta">
+                            Cantidad
+                        </label>
+
+                        <input
+                            type="number"
+                            id="cantidadVenta"
+                            name="cantidadVenta"
+                            min="1"
+                            step="1"
+                            value="1"
+                            required
+                        >
+
+                    </div>
+
+                    <!-- Precio unitario -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="precioUnitarioVenta">
+                            Precio unitario
+                        </label>
+
+                        <input
+                            type="number"
+                            id="precioUnitarioVenta"
+                            name="precioUnitarioVenta"
+                            min="0"
+                            step="0.01"
+                            readonly
+                        >
+
+                    </div>
+
+                    <!-- Impuesto -->
+
+                    <div class="grupo-formulario">
+
+                        <label for="impuestoVenta">
+                            Impuesto
+                        </label>
+
+                        <input
+                            type="number"
+                            id="impuestoVenta"
+                            name="impuestoVenta"
+                            min="0"
+                            step="0.01"
+                            readonly
+                        >
+
+                    </div>
+
+                    <!-- Referencia SINPE -->
+
+                    <div
+                        id="grupoReferenciaSinpe"
+                        class="grupo-formulario campo-completo"
+                        hidden
+                    >
+
+                        <label for="referenciaSinpeVenta">
+                            Referencia del SINPE
+                        </label>
+
+                        <input
+                            type="text"
+                            id="referenciaSinpeVenta"
+                            name="referenciaSinpeVenta"
+                            placeholder="Ingrese el número de referencia"
+                            maxlength="60"
+                        >
+
+                    </div>
+
+                    <!-- Observaciones -->
+
+                    <div class="grupo-formulario campo-completo">
+
+                        <label for="observacionesVenta">
+                            Observaciones
+                        </label>
+
+                        <textarea
+                            id="observacionesVenta"
+                            name="observacionesVenta"
+                            rows="3"
+                            maxlength="300"
+                            placeholder="Ingrese una observación cuando sea necesario"
+                        ></textarea>
+
+                    </div>
+
+                </div>
+
+                <!-- Resumen -->
+
+                <div class="resumen-formulario-venta">
+
+                    <div>
+                        <span>Subtotal</span>
+                        <strong id="subtotalFormularioVenta">₡0</strong>
+                    </div>
+
+                    <div>
+                        <span>Impuesto</span>
+                        <strong id="impuestoFormularioVenta">₡0</strong>
+                    </div>
+
+                    <div class="total-formulario-venta">
+                        <span>Total</span>
+                        <strong id="totalFormularioVenta">₡0</strong>
+                    </div>
+
+                </div>
+
+                <p
+                    id="mensajeFormularioVenta"
+                    class="mensaje-login"
+                    aria-live="polite"
+                ></p>
+
+                <div class="acciones-modal-producto">
+
+                    <button
+                        type="button"
+                        id="botonCancelarVenta"
+                        class="boton boton-borde"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Confirmar venta
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+    <!-- ==========================================
+         MODAL: IMPORTAR VENTAS NAYAX
+    =========================================== -->
+
+    <div
+        id="modalImportarNayax"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-nayax
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-venta-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalImportarNayax"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+                    <h2 id="tituloModalImportarNayax">
+                        Importar ventas de Nayax
+                    </h2>
+
+                    <p>
+                        Selecciona el archivo que contiene los
+                        registros de ventas.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalNayax"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar importación"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <form id="formularioImportarNayax">
+
+                <div class="grupo-formulario">
+
+                    <label for="archivoVentasNayax">
+                        Archivo de ventas
+                    </label>
+
+                    <input
+                        type="file"
+                        id="archivoVentasNayax"
+                        name="archivoVentasNayax"
+                        accept=".csv,.xlsx,.xls"
+                        required
+                    >
+
+                    <small class="texto-ayuda">
+                        El archivo será validado antes de confirmar
+                        la importación.
+                    </small>
+
+                </div>
+
+                <div class="aviso-importacion-nayax">
+
+                    <i class="fa-solid fa-circle-info"></i>
+
+                    <p>
+                        El sistema verificará el formato, los registros
+                        duplicados y la relación de los productos con
+                        el catálogo interno.
+                    </p>
+
+                </div>
+
+                <p
+                    id="mensajeImportacionNayax"
+                    class="mensaje-login"
+                    aria-live="polite"
+                ></p>
+
+                <div class="acciones-modal-producto">
+
+                    <button
+                        type="button"
+                        id="botonCancelarImportacionNayax"
+                        class="boton boton-borde"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-file-import"></i>
+                        Validar archivo
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+    <!-- ==========================================
+         MODAL: CIERRE DIARIO
+    =========================================== -->
+
+    <div
+        id="modalCierreCaja"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-cierre
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-venta-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalCierreCaja"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+                    <h2 id="tituloModalCierreCaja">
+                        Cierre diario
+                    </h2>
+
+                    <p>
+                        Registra los ingresos y diferencias
+                        encontradas durante la jornada.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalCierre"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar formulario de cierre"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <form id="formularioCierreCaja">
+
+                <div class="cuadricula-formulario">
+
+                    <div class="grupo-formulario">
+
+                        <label for="tiendaCierreCaja">
+                            Tienda
+                        </label>
+
+                        <select
+                            id="tiendaCierreCaja"
+                            name="tiendaCierreCaja"
+                            required
+                        >
+
+                            <option value="">
+                                Seleccione una tienda
+                            </option>
+
+                            <option value="Mini Market Centro">
+                                Mini Market Centro
+                            </option>
+
+                            <option value="Mini Market Sur">
+                                Mini Market Sur
+                            </option>
+
+                            <option value="Oficina principal">
+                                Oficina principal
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="grupo-formulario">
+
+                        <label for="fechaCierreCaja">
+                            Fecha
+                        </label>
+
+                        <input
+                            type="date"
+                            id="fechaCierreCaja"
+                            name="fechaCierreCaja"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="grupo-formulario">
+
+                        <label for="montoEfectivoCierre">
+                            Efectivo contado
+                        </label>
+
+                        <input
+                            type="number"
+                            id="montoEfectivoCierre"
+                            name="montoEfectivoCierre"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="grupo-formulario">
+
+                        <label for="montoSinpeCierre">
+                            Total SINPE
+                        </label>
+
+                        <input
+                            type="number"
+                            id="montoSinpeCierre"
+                            name="montoSinpeCierre"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="grupo-formulario">
+
+                        <label for="montoTarjetaCierre">
+                            Total tarjeta
+                        </label>
+
+                        <input
+                            type="number"
+                            id="montoTarjetaCierre"
+                            name="montoTarjetaCierre"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="grupo-formulario">
+
+                        <label for="diferenciaCierreCaja">
+                            Diferencia
+                        </label>
+
+                        <input
+                            type="number"
+                            id="diferenciaCierreCaja"
+                            name="diferenciaCierreCaja"
+                            step="0.01"
+                            value="0"
+                            readonly
+                        >
+
+                    </div>
+
+                    <div class="grupo-formulario campo-completo">
+
+                        <label for="observacionesCierreCaja">
+                            Observaciones
+                        </label>
+
+                        <textarea
+                            id="observacionesCierreCaja"
+                            name="observacionesCierreCaja"
+                            rows="4"
+                            maxlength="500"
+                            placeholder="Describa diferencias, incidencias o información importante del cierre"
+                        ></textarea>
+
+                    </div>
+
+                </div>
+
+                <p
+                    id="mensajeCierreCaja"
+                    class="mensaje-login"
+                    aria-live="polite"
+                ></p>
+
+                <div class="acciones-modal-producto">
+
+                    <button
+                        type="button"
+                        id="botonCancelarCierreCaja"
+                        class="boton boton-borde"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Guardar cierre
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+    <!-- Archivo JavaScript principal -->
+    <script src="../js/app.js"></script>
+
+</body>
+</html>
