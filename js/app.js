@@ -3883,70 +3883,720 @@ function inicializarPaginaUsuariosVending() {
         const boton=evento.target.closest("button[data-usuario]"); if(!boton)return;
         boton.dataset.accion === "editar" ? prepararFormularioUsuarioVending(boton.dataset.usuario) : cambiarEstadoUsuarioVending(boton.dataset.usuario);
     });
+
+    cargarTiendasUsuarioVending();
     renderUsuariosVending();
 }
 
-function prepararFormularioUsuarioVending(id = "") {
-    const form=document.getElementById("formularioUsuario"); form?.reset();
-    document.getElementById("idUsuario").value=id;
-    const usuario=leerListaVending(CLAVE_USUARIOS_VENDING).find(u=>u.id===id);
-    textoVending("tituloModalUsuario", usuario ? "Editar usuario" : "Nuevo usuario");
-    if(usuario){
-        document.getElementById("nombreUsuario").value=usuario.nombre||"";
-        document.getElementById("nombreAccesoUsuario").value=usuario.usuario||"";
-        document.getElementById("correoUsuario").value=usuario.correo||"";
-        document.getElementById("rolUsuario").value=usuario.rol||"Trabajador";
-        document.getElementById("tiendaUsuario").value=usuario.tienda||"Ultrapark 1";
-        document.getElementById("estadoUsuario").value=usuario.activo===false?"Inactivo":"Activo";
-        document.getElementById("contrasenaUsuario").required=false;
-        document.getElementById("confirmarContrasenaUsuario").required=false;
+async function cargarTiendasUsuarioVending() {
+
+    const select =
+        document.getElementById("tiendaUsuario");
+
+    if (!select) {
+        return;
     }
-    abrirModalVending("modalUsuario");
+
+    try {
+
+        const respuesta = await fetch(
+            "../api/usuarios/listar_tiendas.php",
+            {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                }
+            }
+        );
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.exito) {
+
+            console.error(
+                resultado.mensaje ||
+                "No fue posible cargar las tiendas."
+            );
+
+            return;
+        }
+
+        select.innerHTML = `
+            <option value="">
+                Seleccione una tienda
+            </option>
+        `;
+
+        (resultado.tiendas || []).forEach(tienda => {
+
+            const opcion =
+                document.createElement("option");
+
+            opcion.value = tienda.id_tienda;
+
+            opcion.textContent = tienda.nombre;
+
+            select.appendChild(opcion);
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Error al cargar tiendas:",
+            error
+        );
+    }
 }
 
-function guardarUsuarioVending(evento) {
+async function prepararFormularioUsuarioVending(id = "") {
+
+    const form = document.getElementById("formularioUsuario");
+
+    form?.reset();
+
+    document.getElementById("idUsuario").value = id;
+
+    textoVending(
+        "tituloModalUsuario",
+        id ? "Editar usuario" : "Nuevo usuario"
+    );
+
+    // Si es un usuario nuevo
+    if (!id) {
+
+        document.getElementById("contrasenaUsuario").required = true;
+        document.getElementById("confirmarContrasenaUsuario").required = true;
+
+        abrirModalVending("modalUsuario");
+
+        return;
+    }
+
+    try {
+
+        const respuesta = await fetch(
+            `../api/usuarios/obtener.php?id=${encodeURIComponent(id)}`,
+            {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                }
+            }
+        );
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.exito) {
+
+            mostrarMensajeModuloVending(
+                "mensajeUsuarios",
+                resultado.mensaje ||
+                "No fue posible consultar el usuario.",
+                "error"
+            );
+
+            return;
+        }
+
+        const usuario = resultado.usuario;
+
+        document.getElementById("nombreUsuario").value =
+            usuario.nombre || "";
+
+        document.getElementById("apellidoUsuario").value =
+            usuario.apellido || "";
+
+        document.getElementById("correoUsuario").value =
+            usuario.correo || "";
+
+        document.getElementById("rolUsuario").value =
+            usuario.id_rol || "";
+
+        document.getElementById("tiendaUsuario").value =
+    usuario.id_tienda || "";
+
+        document.getElementById("estadoUsuario").value =
+            usuario.estado === true ||
+            usuario.estado === "true"
+                ? "Activo"
+                : "Inactivo";
+
+        // Al editar, la contraseña no es obligatoria.
+        document.getElementById("contrasenaUsuario").required = false;
+
+        document.getElementById("confirmarContrasenaUsuario").required = false;
+
+        abrirModalVending("modalUsuario");
+
+    } catch (error) {
+
+        console.error(
+            "Error al consultar usuario:",
+            error
+        );
+
+        mostrarMensajeModuloVending(
+            "mensajeUsuarios",
+            "No fue posible comunicarse con el servidor.",
+            "error"
+        );
+    }
+}
+
+async function guardarUsuarioVending(evento) {
+
     evento.preventDefault();
-    const id=document.getElementById("idUsuario").value;
-    const clave=document.getElementById("contrasenaUsuario").value;
-    const confirmar=document.getElementById("confirmarContrasenaUsuario").value;
-    if((!id || clave) && clave.length<8){ textoVending("mensajeFormularioUsuario","La contraseña debe tener al menos 8 caracteres."); return; }
-    if(clave!==confirmar){ textoVending("mensajeFormularioUsuario","Las contraseñas no coinciden."); return; }
-    const usuarios=leerListaVending(CLAVE_USUARIOS_VENDING);
-    const correo=document.getElementById("correoUsuario").value.trim();
-    if(usuarios.some(u=>u.correo.toLowerCase()===correo.toLowerCase() && u.id!==id)){
-        textoVending("mensajeFormularioUsuario","Ya existe un usuario con ese correo."); return;
+
+    const id =
+        document.getElementById("idUsuario")?.value || "";
+
+    const nombre =
+        document.getElementById("nombreUsuario")?.value.trim() || "";
+
+    const apellido =
+        document.getElementById("apellidoUsuario")?.value.trim() || "";
+
+    const correo =
+        document.getElementById("correoUsuario")?.value.trim() || "";
+
+    const idRol =
+        document.getElementById("rolUsuario")?.value || "";
+
+    const estado =
+        document.getElementById("estadoUsuario")?.value === "Activo";
+
+    const contrasena =
+        document.getElementById("contrasenaUsuario")?.value || "";
+
+    const confirmarContrasena =
+        document.getElementById("confirmarContrasenaUsuario")?.value || "";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validaciones
+    |--------------------------------------------------------------------------
+    */
+
+    if (!nombre || !apellido || !correo || !idRol) {
+
+        textoVending(
+            "mensajeFormularioUsuario",
+            "Debe completar todos los campos obligatorios."
+        );
+
+        return;
     }
-    const previo=usuarios.find(u=>u.id===id);
-    const registro={
-        id:id||generarIdVending("USR"), nombre:document.getElementById("nombreUsuario").value.trim(),
-        usuario:document.getElementById("nombreAccesoUsuario").value.trim(), correo,
-        rol:document.getElementById("rolUsuario").value, tienda:document.getElementById("tiendaUsuario").value,
-        activo:document.getElementById("estadoUsuario").value==="Activo",
-        contrasena:clave||previo?.contrasena||"", fechaRegistro:previo?.fechaRegistro||fechaHoyVending()
-    };
-    const indice=usuarios.findIndex(u=>u.id===registro.id);
-    indice>=0 ? usuarios.splice(indice,1,registro) : usuarios.push(registro);
-    guardarListaVending(CLAVE_USUARIOS_VENDING,usuarios); cerrarModalVending("modalUsuario");
-    mostrarMensajeModuloVending("mensajeUsuarios","Usuario guardado correctamente."); renderUsuariosVending();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Contraseña
+    |--------------------------------------------------------------------------
+    */
+
+    // Al crear un usuario, la contraseña es obligatoria.
+    if (!id && !contrasena) {
+
+        textoVending(
+            "mensajeFormularioUsuario",
+            "Debe ingresar una contraseña."
+        );
+
+        return;
+    }
+
+
+    // Si se escribe una contraseña, debe tener mínimo 8 caracteres.
+    if (contrasena && contrasena.length < 8) {
+
+        textoVending(
+            "mensajeFormularioUsuario",
+            "La contraseña debe tener al menos 8 caracteres."
+        );
+
+        return;
+    }
+
+
+    // Si se escribe una contraseña, ambas deben coincidir.
+    if (contrasena !== confirmarContrasena) {
+
+        textoVending(
+            "mensajeFormularioUsuario",
+            "Las contraseñas no coinciden."
+        );
+
+        return;
+    }
+
+
+    try {
+
+        const botonGuardar =
+            document.querySelector(
+                "#formularioUsuario button[type='submit']"
+            );
+
+        if (botonGuardar) {
+            botonGuardar.disabled = true;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Enviar datos al servidor
+        |--------------------------------------------------------------------------
+        */
+
+        const respuesta = await fetch(
+            "../api/usuarios/guardar.php",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    id_usuario: id || null,
+
+                    nombre: nombre,
+
+                    apellido: apellido,
+
+                    correo: correo,
+
+                    id_rol: idRol,
+
+                    id_tienda:
+                        document.getElementById("tiendaUsuario")?.value || null,
+
+                    estado: estado,
+
+                    contrasena: contrasena
+
+                })
+            }
+        );
+
+
+        const resultado =
+            await respuesta.json();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Error del servidor
+        |--------------------------------------------------------------------------
+        */
+
+        if (!respuesta.ok || !resultado.exito) {
+
+            textoVending(
+                "mensajeFormularioUsuario",
+                resultado.mensaje ||
+                "No fue posible guardar el usuario."
+            );
+
+            return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Guardado exitoso
+        |--------------------------------------------------------------------------
+        */
+
+        cerrarModalVending("modalUsuario");
+
+        mostrarMensajeModuloVending(
+            "mensajeUsuarios",
+            resultado.mensaje ||
+            "Usuario guardado correctamente."
+        );
+
+
+        document
+            .getElementById("formularioUsuario")
+            ?.reset();
+
+
+        await renderUsuariosVending();
+
+
+    } catch (error) {
+
+        console.error(
+            "Error al guardar usuario:",
+            error
+        );
+
+        textoVending(
+            "mensajeFormularioUsuario",
+            "No fue posible comunicarse con el servidor."
+        );
+
+
+    } finally {
+
+        const botonGuardar =
+            document.querySelector(
+                "#formularioUsuario button[type='submit']"
+            );
+
+        if (botonGuardar) {
+            botonGuardar.disabled = false;
+        }
+    }
 }
 
-function cambiarEstadoUsuarioVending(id){
-    const usuarios=leerListaVending(CLAVE_USUARIOS_VENDING); const usuario=usuarios.find(u=>u.id===id); if(!usuario)return;
-    if(usuario.id==="usuario-admin" && usuario.activo!==false){ alert("El administrador principal no puede desactivarse."); return; }
-    usuario.activo=usuario.activo===false; guardarListaVending(CLAVE_USUARIOS_VENDING,usuarios); renderUsuariosVending();
+async function cambiarEstadoUsuarioVending(id) {
+
+    if (!id) {
+        return;
+    }
+
+    const confirmar = confirm(
+        "¿Desea cambiar el estado de este usuario?"
+    );
+
+    if (!confirmar) {
+        return;
+    }
+
+    try {
+
+        const respuesta = await fetch(
+            "../api/usuarios/estado.php",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+
+                body: JSON.stringify({
+                    id_usuario: id
+                })
+            }
+        );
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.exito) {
+
+            mostrarMensajeModuloVending(
+                "mensajeUsuarios",
+                resultado.mensaje ||
+                "No fue posible cambiar el estado del usuario.",
+                "error"
+            );
+
+            return;
+        }
+
+        mostrarMensajeModuloVending(
+            "mensajeUsuarios",
+            resultado.mensaje ||
+            "Estado del usuario actualizado correctamente."
+        );
+
+        await renderUsuariosVending();
+
+    } catch (error) {
+
+        console.error(
+            "Error al cambiar estado del usuario:",
+            error
+        );
+
+        mostrarMensajeModuloVending(
+            "mensajeUsuarios",
+            "No fue posible comunicarse con el servidor.",
+            "error"
+        );
+    }
 }
 
-function renderUsuariosVending(){
-    const usuarios=leerListaVending(CLAVE_USUARIOS_VENDING); const q=normalizarTexto(document.getElementById("buscarUsuario")?.value||"");
-    const rol=document.getElementById("filtroRolUsuario")?.value||""; const tienda=document.getElementById("filtroTiendaUsuario")?.value||"";
-    const estado=document.getElementById("filtroEstadoUsuario")?.value||"";
-    const lista=usuarios.filter(u=>(!q||normalizarTexto(`${u.nombre} ${u.usuario||""} ${u.correo}`).includes(q))&&(!rol||u.rol===rol)&&(!tienda||u.tienda===tienda)&&(!estado||(u.activo===false?"Inactivo":"Activo")===estado));
-    textoVending("totalUsuarios",usuarios.length); textoVending("usuariosActivos",usuarios.filter(u=>u.activo!==false).length);
-    textoVending("totalAdministradores",usuarios.filter(u=>u.rol==="Administrador").length); textoVending("totalTrabajadores",usuarios.filter(u=>u.rol==="Trabajador").length);
-    const cuerpo=document.getElementById("cuerpoTablaUsuarios");
-    cuerpo.innerHTML=lista.map(u=>`<tr><td><div class="usuario-tabla"><div class="usuario-tabla-icono"><i class="fa-solid fa-user"></i></div><div class="usuario-tabla-datos"><strong>${escaparHTMLVending(u.nombre)}</strong><span>${escaparHTMLVending(u.usuario||"")}</span></div></div></td><td>${escaparHTMLVending(u.correo)}</td><td>${escaparHTMLVending(u.rol)}</td><td>${escaparHTMLVending(u.tienda||"Sin asignar")}</td><td><span class="badge ${u.activo===false?"badge-rojo":"badge-verde"}">${u.activo===false?"Inactivo":"Activo"}</span></td><td>${escaparHTMLVending(u.fechaRegistro||"-")}</td><td><div class="acciones-usuario-tabla"><button class="boton-accion-producto" data-usuario="${u.id}" data-accion="editar" title="Editar"><i class="fa-solid fa-pen"></i></button><button class="boton-accion-producto ${u.activo===false?"boton-activar-producto":"boton-inactivar-producto"}" data-usuario="${u.id}" data-accion="estado" title="Cambiar estado"><i class="fa-solid fa-power-off"></i></button></div></td></tr>`).join("");
-    mostrarElementoVending("contenedorTablaUsuarios",lista.length>0); mostrarElementoVending("mensajeSinUsuarios",usuarios.length===0);
-    mostrarElementoVending("mensajeSinResultadosUsuarios",usuarios.length>0&&lista.length===0); textoVending("resultadoBusquedaUsuarios",`${lista.length} resultado(s)`);
+async function renderUsuariosVending() {
+
+    const cuerpo = document.getElementById("cuerpoTablaUsuarios");
+
+    if (!cuerpo) {
+        return;
+    }
+
+    try {
+
+        const respuesta = await fetch(
+            "../api/usuarios/listar.php",
+            {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                }
+            }
+        );
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.exito) {
+
+            mostrarMensajeModuloVending(
+                "mensajeUsuarios",
+                resultado.mensaje ||
+                "No fue posible cargar los usuarios.",
+                "error"
+            );
+
+            return;
+        }
+
+        const usuarios = resultado.usuarios || [];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Filtros
+        |--------------------------------------------------------------------------
+        */
+
+        const q = normalizarTexto(
+            document.getElementById("buscarUsuario")?.value || ""
+        );
+
+        const rol =
+            document.getElementById("filtroRolUsuario")?.value || "";
+
+        const estado =
+            document.getElementById("filtroEstadoUsuario")?.value || "";
+
+
+        const lista = usuarios.filter(usuario => {
+
+            const nombreCompleto =
+                `${usuario.nombre || ""} ${usuario.apellido || ""}`;
+
+            const coincideBusqueda =
+                !q ||
+                normalizarTexto(nombreCompleto).includes(q) ||
+                normalizarTexto(usuario.correo || "").includes(q);
+
+            const coincideRol =
+                !rol ||
+                usuario.rol === rol;
+
+            const estadoTexto =
+                usuario.estado === true ||
+                usuario.estado === "true"
+                    ? "Activo"
+                    : "Inactivo";
+
+            const coincideEstado =
+                !estado ||
+                estadoTexto === estado;
+
+            return (
+                coincideBusqueda &&
+                coincideRol &&
+                coincideEstado
+            );
+        });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Estadísticas
+        |--------------------------------------------------------------------------
+        */
+
+        const usuariosActivos =
+            usuarios.filter(usuario =>
+                usuario.estado === true ||
+                usuario.estado === "true"
+            ).length;
+
+        const administradores =
+            usuarios.filter(usuario =>
+                usuario.rol === "Administrador"
+            ).length;
+
+        const trabajadores =
+            usuarios.filter(usuario =>
+                usuario.rol === "Encargado" ||
+                usuario.rol === "Dependiente"
+            ).length;
+
+
+        textoVending(
+            "totalUsuarios",
+            usuarios.length
+        );
+
+        textoVending(
+            "usuariosActivos",
+            usuariosActivos
+        );
+
+        textoVending(
+            "totalAdministradores",
+            administradores
+        );
+
+        textoVending(
+            "totalTrabajadores",
+            trabajadores
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Tabla
+        |--------------------------------------------------------------------------
+        */
+
+        if (lista.length === 0) {
+
+            cuerpo.innerHTML = "";
+
+            document.getElementById(
+                "contenedorTablaUsuarios"
+            ).hidden = true;
+
+            document.getElementById(
+                "mensajeSinResultadosUsuarios"
+            ).hidden = false;
+
+            return;
+        }
+
+
+        document.getElementById(
+            "contenedorTablaUsuarios"
+        ).hidden = false;
+
+        document.getElementById(
+            "mensajeSinResultadosUsuarios"
+        ).hidden = true;
+
+
+        cuerpo.innerHTML = lista.map(usuario => {
+
+            const nombreCompleto =
+                `${usuario.nombre || ""} ${usuario.apellido || ""}`.trim();
+
+            const estadoActivo =
+                usuario.estado === true ||
+                usuario.estado === "true";
+
+            const estadoTexto =
+                estadoActivo
+                    ? "Activo"
+                    : "Inactivo";
+
+            return `
+                <tr>
+
+                    <td>
+                        <div class="usuario-tabla">
+
+                            <div class="usuario-tabla-icono">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+
+                            <div class="usuario-tabla-datos">
+
+                                <strong>
+                                    ${escaparHTMLVending(nombreCompleto)}
+                                </strong>
+
+                                <span>
+                                    ${escaparHTMLVending(usuario.correo)}
+                                </span>
+
+                            </div>
+
+                        </div>
+                    </td>
+
+                    <td>
+                        ${escaparHTMLVending(usuario.correo)}
+                    </td>
+
+                    <td>
+                        ${escaparHTMLVending(usuario.rol)}
+                    </td>
+
+                    <td>
+                        —
+                    </td>
+
+                    <td>
+                        <span class="estado-tabla ${estadoActivo ? "activo" : "inactivo"}">
+                            ${estadoTexto}
+                        </span>
+                    </td>
+
+                    <td>
+                        —
+                    </td>
+
+                    <td>
+
+                        <div class="acciones-tabla">
+
+                            <button
+                                type="button"
+                                class="boton-tabla"
+                                data-usuario="${usuario.id_usuario}"
+                                data-accion="editar"
+                                title="Editar usuario"
+                            >
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="boton-tabla"
+                                data-usuario="${usuario.id_usuario}"
+                                data-accion="estado"
+                                title="Cambiar estado"
+                            >
+                                <i class="fa-solid fa-user-lock"></i>
+                            </button>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+            `;
+
+        }).join("");
+
+
+        textoVending(
+            "resultadoBusquedaUsuarios",
+            `Mostrando ${lista.length} de ${usuarios.length} usuarios.`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error al cargar usuarios:",
+            error
+        );
+
+        mostrarMensajeModuloVending(
+            "mensajeUsuarios",
+            "No fue posible comunicarse con el servidor.",
+            "error"
+        );
+    }
 }
 
 /* ALERTAS */

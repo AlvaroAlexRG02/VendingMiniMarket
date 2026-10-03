@@ -648,43 +648,31 @@
 
                     <!-- Nombre -->
 
-                    <div class="grupo-formulario">
-
-                        <label for="nombreUsuario">
-                            Nombre completo
-                        </label>
-
+                    <div class="campo-formulario">
+                        <label for="nombreUsuario">Nombre</label>
                         <input
                             type="text"
                             id="nombreUsuario"
                             name="nombreUsuario"
-                            placeholder="Ingrese el nombre completo"
+                            placeholder="Ingrese el nombre"
                             maxlength="100"
-                            autocomplete="off"
                             required
                         >
-
                     </div>
 
-                    <!-- Nombre de usuario -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="nombreAccesoUsuario">
-                            Nombre de usuario
-                        </label>
-
+                    <div class="campo-formulario">
+                        <label for="apellidoUsuario">Apellido</label>
                         <input
                             type="text"
-                            id="nombreAccesoUsuario"
-                            name="nombreAccesoUsuario"
-                            placeholder="Ejemplo: jperez"
-                            maxlength="40"
-                            autocomplete="off"
+                            id="apellidoUsuario"
+                            name="apellidoUsuario"
+                            placeholder="Ingrese el apellido"
+                            maxlength="100"
                             required
                         >
-
                     </div>
+
+                 
 
                     <!-- Correo -->
 
@@ -720,17 +708,11 @@
                             required
                         >
 
-                            <option value="">
-                                Seleccione un rol
-                            </option>
-
-                            <option value="Administrador">
-                                Administrador
-                            </option>
-
-                            <option value="Trabajador">
-                                Trabajador
-                            </option>
+                            <option value="">Seleccione un rol</option>
+                            <option value="1">Administrador</option>
+                            <option value="2">Gerente General</option>
+                            <option value="3">Encargado</option>
+                            <option value="4">Dependiente</option>
 
                         </select>
 
