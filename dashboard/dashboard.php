@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . "/../config/session.php";
+require_once __DIR__ . "/../config/permisos.php";
+
 
 if (!isset($_SESSION["usuario"])) {
     header("Location: ../index/index.html");
