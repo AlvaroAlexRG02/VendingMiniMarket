@@ -2731,65 +2731,171 @@ function crearUsuariosInicialesVending() {
 }
 
 function inicializarSesionVending() {
-    crearUsuariosInicialesVending();
 
     const formulario =
         document.getElementById("formularioLogin") ||
         document.querySelector("form.formulario-login");
 
     if (formulario) {
-        formulario.addEventListener("submit", procesarInicioSesionVending);
+        formulario.addEventListener(
+            "submit",
+            procesarInicioSesionVending
+        );
     }
 
-    const botonCerrar = document.getElementById("botonCerrarSesion");
+    const botonCerrar =
+        document.getElementById("botonCerrarSesion");
 
     if (botonCerrar) {
-        botonCerrar.addEventListener("click", () => {
-            localStorage.removeItem(CLAVE_SESION_VENDING);
-        });
+        botonCerrar.addEventListener(
+            "click",
+            cerrarSesionVending
+        );
     }
 }
 
-function procesarInicioSesionVending(evento) {
+
+async function procesarInicioSesionVending(evento) {
+
     evento.preventDefault();
 
     const campoCorreo =
-        document.getElementById("correo") ||
-        document.getElementById("usuario") ||
-        document.querySelector('input[type="email"]');
+        document.getElementById("correo");
 
-    const campoContrasena = document.getElementById("contrasena");
+    const campoContrasena =
+        document.getElementById("contrasena");
+
     const mensaje =
-        document.getElementById("mensajeLogin") ||
-        document.querySelector(".mensaje-login");
+        document.getElementById("mensajeLogin");
 
-    const correo = campoCorreo?.value.trim() || "";
-    const contrasena = campoContrasena?.value || "";
+    const botonIngresar =
+        document.querySelector(".boton-ingresar");
 
-    const usuario = crearUsuariosInicialesVending().find((item) =>
-        normalizarTexto(item.correo) === normalizarTexto(correo) &&
-        item.contrasena === contrasena &&
-        item.activo !== false
-    );
+    const correo =
+        campoCorreo?.value.trim() || "";
 
-    if (!usuario) {
+    const contrasena =
+        campoContrasena?.value || "";
+
+    if (!correo || !contrasena) {
+
         if (mensaje) {
-            mensaje.textContent = "El correo o la contraseña no son correctos.";
+            mensaje.textContent =
+                "Debe ingresar el correo y la contraseña.";
         }
+
         return;
     }
 
-    localStorage.setItem(
-        CLAVE_SESION_VENDING,
-        JSON.stringify({
-            id: usuario.id,
-            nombre: usuario.nombre,
-            correo: usuario.correo,
-            rol: usuario.rol
-        })
-    );
+    try {
 
-    window.location.href = "../dashboard/dashboard.html";
+        if (botonIngresar) {
+            botonIngresar.disabled = true;
+        }
+
+        if (mensaje) {
+            mensaje.textContent = "Validando acceso...";
+        }
+
+        const respuesta = await fetch(
+            "../api/auth/login.php",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body: JSON.stringify({
+                    correo: correo,
+                    contrasena: contrasena
+                })
+            }
+        );
+
+        const resultado =
+            await respuesta.json();
+
+        if (!respuesta.ok || !resultado.exito) {
+
+            if (mensaje) {
+                mensaje.textContent =
+                    resultado.mensaje ||
+                    "No fue posible iniciar sesión.";
+            }
+
+            return;
+        }
+
+        /*
+         * La autenticación ahora está manejada
+         * por la sesión PHP.
+         *
+         * No se guarda la contraseña ni
+         * la sesión en localStorage.
+         */
+
+        window.location.href =
+            "../dashboard/dashboard.php";
+
+    } catch (error) {
+
+        console.error(
+            "Error al iniciar sesión:",
+            error
+        );
+
+        if (mensaje) {
+            mensaje.textContent =
+                "No fue posible comunicarse con el servidor.";
+        }
+
+    } finally {
+
+        if (botonIngresar) {
+            botonIngresar.disabled = false;
+        }
+    }
+}
+
+
+async function cerrarSesionVending(evento) {
+
+    if (evento) {
+        evento.preventDefault();
+    }
+
+    try {
+
+        const respuesta = await fetch(
+            "../api/auth/logout.php",
+            {
+                method: "POST"
+            }
+        );
+
+        const resultado =
+            await respuesta.json();
+
+        if (resultado.exito) {
+
+            window.location.href =
+                "../index/index.html";
+
+            return;
+        }
+
+        console.error(
+            "No fue posible cerrar sesión:",
+            resultado.mensaje
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error al cerrar sesión:",
+            error
+        );
+    }
 }
 
 function actualizarPerfilSuperiorVending() {
