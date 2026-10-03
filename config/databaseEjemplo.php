@@ -23,7 +23,7 @@ try {
 
 } catch (PDOException $e) {
 
-    die("Error de conexión a Supabase: " . $e->getMessage());
+    die("Error de conexión a Supabase.");
 
 }
 //tieen que crear en config un archivo "database.php" con este mismo contenido pero con la contraseña 

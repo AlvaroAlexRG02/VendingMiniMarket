@@ -1,3 +1,23 @@
+<?php
+
+require_once __DIR__ . "/../config/session.php";
+
+if (!isset($_SESSION["usuario"])) {
+    header("Location: ../index/index.html");
+    exit;
+}
+
+/*
+ * Evitar que el navegador muestre el dashboard
+ * después de cerrar sesión utilizando la caché.
+ */
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: 0");
+
+?>
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -38,7 +58,7 @@
         <div class="logo-sistema">
 
             <a
-                href="dashboard.html"
+                href="dashboard.php"
                 aria-label="Ir al Dashboard"
             >
 
@@ -60,7 +80,7 @@
         >
 
             <a
-                href="dashboard.html"
+                href="dashboard.php"
                 class="activo"
                 aria-current="page"
             >
@@ -182,12 +202,15 @@
                         -->
 
                         <strong id="nombreUsuarioSuperior">
-                            Administrador
+                            <?= htmlspecialchars(
+                                $_SESSION["usuario"]["nombre"] . " " .
+                                ($_SESSION["usuario"]["apellido"] ?? "")
+                            ) ?>
                         </strong>
 
                         <span id="correoUsuarioSuperior">
-                            admin@vending.com
-                        </span>
+                            <?= htmlspecialchars($_SESSION["usuario"]["correo"]) ?>
+                        </span> 
 
                     </div>
 
