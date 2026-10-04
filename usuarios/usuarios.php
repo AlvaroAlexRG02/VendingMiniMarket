@@ -1,3 +1,21 @@
+<?php
+
+require_once __DIR__ . "/../config/session.php";
+require_once __DIR__ . "/../config/permisos.php";
+
+if (!isset($_SESSION["usuario"])) {
+    header("Location: ../index/index.html");
+    exit;
+}
+
+if (!esAdministradorOGerente()) {
+    http_response_code(403);
+    echo "Acceso no autorizado.";
+    exit;
+}
+
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
