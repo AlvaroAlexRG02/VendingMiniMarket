@@ -6,8 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarMostrarContrasena();
     inicializarMenuLateral();
     inicializarSesionVending();
-    inicializarFormularioProducto();
-    inicializarPaginaProductos();
     inicializarPaginaInventarioVending();
     inicializarPaginaMovimientosVending();
     inicializarPaginaVentas();
