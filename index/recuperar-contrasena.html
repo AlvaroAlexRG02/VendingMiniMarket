@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Recuperación de contraseña | Vending Mini Market"
+    >
+
+    <title>Recuperar contraseña | Vending Mini Market</title>
+
+    <link
+        rel="stylesheet"
+        href="../css/estilos.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body class="pagina-login">
+
+    <main class="contenedor-login">
+
+        <section class="tarjeta-login">
+
+            <div class="encabezado-login">
+
+                <h1>
+                    Recuperar contraseña
+                </h1>
+
+                <p>
+                    Ingrese su correo electrónico para iniciar
+                    el proceso de recuperación.
+                </p>
+
+            </div>
+
+            <form
+                id="formularioRecuperarContrasena"
+                class="formulario-login"
+                novalidate
+            >
+
+                <div class="campo-formulario">
+
+                    <label for="correoRecuperacion">
+                        Correo electrónico
+                    </label>
+
+                    <input
+                        type="email"
+                        id="correoRecuperacion"
+                        name="correoRecuperacion"
+                        placeholder="Ingrese su correo electrónico"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+                <p
+                    id="mensajeRecuperacion"
+                    class="mensaje-login"
+                    aria-live="polite"
+                ></p>
+
+                <button
+                    type="submit"
+                    class="boton boton-azul boton-login"
+                >
+                    <i class="fa-solid fa-key"></i>
+                    Continuar
+                </button>
+
+            </form>
+
+            <div class="acciones-login">
+
+                <a
+                    href="index.html"
+                    class="enlace-recuperar"
+                >
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Volver al inicio de sesión
+                </a>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+<script>
+    const formulario = document.getElementById("formularioRecuperarContrasena");
+    const mensaje = document.getElementById("mensajeRecuperacion");
+
+    formulario.addEventListener("submit", async function (evento) {
+
+        evento.preventDefault();
+
+        const correo = document
+            .getElementById("correoRecuperacion")
+            .value
+            .trim();
+
+        mensaje.textContent = "";
+
+        if (!correo) {
+            mensaje.textContent = "Ingrese su correo electrónico.";
+            return;
+        }
+
+        try {
+
+            const respuesta = await fetch(
+                "../api/auth/solicitar_recuperacion.php",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        correo: correo
+                    })
+                }
+            );
+
+            const resultado = await respuesta.json();
+
+            if (!respuesta.ok || !resultado.success) {
+                mensaje.textContent =
+                    resultado.message ||
+                    "No fue posible procesar la solicitud.";
+
+                return;
+            }
+
+            mensaje.textContent = resultado.message;
+
+            
+        } catch (error) {
+
+            console.error(error);
+
+            mensaje.textContent =
+                "No fue posible comunicarse con el servidor.";
+        }
+    });
+</script>
+
+</body>
+
+</html>
