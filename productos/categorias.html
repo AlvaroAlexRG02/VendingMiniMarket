@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Registro de productos del sistema Vending Mini Market">
+    <meta name="description" content="Administración de categorías de productos de Vending Mini Market">
 
-    <title>Nuevo producto | Vending Mini Market</title>
+    <title>Categorías | Vending Mini Market</title>
 
     <link rel="stylesheet" href="../css/estilos.css">
     <link rel="stylesheet" href="../css/catalogo.css">
@@ -89,7 +89,7 @@
             <div class="buscador-superior">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="search"
-                       id="buscadorGeneralProductoNuevo"
+                       id="buscadorGeneralCategorias"
                        placeholder="Buscar en el sistema..."
                        aria-label="Buscar en el sistema"
                        autocomplete="off">
@@ -99,7 +99,7 @@
 
                 <button type="button" class="boton-notificacion" aria-label="Consultar notificaciones">
                     <i class="fa-regular fa-bell"></i>
-                    <span class="contador" id="contadorNotificacionesProductoNuevo" aria-label="0 notificaciones">0</span>
+                    <span class="contador" id="contadorNotificacionesCategorias" aria-label="0 notificaciones">0</span>
                 </button>
 
                 <div class="perfil-superior">
@@ -119,10 +119,8 @@
             <div class="encabezado-pagina">
 
                 <div>
-                    <h1 id="tituloPagina">Nuevo producto</h1>
-                    <p id="textoPagina">
-                        Registra un producto para utilizarlo en productos, inventario y reportes.
-                    </p>
+                    <h1>Categorías</h1>
+                    <p>Organiza el catálogo para facilitar la búsqueda y los reportes.</p>
                 </div>
 
                 <a href="productos.html" class="boton boton-borde">
@@ -134,103 +132,95 @@
 
             <div id="mensajeProducto" class="mensaje-producto" aria-live="polite"></div>
 
+            <!-- FORMULARIO -->
             <section class="panel">
 
                 <div class="panel-encabezado">
-
                     <div>
-                        <h2>Información del producto</h2>
-                        <p class="descripcion-panel">
-                            Complete los campos necesarios. Los marcados con * son obligatorios.
-                        </p>
+                        <h2 id="tituloFormularioCategoria">Nueva categoría</h2>
+                        <p class="descripcion-panel">El nombre no se puede repetir.</p>
                     </div>
 
                     <div class="tarjeta-estadistica-icono">
-                        <i class="fa-solid fa-box-open"></i>
+                        <i class="fa-solid fa-tags"></i>
                     </div>
-
                 </div>
 
-                <form id="formularioProducto">
+                <form id="formularioCategoria">
 
                     <div class="cuadricula-formulario">
 
                         <div class="grupo-formulario">
-                            <label for="nombreProducto">Nombre del producto *</label>
-                            <input type="text" id="nombreProducto" maxlength="255"
-                                   placeholder="Ejemplo: Coca-Cola 600 ml"
-                                   autocomplete="off" required>
+                            <label for="nombreCategoria">Nombre *</label>
+                            <input type="text" id="nombreCategoria" maxlength="255"
+                                   placeholder="Ejemplo: Bebidas" autocomplete="off" required>
                         </div>
 
                         <div class="grupo-formulario">
-                            <label for="codigoInternoProducto">Código interno</label>
-                            <input type="text" id="codigoInternoProducto" maxlength="100"
-                                   placeholder="Código de artículo. Ejemplo: COCA-600"
-                                   autocomplete="off">
-                        </div>
-
-                        <div class="grupo-formulario">
-                            <label for="codigoBarrasProducto">Código de barras</label>
-                            <input type="text" id="codigoBarrasProducto" maxlength="100"
-                                   inputmode="numeric" autocomplete="off">
-                        </div>
-
-                        <div class="grupo-formulario">
-                            <label for="categoriaProducto">Categoría *</label>
-                            <select id="categoriaProducto" required>
-                                <option value="">Seleccione una categoría</option>
-                            </select>
-                        </div>
-
-                        <div class="grupo-formulario">
-                            <label for="impuestoProducto">Impuesto *</label>
-                            <select id="impuestoProducto" required>
-                                <option value="">Seleccione un impuesto</option>
-                            </select>
-                        </div>
-
-                        <div class="grupo-formulario campo-completo">
-                            <label for="descripcionProducto">Descripción</label>
-                            <textarea id="descripcionProducto" rows="3" maxlength="500"
-                                      placeholder="Descripción u observaciones del producto..."></textarea>
-                        </div>
-
-                        <div class="grupo-formulario campo-completo">
-
-                            <label>Proveedores</label>
-
-                            <div class="seccion-proveedores-producto">
-
-                                <div id="listaProveedoresProducto"></div>
-
-                                <p id="mensajeSinProveedoresProducto" class="texto-ayuda">
-                                    Este producto no tiene proveedores. Es opcional; puede agregar uno o varios,
-                                    cada uno con su costo.
-                                </p>
-
-                                <button type="button" id="botonAgregarProveedorProducto" class="boton boton-borde">
-                                    <i class="fa-solid fa-plus"></i>
-                                    Agregar proveedor
-                                </button>
-
-                            </div>
-
+                            <label for="descripcionCategoria">Descripción</label>
+                            <input type="text" id="descripcionCategoria" maxlength="500"
+                                   placeholder="Opcional" autocomplete="off">
                         </div>
 
                     </div>
 
                     <div class="acciones-formulario">
 
-                        <a href="productos.html" class="boton boton-borde">Cancelar</a>
+                        <button type="button" id="botonCancelarEdicion" class="boton boton-borde" hidden>
+                            Cancelar edición
+                        </button>
 
-                        <button type="submit" id="botonGuardarProducto" class="boton boton-azul">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            Guardar producto
+                        <button type="submit" id="botonGuardarCategoria" class="boton boton-azul">
+                            <i class="fa-solid fa-plus"></i>
+                            Crear categoría
                         </button>
 
                     </div>
 
                 </form>
+
+            </section>
+
+            <!-- LISTA -->
+            <section class="panel">
+
+                <div class="panel-encabezado">
+                    <div>
+                        <h2>Categorías registradas</h2>
+                        <p class="descripcion-panel">
+                            Una categoría desactivada no se puede elegir en productos nuevos,
+                            pero los productos que ya la usan la conservan.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="contenedorTablaCategorias" class="contenedor-tabla">
+
+                    <table class="tabla-datos tabla-compacta">
+
+                        <caption class="texto-solo-lectores">Categorías de productos</caption>
+
+                        <thead>
+                            <tr>
+                                <th scope="col">Nombre</th>
+                                <th scope="col">Descripción</th>
+                                <th scope="col">Productos</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="cuerpoTablaCategorias"></tbody>
+
+                    </table>
+
+                </div>
+
+                <div id="mensajeSinCategorias" class="estado-vacio-productos" hidden>
+                    <i class="fa-solid fa-tags"></i>
+                    <h3>No hay categorías registradas</h3>
+                    <p>Crea la primera categoría con el formulario de arriba.</p>
+                </div>
 
             </section>
 
@@ -240,7 +230,7 @@
 
     <script src="../js/app.js"></script>
     <script src="../js/catalogo-comun.js"></script>
-    <script src="../js/producto-form.js"></script>
+    <script src="../js/categorias.js"></script>
 
 </body>
 </html>

@@ -1,0 +1,133 @@
+/* ==========================================================
+   VENDING MINI MARKET — Complementos del módulo de catálogo
+   Cargar DESPUÉS de estilos.css. No modifica reglas existentes.
+========================================================== */
+
+/* Mensajes con varias líneas (lista de duplicados, errores) */
+.mensaje-producto {
+    white-space: pre-line;
+}
+
+/* Textos de los modales con saltos de línea */
+.modal-producto-contenido p {
+    white-space: pre-line;
+}
+
+/* Modal ancho para el historial */
+.modal-producto-contenido.modal-ancho {
+    width: min(100%, 640px);
+    max-height: 82vh;
+    overflow-y: auto;
+    text-align: left;
+}
+
+.modal-ancho .acciones-modal-producto {
+    justify-content: flex-end;
+}
+
+/* Botones de acción de las tablas */
+.boton-editar-producto {
+    background: var(--azul-claro);
+    color: var(--azul);
+    text-decoration: none;
+}
+
+.boton-historial-producto {
+    background: #eef0f5;
+    color: var(--texto-secundario);
+}
+
+/* Lista del historial */
+.lista-historial {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lista-historial > li {
+    padding: 12px 14px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-sm);
+}
+
+.lista-historial > li > small {
+    display: block;
+    margin-top: 2px;
+    color: var(--texto-secundario);
+}
+
+.lista-historial ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--texto-principal);
+}
+
+/* Tablas de categorías y proveedores (no necesitan 1080px) */
+.tabla-datos.tabla-compacta {
+    min-width: 640px;
+}
+
+/* Encabezados con varios botones */
+.acciones-encabezado-catalogo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.boton[hidden] {
+    display: none;
+}
+
+/* Formularios de una sola columna en pantallas pequeñas */
+@media (max-width: 720px) {
+    .cuadricula-formulario {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Paginación del catálogo (el atributo hidden debe poder ocultarla) */
+.paginacion[hidden] {
+    display: none;
+}
+
+.paginacion-controles button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Proveedores dentro del formulario de producto */
+.seccion-proveedores-producto {
+    padding: 14px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-sm);
+    background: var(--fondo-pagina);
+}
+
+#listaProveedoresProducto {
+    display: grid;
+    gap: 10px;
+}
+
+#listaProveedoresProducto:not(:empty) {
+    margin-bottom: 12px;
+}
+
+.fila-proveedor-producto {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+@media (max-width: 720px) {
+    .fila-proveedor-producto {
+        grid-template-columns: 1fr auto;
+    }
+
+    .fila-proveedor-producto select {
+        grid-column: 1 / -1;
+    }
+}
