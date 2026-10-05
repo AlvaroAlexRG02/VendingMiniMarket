@@ -115,7 +115,7 @@ header("Expires: 0");
                 Reportes
             </a>
 
-            <a href="../usuarios/usuarios.html">
+            <a href="../usuarios/usuarios.php">
                 <i class="fa-solid fa-users"></i>
                 Usuarios
             </a>

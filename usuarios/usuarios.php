@@ -52,7 +52,7 @@ if (!esAdministradorOGerente()) {
         <div class="logo-sistema">
 
             <a
-                href="../dashboard/dashboard.html"
+                href="../dashboard/dashboard.php"
                 aria-label="Ir al Dashboard"
             >
                 <img
@@ -69,7 +69,7 @@ if (!esAdministradorOGerente()) {
             aria-label="Navegación principal"
         >
 
-            <a href="../dashboard/dashboard.html">
+            <a href="../dashboard/dashboard.php">
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
             </a>
@@ -105,7 +105,7 @@ if (!esAdministradorOGerente()) {
             </a>
 
             <a
-                href="usuarios.html"
+                href="usuarios.php"
                 class="activo"
                 aria-current="page"
             >
