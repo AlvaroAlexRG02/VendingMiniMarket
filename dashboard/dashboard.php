@@ -95,6 +95,11 @@ header("Expires: 0");
                 Productos
             </a>
 
+            <a href="../tienda/tienda.php">
+                <i class="fa-solid fa-shop"></i>
+                Tienda
+            </a>
+
             <a href="../inventario/inventario.html">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario

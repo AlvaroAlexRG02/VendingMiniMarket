@@ -1,10 +1,10 @@
 <?php
 
-$host = "aws-0-us-east-1.pooler.supabase.com";
+$host = "TU_HOST_SUPABASE";
 $port = "5432";
 $dbname = "postgres";
-$user = "postgres.bsdgxhkqjdxcydrqztwu";
-$password = "CONTRASENIAAAAA";
+$user = "TU_USUARIO_SUPABASE";
+$password = "TU_PASSWORD_SUPABASE";
 
 try {
 
@@ -26,4 +26,8 @@ try {
     die("Error de conexión a Supabase.");
 
 }
-//tieen que crear en config un archivo "database.php" con este mismo contenido pero con la contraseña 
+
+/*
+ * Cree config/database.php localmente con estos mismos datos,
+ * completando las credenciales reales de su entorno.
+ */
