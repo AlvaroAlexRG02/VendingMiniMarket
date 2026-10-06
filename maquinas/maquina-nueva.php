@@ -258,9 +258,6 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                                 <option value="true">Activa</option>
                                 <option value="false">Inactiva</option>
                             </select>
-                            <small id="ayudaEstadoMaquina" class="texto-ayuda" hidden>
-                                El estado se cambia desde el listado de máquinas.
-                            </small>
                         </div>
 
                         <div class="grupo-formulario campo-completo">
@@ -292,8 +289,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <script src="../js/app.js"></script>
     <script src="../js/catalogo-comun.js"></script>
-    <script src="../js/maquinas-api.js"></script>
-    <script src="../js/maquina-form.js"></script>
+    <script src="../js/maquinas-api.js?v=<?= filemtime(__DIR__ . '/../js/maquinas-api.js') ?>"></script>
+    <script src="../js/maquina-form.js?v=<?= filemtime(__DIR__ . '/../js/maquina-form.js') ?>"></script>
 
 </body>
 </html>

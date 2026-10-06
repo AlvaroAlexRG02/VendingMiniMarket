@@ -14,6 +14,7 @@
     const PAGINA_LISTADO = 'maquinas.php';
 
     let idMaquina = null;
+    let maquinaOriginal = null;
     let guardando = false;
 
 
@@ -85,11 +86,9 @@
         $('modeloMaquina').value = maquina.modelo || '';
         $('tipoMaquina').value = maquina.tipo || '';
         $('observacionesMaquina').value = maquina.observaciones || '';
-
-        // El estado no se edita aquí: se cambia con las acciones de inactivar/activar.
         $('estadoMaquina').value = maquina.estado ? 'true' : 'false';
-        $('estadoMaquina').disabled = true;
-        $('ayudaEstadoMaquina').hidden = false;
+
+        maquinaOriginal = maquina;
     }
 
 
@@ -127,6 +126,67 @@
         return null;
     }
 
+    function normalizarCodigo(valor) {
+        return String(valor ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+    }
+
+    /** En edición: indica si cambió algo distinto del estado. */
+    function huboCambiosDeDatos(datos) {
+        const o = maquinaOriginal;
+
+        return normalizarCodigo(datos.codigo) !== normalizarCodigo(o.codigo)
+            || datos.nombre !== (o.nombre || '')
+            || Number(datos.id_tienda) !== o.id_tienda
+            || datos.ubicacion !== (o.ubicacion || '')
+            || datos.modelo !== (o.modelo || '')
+            || datos.tipo !== (o.tipo || '')
+            || datos.observaciones !== (o.observaciones || '');
+    }
+
+    /**
+     * Edita los datos (editar_maquina) y, si cambió el estado, usa
+     * inactivar/activar_maquina para que quede en el historial.
+     * Devuelve el mensaje que se mostrará al usuario.
+     */
+    async function guardarEdicion(datos) {
+        const cambioDatos = huboCambiosDeDatos(datos);
+        const cambioEstado = datos.estado !== maquinaOriginal.estado;
+
+        if (!cambioDatos && !cambioEstado) {
+            throw new Error('No hay cambios para guardar.');
+        }
+
+        const mensajes = [];
+
+        if (cambioDatos) {
+            const { estado, ...resto } = datos;
+            const resultado = await api('editar_maquina', { ...resto, id_maquina: idMaquina });
+
+            maquinaOriginal = { ...maquinaOriginal, ...resultado.data };
+            mensajes.push(resultado.message);
+        }
+
+        if (cambioEstado) {
+            try {
+                const resultado = await api(
+                    datos.estado ? 'activar_maquina' : 'inactivar_maquina',
+                    { id_maquina: idMaquina }
+                );
+
+                maquinaOriginal = { ...maquinaOriginal, ...resultado.data };
+                mensajes.push(resultado.message);
+            } catch (error) {
+                if (cambioDatos) {
+                    error.message = 'Los datos se guardaron, pero no se pudo cambiar el estado: ' + error.message;
+                }
+
+                throw error;
+            }
+        }
+
+        return mensajes.join(' ');
+    }
+
     async function guardar(evento) {
         evento.preventDefault();
 
@@ -143,6 +203,20 @@
             return;
         }
 
+        // Inactivar pide confirmación, igual que en el listado.
+        if (idMaquina && maquinaOriginal.estado && !datos.estado) {
+            const confirmado = await C.confirmar({
+                titulo: 'Inactivar máquina',
+                texto: `"${datos.codigo}" dejará de aceptar nuevos movimientos, pero su historial se conserva.`,
+                textoConfirmar: 'Inactivar',
+                peligro: true
+            });
+
+            if (!confirmado) {
+                return;
+            }
+        }
+
         const boton = $('botonGuardarMaquina');
 
         guardando = true;
@@ -150,17 +224,11 @@
         C.limpiarMensaje('mensajeMaquina');
 
         try {
-            const accion = idMaquina ? 'editar_maquina' : 'crear_maquina';
-            const carga = idMaquina ? { ...datos, id_maquina: idMaquina } : datos;
+            const mensaje = idMaquina
+                ? await guardarEdicion(datos)
+                : (await api('crear_maquina', datos)).message;
 
-            // Al editar, el estado no se envía: lo gobiernan inactivar/activar.
-            if (idMaquina) {
-                delete carga.estado;
-            }
-
-            const resultado = await api(accion, carga);
-
-            C.mostrarMensaje(resultado.message, 'exito', 'mensajeMaquina');
+            C.mostrarMensaje(mensaje, 'exito', 'mensajeMaquina');
 
             setTimeout(() => {
                 window.location.href = PAGINA_LISTADO;
@@ -171,8 +239,8 @@
 
             C.mostrarMensaje(error.message, 'error', 'mensajeMaquina');
 
-            // 409 = identificador repetido (u otro conflicto): se vuelve al campo del código.
-            if (error.status === 409) {
+            // 409 por identificador repetido: se vuelve al campo del código.
+            if (error.status === 409 && /identificador/i.test(error.message)) {
                 $('codigoMaquina').focus();
                 $('codigoMaquina').select();
             }

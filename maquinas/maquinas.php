@@ -290,9 +290,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                                 <th scope="col">Ubicación</th>
                                 <th scope="col">Modelo / tipo</th>
                                 <th scope="col">Estado</th>
-                                <?php if (esAdministrador()): ?>
                                 <th scope="col">Acciones</th>
-                                <?php endif; ?>
                             </tr>
                         </thead>
 
@@ -330,7 +328,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <script src="../js/app.js"></script>
     <script src="../js/catalogo-comun.js"></script>
-    <script src="../js/maquinas-api.js"></script>
-    <script src="../js/maquinas.js"></script>
+    <script src="../js/maquinas-api.js?v=<?= filemtime(__DIR__ . '/../js/maquinas-api.js') ?>"></script>
+    <script src="../js/maquinas.js?v=<?= filemtime(__DIR__ . '/../js/maquinas.js') ?>"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 /*=========================================================
   VENDING MINI MARKET — Máquinas expendedoras (maquinas.php)
-  HU-17 · consulta de máquinas con su ubicación y estado
+  HU-17 · consulta, inactivar/activar e historial de máquinas
   Requiere: app.js, catalogo-comun.js y maquinas-api.js cargados antes.
 =========================================================*/
 
@@ -12,6 +12,24 @@
     const $ = (id) => document.getElementById(id);
 
     const ID_MENSAJE = 'mensajeMaquina';
+
+    const ETIQUETAS_CAMBIO = {
+        codigo: 'Código',
+        nombre: 'Nombre',
+        tienda_nombre: 'Ubicación',
+        ubicacion: 'Punto operativo',
+        modelo: 'Modelo',
+        tipo: 'Tipo',
+        observaciones: 'Observaciones',
+        estado: 'Estado'
+    };
+
+    const ACCIONES_HISTORIAL = {
+        CREAR: 'Máquina registrada',
+        EDITAR: 'Máquina editada',
+        INACTIVAR: 'Máquina inactivada',
+        ACTIVAR: 'Máquina activada'
+    };
 
     let maquinas = [];
     let numeroPeticion = 0;
@@ -146,18 +164,39 @@
 
             const nombre = C.escapeHtml(maquina.nombre);
 
-            const celdaAcciones = admin
+            const botonesAdmin = admin
                 ? `
-                <td>
-                    <div class="acciones-producto-tabla">
                         <a href="maquina-nueva.php?id=${maquina.id_maquina}"
                            class="boton-accion-producto boton-editar-producto"
                            title="Editar máquina" aria-label="Editar ${nombre}">
                             <i class="fa-solid fa-pen"></i>
                         </a>
-                    </div>
-                </td>`
+                        ${maquina.estado
+                            ? `<button type="button"
+                                       class="boton-accion-producto boton-inactivar-producto"
+                                       data-accion="inactivar" data-id="${maquina.id_maquina}"
+                                       title="Inactivar máquina" aria-label="Inactivar ${nombre}">
+                                    <i class="fa-solid fa-ban"></i>
+                               </button>`
+                            : `<button type="button"
+                                       class="boton-accion-producto boton-activar-producto"
+                                       data-accion="activar" data-id="${maquina.id_maquina}"
+                                       title="Activar máquina" aria-label="Activar ${nombre}">
+                                    <i class="fa-solid fa-circle-check"></i>
+                               </button>`}`
                 : '';
+
+            const celdaAcciones = `
+                <td>
+                    <div class="acciones-producto-tabla">
+                        <button type="button"
+                                class="boton-accion-producto boton-historial-producto"
+                                data-accion="historial" data-id="${maquina.id_maquina}"
+                                title="Ver historial" aria-label="Ver historial de ${nombre}">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </button>${botonesAdmin}
+                    </div>
+                </td>`;
 
             fila.innerHTML = `
                 <td><strong>${C.escapeHtml(maquina.codigo)}</strong></td>
@@ -203,5 +242,133 @@
             cargarMaquinas();
             $('buscarMaquina').focus();
         });
+
+        $('cuerpoTablaMaquinas').addEventListener('click', (evento) => {
+            const boton = evento.target.closest('[data-accion]');
+
+            if (!boton) {
+                return;
+            }
+
+            const id = Number(boton.dataset.id);
+
+            if (boton.dataset.accion === 'inactivar') {
+                cambiarEstado(id, false);
+            } else if (boton.dataset.accion === 'activar') {
+                cambiarEstado(id, true);
+            } else if (boton.dataset.accion === 'historial') {
+                verHistorial(id);
+            }
+        });
+    }
+
+
+    /*-----------------------------------------------------
+      ACTIVAR / INACTIVAR — nunca se borra el registro
+    -----------------------------------------------------*/
+
+    async function cambiarEstado(id, activar) {
+        const maquina = maquinas.find((m) => m.id_maquina === id);
+
+        if (!maquina) {
+            return;
+        }
+
+        const confirmado = await C.confirmar({
+            titulo: activar ? 'Activar máquina' : 'Inactivar máquina',
+            texto: activar
+                ? `"${maquina.codigo}" volverá a aceptar movimientos.`
+                : `"${maquina.codigo}" dejará de aceptar nuevos movimientos, pero su historial se conserva.`,
+            textoConfirmar: activar ? 'Activar' : 'Inactivar',
+            peligro: !activar
+        });
+
+        if (!confirmado) {
+            return;
+        }
+
+        try {
+            const resultado = await apiMaquinas(
+                activar ? 'activar_maquina' : 'inactivar_maquina',
+                { id_maquina: id }
+            );
+
+            C.mostrarMensaje(resultado.message, 'exito', ID_MENSAJE);
+            await Promise.all([cargarMaquinas(), cargarResumen()]);
+        } catch (error) {
+            C.mostrarMensaje(error.message, 'error', ID_MENSAJE);
+        }
+    }
+
+
+    /*-----------------------------------------------------
+      HISTORIAL — viene de bitacora_auditoria
+    -----------------------------------------------------*/
+
+    function formatearValor(clave, valor) {
+        if (valor === null || valor === undefined || valor === '') {
+            return '—';
+        }
+
+        if (clave === 'estado') {
+            return valor ? 'Activa' : 'Inactiva';
+        }
+
+        return String(valor);
+    }
+
+    function cambiosEntre(antes, despues) {
+        if (!antes || !despues) {
+            return [];
+        }
+
+        return Object.keys(ETIQUETAS_CAMBIO)
+            .filter((clave) => String(antes[clave] ?? '') !== String(despues[clave] ?? ''))
+            .map((clave) =>
+                `${ETIQUETAS_CAMBIO[clave]}: ${formatearValor(clave, antes[clave])} → ${formatearValor(clave, despues[clave])}`
+            );
+    }
+
+    async function verHistorial(id) {
+        const maquina = maquinas.find((m) => m.id_maquina === id);
+
+        try {
+            const { data } = await apiMaquinas('historial_maquina', null, { id });
+            const contenedor = document.createElement('div');
+
+            if (!data.length) {
+                contenedor.innerHTML = '<p>Esta máquina todavía no tiene movimientos registrados.</p>';
+            } else {
+                const lista = document.createElement('ul');
+                lista.className = 'lista-historial';
+
+                data.forEach((registro) => {
+                    const elemento = document.createElement('li');
+
+                    const cambios = registro.accion === 'CREAR'
+                        ? [`Estado inicial: ${formatearValor('estado', registro.despues?.estado)}`]
+                        : cambiosEntre(registro.antes, registro.despues);
+
+                    elemento.innerHTML = `
+                        <strong>${C.escapeHtml(ACCIONES_HISTORIAL[registro.accion] || registro.accion)}</strong>
+                        <small>
+                            ${C.escapeHtml(C.fechaHora(registro.fecha))}
+                            ${registro.usuario ? ' · ' + C.escapeHtml(registro.usuario) : ''}
+                        </small>
+                        ${cambios.length
+                            ? `<ul>${cambios.map((c) => `<li>${C.escapeHtml(c)}</li>`).join('')}</ul>`
+                            : ''}
+                    `;
+
+                    lista.appendChild(elemento);
+                });
+
+                contenedor.appendChild(lista);
+            }
+
+            C.mostrarDialogo(`Historial: ${maquina ? maquina.codigo : 'máquina'}`, contenedor);
+        } catch (error) {
+            C.mostrarMensaje(error.message, 'error', ID_MENSAJE);
+        }
     }
 })();
