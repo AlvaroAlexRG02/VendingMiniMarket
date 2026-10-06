@@ -33,9 +33,9 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Consulta y administración del catálogo de productos de Vending Mini Market">
+    <meta name="description" content="Consulta de máquinas expendedoras de Vending Mini Market">
 
-    <title>Productos | Vending Mini Market</title>
+    <title>Máquinas | Vending Mini Market</title>
 
     <link rel="stylesheet" href="../css/estilos.css">
     <link rel="stylesheet" href="../css/catalogo.css">
@@ -64,7 +64,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 Dashboard
             </a>
 
-            <a href="productos.php" class="activo" aria-current="page">
+            <a href="../productos/productos.php">
                 <i class="fa-solid fa-box"></i>
                 Productos
             </a>
@@ -74,7 +74,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 Tienda
             </a>
 
-            <a href="../maquinas/maquinas.php">
+            <a href="maquinas.php" class="activo" aria-current="page">
                 <i class="fa-solid fa-cash-register"></i>
                 Máquinas
             </a>
@@ -104,6 +104,13 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 Usuarios
             </a>
 
+            <?php if (esAdministradorOGerente()): ?>
+            <a href="../bitacora/bitacora.php">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Bitácora
+            </a>
+            <?php endif; ?>
+
         </nav>
 
         <div class="pie-barra-lateral">
@@ -129,7 +136,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             <div class="buscador-superior">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="search"
-                       id="buscadorGeneralProductos"
+                       id="buscadorGeneralMaquinas"
                        placeholder="Buscar en el sistema..."
                        aria-label="Buscar en el sistema"
                        autocomplete="off">
@@ -139,7 +146,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <button type="button" class="boton-notificacion" aria-label="Consultar notificaciones">
                     <i class="fa-regular fa-bell"></i>
-                    <span class="contador" id="contadorNotificacionesProductos" aria-label="0 notificaciones">0</span>
+                    <span class="contador" id="contadorNotificacionesMaquinas" aria-label="0 notificaciones">0</span>
                 </button>
 
                 <div class="perfil-superior">
@@ -160,91 +167,60 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             <div class="encabezado-pagina">
 
                 <div>
-                    <h1>Productos</h1>
-                    <p>Consulta y administra los productos registrados en el sistema.</p>
-                </div>
-
-                <div class="acciones-encabezado-catalogo">
-
-                    <button type="button" id="botonExportarCatalogo" class="boton boton-borde">
-                        <i class="fa-solid fa-file-csv"></i>
-                        Exportar CSV
-                    </button>
-
-                    <?php if (esAdministrador()): ?>
-                    <a href="categorias.php" class="boton boton-borde">
-                        <i class="fa-solid fa-tags"></i>
-                        Categorías
-                    </a>
-                    <?php endif; ?>
-
-                    <?php if (esAdministrador()): ?>
-                    <a href="proveedores.php" class="boton boton-borde">
-                        <i class="fa-solid fa-truck-field"></i>
-                        Proveedores
-                    </a>
-                    <?php endif; ?>
-
-                    <?php if (esAdministrador()): ?>
-                    <a href="producto-nuevo.php" class="boton boton-azul">
-                        <i class="fa-solid fa-plus"></i>
-                        Nuevo producto
-                    </a>
-                    <?php endif; ?>
-
+                    <h1>Máquinas</h1>
+                    <p>Consulta las máquinas expendedoras y la ubicación a la que pertenece cada una.</p>
                 </div>
 
             </div>
 
             <!-- MENSAJES -->
-            <div id="mensajeProducto" class="mensaje-producto" aria-live="polite"></div>
+            <div id="mensajeMaquina" class="mensaje-producto" aria-live="polite"></div>
 
             <!-- RESUMEN -->
-            <section class="resumen-productos" aria-label="Resumen de productos">
+            <section class="resumen-productos" aria-label="Resumen de máquinas">
 
                 <article class="tarjeta-estadistica">
-                    <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-box"></i></div>
+                    <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-cash-register"></i></div>
                     <div>
-                        <span>Total de productos</span>
-                        <strong id="totalProductos">0</strong>
+                        <span>Total de máquinas</span>
+                        <strong id="totalMaquinas">0</strong>
                     </div>
                 </article>
 
                 <article class="tarjeta-estadistica">
                     <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-circle-check"></i></div>
                     <div>
-                        <span>Productos activos</span>
-                        <strong id="productosActivos">0</strong>
+                        <span>Máquinas activas</span>
+                        <strong id="maquinasActivas">0</strong>
                     </div>
                 </article>
 
                 <article class="tarjeta-estadistica">
                     <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-circle-xmark"></i></div>
                     <div>
-                        <span>Productos inactivos</span>
-                        <strong id="productosInactivos">0</strong>
+                        <span>Máquinas inactivas</span>
+                        <strong id="maquinasInactivas">0</strong>
                     </div>
                 </article>
 
                 <article class="tarjeta-estadistica">
-                    <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-tags"></i></div>
+                    <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-shop"></i></div>
                     <div>
-                        <span>Categorías activas</span>
-                        <strong id="categoriasActivas">0</strong>
+                        <span>Ubicaciones con máquinas</span>
+                        <strong id="tiendasConMaquinas">0</strong>
                     </div>
                 </article>
 
             </section>
 
-            <!-- CATÁLOGO -->
+            <!-- LISTADO -->
             <section class="panel">
 
                 <div class="panel-encabezado">
                     <div>
-                        <h2>Catálogo de productos</h2>
+                        <h2>Máquinas registradas</h2>
                         <p class="descripcion-panel">
-                            Busca por nombre, código interno o código de barras.
-                            La exportación incluye todos los productos que coinciden con los filtros.
+                            Busca por código, nombre, punto operativo o modelo.
                         </p>
                     </div>
                 </div>
@@ -255,95 +231,73 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     <div class="campo-busqueda-productos">
                         <i class="fa-solid fa-magnifying-glass"></i>
 
-                        <label for="buscarProducto" class="texto-solo-lectores">Buscar productos</label>
+                        <label for="buscarMaquina" class="texto-solo-lectores">Buscar máquinas</label>
 
                         <input type="search"
-                               id="buscarProducto"
-                               placeholder="Buscar por nombre, código interno o código de barras..."
+                               id="buscarMaquina"
+                               placeholder="Buscar por código, nombre, punto operativo o modelo..."
                                autocomplete="off">
                     </div>
 
                     <div class="campo-filtro-producto">
-                        <label for="filtroCategoriaProducto">Categoría</label>
-                        <select id="filtroCategoriaProducto">
-                            <option value="">Todas las categorías</option>
+                        <label for="filtroTiendaMaquina">Ubicación</label>
+                        <select id="filtroTiendaMaquina">
+                            <option value="">Todas las ubicaciones</option>
                         </select>
                     </div>
 
                     <div class="campo-filtro-producto">
-                        <label for="filtroEstadoProducto">Estado</label>
-                        <select id="filtroEstadoProducto">
+                        <label for="filtroEstadoMaquina">Estado</label>
+                        <select id="filtroEstadoMaquina">
                             <option value="">Todos los estados</option>
-                            <option value="activos">Activos</option>
-                            <option value="inactivos">Inactivos</option>
+                            <option value="activas">Activas</option>
+                            <option value="inactivas">Inactivas</option>
                         </select>
                     </div>
 
-                    <button type="button" id="botonLimpiarFiltrosProductos" class="boton boton-borde">
+                    <button type="button" id="botonLimpiarFiltrosMaquinas" class="boton boton-borde">
                         <i class="fa-solid fa-filter-circle-xmark"></i>
                         Limpiar filtros
                     </button>
 
                 </div>
 
-                <p id="resultadoBusquedaProductos"
+                <p id="resultadoBusquedaMaquinas"
                    class="resultado-busqueda-productos"
                    aria-live="polite"></p>
 
                 <!-- TABLA -->
-                <div id="contenedorTablaProductos" class="contenedor-tabla">
+                <div id="contenedorTablaMaquinas" class="contenedor-tabla">
 
                     <table class="tabla-datos">
 
-                        <caption class="texto-solo-lectores">Catálogo de productos registrados</caption>
+                        <caption class="texto-solo-lectores">Máquinas expendedoras registradas</caption>
 
                         <thead>
                             <tr>
-                                <th scope="col">Producto</th>
-                                <th scope="col">Código interno / barras</th>
-                                <th scope="col">Categoría</th>
-                                <th scope="col">Impuesto</th>
-                                <th scope="col">Proveedores</th>
+                                <th scope="col">Código</th>
+                                <th scope="col">Nombre</th>
+                                <th scope="col">Ubicación</th>
+                                <th scope="col">Modelo / tipo</th>
                                 <th scope="col">Estado</th>
-                                <th scope="col">Acciones</th>
                             </tr>
                         </thead>
 
-                        <tbody id="cuerpoTablaProductos"></tbody>
+                        <tbody id="cuerpoTablaMaquinas"></tbody>
 
                     </table>
 
                 </div>
 
-                <!-- PAGINACIÓN -->
-                <div id="paginacionProductos" class="paginacion" hidden>
-                    <span id="textoPaginacionProductos"></span>
-
-                    <div class="paginacion-controles">
-                        <button type="button" id="botonPaginaAnterior" aria-label="Página anterior">
-                            <i class="fa-solid fa-chevron-left"></i>
-                        </button>
-                        <button type="button" id="botonPaginaSiguiente" aria-label="Página siguiente">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- SIN PRODUCTOS -->
-                <div id="mensajeSinProductos" class="estado-vacio-productos" hidden>
-                    <i class="fa-solid fa-box-open"></i>
-                    <h3>No hay productos registrados</h3>
-                    <p>Registra el primer producto para que aparezca en el catálogo.</p>
-                    <?php if (esAdministrador()): ?>
-                    <a href="producto-nuevo.php" class="boton boton-azul">
-                        <i class="fa-solid fa-plus"></i>
-                        Registrar producto
-                    </a>
-                    <?php endif; ?>
+                <!-- SIN MÁQUINAS -->
+                <div id="mensajeSinMaquinas" class="estado-vacio-productos" hidden>
+                    <i class="fa-solid fa-cash-register"></i>
+                    <h3>No hay máquinas registradas</h3>
+                    <p>Cuando se registre la primera máquina aparecerá en este listado.</p>
                 </div>
 
                 <!-- SIN RESULTADOS -->
-                <div id="mensajeSinResultadosProductos" class="estado-vacio-productos" hidden>
+                <div id="mensajeSinResultadosMaquinas" class="estado-vacio-productos" hidden>
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <h3>No se encontraron coincidencias</h3>
                     <p>Cambia el texto de búsqueda o limpia los filtros seleccionados.</p>
@@ -357,7 +311,6 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <script src="../js/app.js"></script>
     <script src="../js/catalogo-comun.js"></script>
-    <script src="../js/productos.js"></script>
-
+    <script src="../js/maquinas.js"></script>
 </body>
 </html>

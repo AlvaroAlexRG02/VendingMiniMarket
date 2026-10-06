@@ -100,6 +100,11 @@ header("Expires: 0");
                 Tienda
             </a>
 
+            <a href="../maquinas/maquinas.php">
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
+            </a>
+
             <a href="../inventario/inventario.html">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
