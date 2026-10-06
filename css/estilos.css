@@ -3112,3 +3112,276 @@ body.pagina-app {
         align-items: flex-start;
     }
 }
+
+/* ==========================================
+   BITÁCORA DE AUDITORÍA
+========================================== */
+
+.pagina-bitacora {
+    min-height: 100vh;
+    padding: 35px 45px;
+    box-sizing: border-box;
+}
+
+
+/* Contenedor principal de la bitácora */
+
+.contenedor-bitacora {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+}
+
+
+/* Encabezado */
+
+.encabezado-bitacora {
+    margin-bottom: 25px;
+}
+
+.encabezado-bitacora h1 {
+    margin: 0 0 8px 0;
+}
+
+.encabezado-bitacora p {
+    margin: 0;
+}
+
+
+/* Tarjetas */
+
+.tarjeta-bitacora {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-sizing: border-box;
+}
+
+
+/* Filtros */
+
+.filtros-bitacora {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 25px;
+}
+
+
+/* Cada filtro */
+
+.filtro-bitacora {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.filtro-bitacora label {
+    font-weight: 600;
+}
+
+
+/* Inputs y selects */
+
+.filtro-bitacora input,
+.filtro-bitacora select {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid #d7dce5;
+    border-radius: 7px;
+    box-sizing: border-box;
+}
+
+
+/* Botones */
+
+.acciones-bitacora {
+    grid-column: 1 / -1;
+
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 5px;
+}
+
+
+/* Tabla */
+
+.tabla-bitacora-contenedor {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.tabla-bitacora-contenedor table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-bitacora-contenedor th,
+.tabla-bitacora-contenedor td {
+    padding: 12px 14px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.tabla-bitacora-contenedor th {
+    font-weight: 700;
+}
+
+
+/* Responsive */
+
+@media (max-width: 900px) {
+
+    .pagina-bitacora {
+        padding: 25px 20px;
+    }
+
+    .filtros-bitacora {
+        grid-template-columns: 1fr;
+    }
+
+    .acciones-bitacora {
+        grid-column: auto;
+        justify-content: flex-start;
+    }
+
+}
+
+/* ==========================================
+   DISEÑO DE BITÁCORA
+========================================== */
+
+body.pagina-bitacora {
+    padding: 35px 45px;
+    box-sizing: border-box;
+}
+
+
+/* Contenedor general */
+
+body.pagina-bitacora .contenedor-bitacora {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+}
+
+
+/* Encabezado */
+
+body.pagina-bitacora .encabezado-bitacora {
+    margin-bottom: 25px;
+}
+
+
+/* Tarjetas */
+
+body.pagina-bitacora .tarjeta-bitacora {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-sizing: border-box;
+}
+
+
+/* ==========================================
+   FILTROS
+========================================== */
+
+body.pagina-bitacora #formularioFiltros {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 30px;
+}
+
+
+/* Cada filtro */
+
+body.pagina-bitacora #formularioFiltros .filtro-bitacora {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+
+/* Etiquetas */
+
+body.pagina-bitacora #formularioFiltros .filtro-bitacora label {
+    font-weight: 600;
+}
+
+
+/* Inputs y selects */
+
+body.pagina-bitacora #formularioFiltros .filtro-bitacora input,
+body.pagina-bitacora #formularioFiltros .filtro-bitacora select {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid #d7dce5;
+    border-radius: 7px;
+    box-sizing: border-box;
+}
+
+
+/* Botones */
+
+body.pagina-bitacora #formularioFiltros .acciones-bitacora {
+    grid-column: 1 / -1;
+
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 5px;
+}
+
+
+/* ==========================================
+   TABLA
+========================================== */
+
+body.pagina-bitacora .tabla-bitacora-contenedor {
+    width: 100%;
+    overflow-x: auto;
+}
+
+
+body.pagina-bitacora .tabla-bitacora-contenedor table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+
+body.pagina-bitacora .tabla-bitacora-contenedor th,
+body.pagina-bitacora .tabla-bitacora-contenedor td {
+    padding: 12px 14px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+@media (max-width: 900px) {
+
+    body.pagina-bitacora {
+        padding: 25px 20px;
+    }
+
+    body.pagina-bitacora #formularioFiltros {
+        grid-template-columns: 1fr;
+    }
+
+    body.pagina-bitacora #formularioFiltros .acciones-bitacora {
+        grid-column: auto;
+        justify-content: flex-start;
+    }
+
+}
