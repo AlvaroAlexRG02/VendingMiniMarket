@@ -1,5 +1,5 @@
 /*=========================================================
-  VENDING MINI MARKET — Proveedores (proveedores.html)
+  VENDING MINI MARKET — Proveedores (proveedores.php)
   HU-12: registrar y mantener proveedores
   Requiere: app.js y catalogo-comun.js cargados antes.
 =========================================================*/

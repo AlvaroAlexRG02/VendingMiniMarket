@@ -14,6 +14,7 @@
  * HU-13  Duplicados                    verificarDuplicados()
  * HU-15  Consultar y exportar          listar_productos, exportar_productos
  *
+ * Usa PDO ($pdo), igual que api/auth/login.php.
  */
 
 ini_set('display_errors', '0');

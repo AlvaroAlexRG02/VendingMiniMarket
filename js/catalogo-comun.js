@@ -9,7 +9,7 @@
 
     const API = '../api/catalogo/catalogo.php';
     const PAGINA_LOGIN = '../index/index.html';
-    const PAGINA_PRODUCTOS = '../productos/productos.html';
+    const PAGINA_PRODUCTOS = '../productos/productos.php';
 
     let sesionActual = null;
 

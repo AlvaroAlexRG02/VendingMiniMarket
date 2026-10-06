@@ -1,5 +1,5 @@
 /*=========================================================
-  VENDING MINI MARKET — Categorías (categorias.html)
+  VENDING MINI MARKET — Categorías (categorias.php)
   HU-11: crear, editar y desactivar categorías
   Requiere: app.js y catalogo-comun.js cargados antes.
 =========================================================*/
