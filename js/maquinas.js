@@ -1,70 +1,20 @@
 /*=========================================================
   VENDING MINI MARKET — Máquinas expendedoras (maquinas.php)
   HU-17 · consulta de máquinas con su ubicación y estado
-  Requiere: app.js y catalogo-comun.js cargados antes.
+  Requiere: app.js, catalogo-comun.js y maquinas-api.js cargados antes.
 =========================================================*/
 
 (() => {
     'use strict';
 
     const C = window.CatalogoComun;
+    const { api: apiMaquinas } = window.MaquinasApi;
     const $ = (id) => document.getElementById(id);
 
-    const API = '../api/maquinas/maquinas.php';
-    const PAGINA_LOGIN = '../index/index.html';
     const ID_MENSAJE = 'mensajeMaquina';
 
     let maquinas = [];
     let numeroPeticion = 0;
-
-
-    /*-----------------------------------------------------
-      API
-    -----------------------------------------------------*/
-
-    async function apiMaquinas(accion, parametros = {}) {
-        const url = new URL(API, window.location.href);
-        url.searchParams.set('accion', accion);
-
-        Object.entries(parametros).forEach(([clave, valor]) => {
-            if (valor !== undefined && valor !== null && valor !== '') {
-                url.searchParams.set(clave, valor);
-            }
-        });
-
-        let respuesta;
-
-        try {
-            respuesta = await fetch(url.toString(), {
-                credentials: 'same-origin',
-                headers: { Accept: 'application/json' }
-            });
-        } catch (error) {
-            throw new Error('No fue posible comunicarse con el servidor.');
-        }
-
-        let resultado;
-
-        try {
-            resultado = await respuesta.json();
-        } catch (error) {
-            throw new Error(
-                'El servidor devolvió una respuesta no válida. ' +
-                'Revise XAMPP, config/database.php y los registros de error de PHP.'
-            );
-        }
-
-        if (respuesta.status === 401) {
-            window.location.href = PAGINA_LOGIN;
-            throw new Error(resultado.message || 'Debe iniciar sesión.');
-        }
-
-        if (!respuesta.ok || !resultado.success) {
-            throw new Error(resultado.message || 'Ocurrió un error.');
-        }
-
-        return resultado;
-    }
 
 
     /*-----------------------------------------------------
@@ -135,7 +85,7 @@
         const filtros = leerFiltros();
 
         try {
-            const resultado = await apiMaquinas('listar_maquinas', filtros);
+            const resultado = await apiMaquinas('listar_maquinas', null, filtros);
 
             // Si el usuario siguió escribiendo, se descarta esta respuesta.
             if (peticion !== numeroPeticion) {
@@ -171,6 +121,7 @@
 
         cuerpo.innerHTML = '';
 
+        const admin = contenedorTabla.dataset.esAdmin === '1';
         const vacio = maquinas.length === 0;
         const conFiltros = hayFiltros(filtros);
 
@@ -193,10 +144,25 @@
                 .map((valor) => C.escapeHtml(valor))
                 .join(' · ');
 
+            const nombre = C.escapeHtml(maquina.nombre);
+
+            const celdaAcciones = admin
+                ? `
+                <td>
+                    <div class="acciones-producto-tabla">
+                        <a href="maquina-nueva.php?id=${maquina.id_maquina}"
+                           class="boton-accion-producto boton-editar-producto"
+                           title="Editar máquina" aria-label="Editar ${nombre}">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                    </div>
+                </td>`
+                : '';
+
             fila.innerHTML = `
                 <td><strong>${C.escapeHtml(maquina.codigo)}</strong></td>
                 <td>
-                    ${C.escapeHtml(maquina.nombre)}
+                    ${nombre}
                     ${maquina.observaciones
                         ? `<br><small>${C.escapeHtml(maquina.observaciones)}</small>`
                         : ''}
@@ -213,6 +179,7 @@
                         ${maquina.estado ? 'Activa' : 'Inactiva'}
                     </span>
                 </td>
+                ${celdaAcciones}
             `;
 
             cuerpo.appendChild(fila);

@@ -434,18 +434,22 @@ function accionCrearMaquina(array $in): void
 
     $m = leerMaquina($in);
 
+    // El estado inicial es opcional: si no se indica, la máquina queda activa.
+    $estado = array_key_exists('estado', $in) ? aBool($in['estado']) : true;
+
     validarTienda($m['id_tienda']);
     verificarCodigoUnico($m['codigo']);
 
-    $nueva = enTransaccion(function () use ($m) {
+    $nueva = enTransaccion(function () use ($m, $estado) {
         $st = db()->prepare("
             INSERT INTO maquina
                 (id_tienda, codigo, nombre, ubicacion, modelo, tipo, estado, observaciones)
             VALUES
-                (:id_tienda, :codigo, :nombre, :ubicacion, :modelo, :tipo, TRUE, :observaciones)
+                (:id_tienda, :codigo, :nombre, :ubicacion, :modelo, :tipo, CAST(:estado AS BOOLEAN), :observaciones)
             RETURNING id_maquina
         ");
         $st->execute([
+            ':estado'        => $estado ? 'true' : 'false',
             ':id_tienda'     => $m['id_tienda'],
             ':codigo'        => $m['codigo'],
             ':nombre'        => $m['nombre'],

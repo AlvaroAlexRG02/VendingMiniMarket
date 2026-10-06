@@ -171,6 +171,15 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     <p>Consulta las máquinas expendedoras y la ubicación a la que pertenece cada una.</p>
                 </div>
 
+                <?php if (esAdministrador()): ?>
+                <div class="acciones-encabezado-catalogo">
+                    <a href="maquina-nueva.php" class="boton boton-azul">
+                        <i class="fa-solid fa-plus"></i>
+                        Nueva máquina
+                    </a>
+                </div>
+                <?php endif; ?>
+
             </div>
 
             <!-- MENSAJES -->
@@ -267,7 +276,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                    aria-live="polite"></p>
 
                 <!-- TABLA -->
-                <div id="contenedorTablaMaquinas" class="contenedor-tabla">
+                <div id="contenedorTablaMaquinas" class="contenedor-tabla"
+                     data-es-admin="<?= esAdministrador() ? '1' : '0' ?>">
 
                     <table class="tabla-datos">
 
@@ -280,6 +290,9 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                                 <th scope="col">Ubicación</th>
                                 <th scope="col">Modelo / tipo</th>
                                 <th scope="col">Estado</th>
+                                <?php if (esAdministrador()): ?>
+                                <th scope="col">Acciones</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
 
@@ -294,6 +307,12 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     <i class="fa-solid fa-cash-register"></i>
                     <h3>No hay máquinas registradas</h3>
                     <p>Cuando se registre la primera máquina aparecerá en este listado.</p>
+                    <?php if (esAdministrador()): ?>
+                    <a href="maquina-nueva.php" class="boton boton-azul">
+                        <i class="fa-solid fa-plus"></i>
+                        Registrar máquina
+                    </a>
+                    <?php endif; ?>
                 </div>
 
                 <!-- SIN RESULTADOS -->
@@ -311,6 +330,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <script src="../js/app.js"></script>
     <script src="../js/catalogo-comun.js"></script>
+    <script src="../js/maquinas-api.js"></script>
     <script src="../js/maquinas.js"></script>
 </body>
 </html>
