@@ -120,6 +120,18 @@ header("Expires: 0");
                 Usuarios
             </a>
 
+            <?php if (esAdministradorOGerente()): ?>
+
+            <a href="../bitacora/bitacora.php">
+
+                <i class="fa-solid fa-clipboard-list"></i>
+
+                Bitácora
+
+            </a>
+
+        <?php endif; ?>
+
         </nav>
 
         <!-- Cerrar sesión -->
