@@ -10,11 +10,11 @@
     const PAGINA_LOGIN = '../index/index.html';
 
     /**
-     * Llama a una acción de la API de máquinas.
+     * Llama a una acción de una API JSON del sistema.
      * Sin `datos` hace GET; con `datos` hace POST con cuerpo JSON.
      */
-    async function api(accion, datos = null, parametros = {}) {
-        const url = new URL(API, window.location.href);
+    async function llamarApi(ruta, accion, datos = null, parametros = {}) {
+        const url = new URL(ruta, window.location.href);
         url.searchParams.set('accion', accion);
 
         Object.entries(parametros).forEach(([clave, valor]) => {
@@ -68,5 +68,15 @@
         return resultado;
     }
 
-    window.MaquinasApi = { api };
+    /** Cliente de la API de máquinas (el que usan maquinas.php y maquina-nueva.php). */
+    const api = (accion, datos = null, parametros = {}) =>
+        llamarApi(API, accion, datos, parametros);
+
+    /** Crea un cliente con la misma interfaz para otra API (por ejemplo, abastecimiento). */
+    function crearCliente(ruta) {
+        return (accion, datos = null, parametros = {}) =>
+            llamarApi(ruta, accion, datos, parametros);
+    }
+
+    window.MaquinasApi = { api, crearCliente };
 })();

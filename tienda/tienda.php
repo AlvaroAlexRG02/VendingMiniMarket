@@ -160,6 +160,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 </div>
 
                 <div class="acciones-encabezado-compras">
+                    <a href="relaciones.php" class="boton boton-borde">
+                        <i class="fa-solid fa-diagram-project"></i>
+                        Relaciones de abastecimiento
+                    </a>
                     <a href="#formularioTienda" class="boton boton-azul">
                         <i class="fa-solid fa-plus"></i>
                         Nueva ubicación
