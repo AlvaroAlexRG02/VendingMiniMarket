@@ -137,15 +137,25 @@ header("Expires: 0");
 
             <?php if (esAdministradorOGerente()): ?>
 
-            <a href="../bitacora/bitacora.php">
+                <a href="../bitacora/bitacora.php">
 
-                <i class="fa-solid fa-clipboard-list"></i>
+                    <i class="fa-solid fa-clipboard-list"></i>
 
-                Bitácora
+                    Bitácora
 
-            </a>
+                </a>
 
-        <?php endif; ?>
+            <?php endif; ?>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
+
+            <?php endif; ?>
 
         </nav>
 
