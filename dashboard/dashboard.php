@@ -10,6 +10,11 @@ if (!isset($_SESSION["usuario"])) {
 }
 
 /*
+ * Ubicación asignada al usuario (HU-19), leída de la base en cada carga.
+ */
+$ubicacionUsuario = resumenUbicacionUsuario($pdo);
+
+/*
  * Evitar que el navegador muestre el dashboard
  * después de cerrar sesión utilizando la caché.
  */
@@ -234,6 +239,10 @@ header("Expires: 0");
 
                         <span id="correoUsuarioSuperior">
                             <?= htmlspecialchars($_SESSION["usuario"]["correo"]) ?>
+                        </span>
+
+                        <span id="ubicacionUsuarioSuperior">
+                            Ubicación: <?= htmlspecialchars($ubicacionUsuario["texto"], ENT_QUOTES, "UTF-8") ?>
                         </span> 
 
                     </div>
@@ -251,6 +260,35 @@ header("Expires: 0");
         =========================================== -->
 
         <main class="contenido-app">
+
+            <!-- ==========================================
+                 UBICACIÓN ASIGNADA (HU-19)
+            =========================================== -->
+
+            <?php if ($ubicacionUsuario["sin_ubicacion"]): ?>
+
+            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-error">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Sin ubicación asignada. Solicite al administrador que le asigne una ubicación para poder operar.
+            </div>
+
+            <?php elseif ($ubicacionUsuario["todas"]): ?>
+
+            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-exito">
+                <i class="fa-solid fa-location-dot"></i>
+                Tiene acceso a todas las ubicaciones.
+            </div>
+
+            <?php else: ?>
+
+            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-exito">
+                <i class="fa-solid fa-location-dot"></i>
+                <?= $ubicacionUsuario["cantidad"] > 1 ? "Ubicaciones asignadas" : "Ubicación asignada" ?>:
+                <strong><?= htmlspecialchars($ubicacionUsuario["texto"], ENT_QUOTES, "UTF-8") ?></strong>.
+                Solo puede operar en <?= $ubicacionUsuario["cantidad"] > 1 ? "ellas" : "ella" ?>.
+            </div>
+
+            <?php endif; ?>
 
             <!-- ==========================================
                  ENCABEZADO DEL DASHBOARD

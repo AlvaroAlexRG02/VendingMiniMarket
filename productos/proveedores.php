@@ -155,6 +155,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     <div class="perfil-superior-texto">
                         <strong id="nombreUsuarioSuperior"><?= htmlspecialchars($nombreUsuario, ENT_QUOTES, "UTF-8") ?></strong>
                         <span id="correoUsuarioSuperior"><?= htmlspecialchars($correoUsuario, ENT_QUOTES, "UTF-8") ?></span>
+                        <span id="ubicacionUsuarioSuperior">Ubicación: <?= htmlspecialchars(resumenUbicacionUsuario($pdo)["texto"], ENT_QUOTES, "UTF-8") ?></span>
                     </div>
                     <i class="fa-solid fa-chevron-down"></i>
                 </div>

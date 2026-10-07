@@ -156,6 +156,40 @@ function exigirOperarEnUbicacion(PDO $pdo, int $idTienda): void
 }
 
 /**
+ * Resumen de la ubicación del usuario de la sesión, listo para mostrar en pantalla.
+ * Devuelve ['texto' => string, 'cantidad' => int, 'todas' => bool, 'sin_ubicacion' => bool].
+ */
+function resumenUbicacionUsuario(PDO $pdo): array
+{
+    $usuario = $_SESSION['usuario'] ?? null;
+
+    if (!$usuario) {
+        return ['texto' => '', 'cantidad' => 0, 'todas' => false, 'sin_ubicacion' => false];
+    }
+
+    if (in_array((int)($usuario['id_rol'] ?? 0), UBICACION_ROLES_VEN_TODAS, true)) {
+        return ['texto' => 'Todas las ubicaciones', 'cantidad' => 0, 'todas' => true, 'sin_ubicacion' => false];
+    }
+
+    $asignadas = ubicacionesAsignadas($pdo, (int)($usuario['id_usuario'] ?? 0));
+
+    if (!$asignadas) {
+        return ['texto' => 'Sin ubicación asignada', 'cantidad' => 0, 'todas' => false, 'sin_ubicacion' => true];
+    }
+
+    $nombres = array_map(function (array $t): string {
+        return $t['nombre'] . ($t['estado'] ? '' : ' (inactiva)');
+    }, $asignadas);
+
+    return [
+        'texto'         => implode(', ', $nombres),
+        'cantidad'      => count($asignadas),
+        'todas'         => false,
+        'sin_ubicacion' => false,
+    ];
+}
+
+/**
  * Registra en bitacora_auditoria el usuario de la sesión y la ubicación de una
  * operación (criterio 4). Debe llamarse dentro de la misma transacción de la
  * operación, para que quede registrada solo cuando la transacción se confirma.
