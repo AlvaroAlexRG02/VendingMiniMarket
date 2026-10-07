@@ -308,6 +308,66 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             </section>
             <?php endif; ?>
 
+            <!-- VERIFICAR TRASLADO -->
+            <section class="panel" id="panelVerificarTraslado">
+
+                <div class="panel-encabezado">
+
+                    <div>
+                        <h2>Verificar un traslado</h2>
+                        <p class="descripcion-panel">
+                            Comprueba si un traslado o una reposición tiene una relación de abastecimiento configurada.
+                        </p>
+                    </div>
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-truck"></i>
+                    </div>
+
+                </div>
+
+                <form id="formularioVerificarTraslado" novalidate>
+
+                    <div class="cuadricula-formulario">
+
+                        <div class="grupo-formulario">
+                            <label for="origenTraslado">Origen del traslado *</label>
+                            <select id="origenTraslado" required>
+                                <option value="">Seleccione el origen</option>
+                            </select>
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <label for="tipoDestinoTraslado">Tipo de destino *</label>
+                            <select id="tipoDestinoTraslado" required>
+                                <option value="">Seleccione el tipo de destino</option>
+                                <option value="UBICACION">Ubicación</option>
+                                <option value="MAQUINA">Máquina</option>
+                            </select>
+                        </div>
+
+                        <div class="grupo-formulario campo-completo">
+                            <label for="destinoTraslado">Destino *</label>
+                            <select id="destinoTraslado" required disabled>
+                                <option value="">Seleccione primero el tipo de destino</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="acciones-formulario">
+                        <button type="submit" id="botonVerificarTraslado" class="boton boton-azul">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Verificar traslado
+                        </button>
+                    </div>
+
+                </form>
+
+                <div id="resultadoTraslado" class="mensaje-producto" aria-live="polite"></div>
+
+            </section>
+
             <!-- LISTADO -->
             <section class="panel">
 
@@ -385,9 +445,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                                 <th scope="col">Tipo de relación</th>
                                 <th scope="col">Observaciones</th>
                                 <th scope="col">Estado</th>
-                                <?php if (esAdministrador()): ?>
                                 <th scope="col">Acciones</th>
-                                <?php endif; ?>
                             </tr>
                         </thead>
 
