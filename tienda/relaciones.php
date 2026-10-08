@@ -46,7 +46,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <title>Relaciones de abastecimiento | Vending Mini Market</title>
 
-    <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
     <link rel="stylesheet" href="../css/catalogo.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
@@ -235,11 +235,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <div class="panel-encabezado">
 
                     <div>
-                        <h2 id="tituloFormularioRelacion">Nueva relación</h2>
-                        <p class="descripcion-panel">
-                            Relaciones permitidas: Bodega → Tienda, Bodega → Máquina,
-                            Tienda → Máquina y Tienda → Tienda.
-                        </p>
+                        <h2 id="tituloFormularioRelacion" class="titulo-panel-grande">Nueva relación</h2>
                     </div>
 
                     <div class="tarjeta-estadistica-icono">
@@ -278,11 +274,6 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                             </small>
                         </div>
 
-                        <div class="grupo-formulario">
-                            <label>Tipo de relación</label>
-                            <p id="vistaPreviaRelacion" class="texto-ayuda">—</p>
-                        </div>
-
                         <div class="grupo-formulario campo-completo">
                             <label for="observacionesRelacion">Observaciones</label>
                             <textarea id="observacionesRelacion" rows="3" maxlength="500"
@@ -315,7 +306,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <div class="panel-encabezado">
 
                     <div>
-                        <h2>Verificar un traslado</h2>
+                        <h2 class="titulo-panel-grande">Verificar un traslado</h2>
                         <p class="descripcion-panel">
                             Comprueba si un traslado o una reposición tiene una relación de abastecimiento configurada.
                         </p>
@@ -374,7 +365,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <div class="panel-encabezado">
                     <div>
-                        <h2>Relaciones configuradas</h2>
+                        <h2 class="titulo-panel-grande">Relaciones configuradas</h2>
                         <p class="descripcion-panel">
                             Busca por ubicación, máquina u observaciones.
                         </p>

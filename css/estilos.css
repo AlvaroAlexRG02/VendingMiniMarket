@@ -728,6 +728,10 @@ body.pagina-app {
     font-size: 17px;
 }
 
+.panel-encabezado h2.titulo-panel-grande {
+    font-size: 22px;
+}
+
 .diseno-tienda {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

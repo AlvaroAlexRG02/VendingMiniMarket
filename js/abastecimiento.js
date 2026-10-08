@@ -251,19 +251,16 @@
     function prepararFormulario() {
         llenarOrigen();
         llenarDestino('', false);
-        actualizarVistaPrevia();
 
         $('formularioRelacion').addEventListener('submit', guardar);
         $('botonCancelarRelacion').addEventListener('click', limpiarFormulario);
 
         $('origenRelacion').addEventListener('change', () => {
             llenarDestino('', true);
-            actualizarVistaPrevia();
         });
 
         $('tipoDestinoRelacion').addEventListener('change', () => {
             llenarDestino('', false);
-            actualizarVistaPrevia();
         });
     }
 
@@ -338,17 +335,6 @@
                 ]);
 
         llenarSelect(select, 'Seleccione el destino', items, actual);
-    }
-
-    function actualizarVistaPrevia() {
-        const origen = opciones.ubicaciones.find(
-            (u) => u.id_tienda === Number($('origenRelacion').value)
-        );
-        const tipo = $('tipoDestinoRelacion').value;
-
-        $('vistaPreviaRelacion').textContent = origen && tipo
-            ? `${etiquetaTipo(origen.tipo)} → ${tipo === 'MAQUINA' ? 'Máquina' : 'Tienda'}`
-            : '—';
     }
 
     function leerDatosFormulario() {
@@ -440,7 +426,6 @@
         $('formularioRelacion').reset();
         llenarOrigen();
         llenarDestino('', false);
-        actualizarVistaPrevia();
 
         $('tituloFormularioRelacion').textContent = 'Nueva relación';
         $('botonGuardarRelacion').innerHTML =
@@ -455,7 +440,6 @@
         $('tipoDestinoRelacion').value = relacion.destino_tipo;
         llenarDestino(relacion.id_destino, false);
         $('observacionesRelacion').value = relacion.observaciones || '';
-        actualizarVistaPrevia();
 
         $('tituloFormularioRelacion').textContent = 'Editar relación';
         $('botonGuardarRelacion').innerHTML =
