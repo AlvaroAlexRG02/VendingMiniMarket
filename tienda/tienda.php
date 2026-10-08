@@ -306,35 +306,13 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     <div id="listaSecundariasTienda" class="lista-principales-tienda"></div>
                 </article>
 
-                <article class="panel">
+                <article class="panel panel-completo-tienda">
                     <div class="panel-encabezado">
                         <h2>Relación de abastecimiento</h2>
+                        <a href="relaciones.php" class="enlace-ver-todo">Gestionar relaciones</a>
                     </div>
 
-                    <p class="texto-ayuda-tienda">Define la relación operativa de abastecimiento entre ubicaciones, por ejemplo UP2 como punto de abastecimiento de UltraLag.</p>
-
-                    <form id="formularioRelacionTienda" novalidate>
-                        <div class="cuadricula-formulario">
-
-                            <div class="grupo-formulario">
-                                <label for="origenRelacionTienda">Ubicación que abastece</label>
-                                <select id="origenRelacionTienda" required></select>
-                            </div>
-
-                            <div class="grupo-formulario">
-                                <label for="destinoRelacionTienda">Ubicación abastecida</label>
-                                <select id="destinoRelacionTienda" required></select>
-                            </div>
-
-                        </div>
-
-                        <div class="acciones-formulario">
-                            <button type="submit" class="boton boton-azul">
-                                <i class="fa-solid fa-link"></i>
-                                Guardar relación
-                            </button>
-                        </div>
-                    </form>
+                    <p class="texto-ayuda-tienda">Las relaciones de abastecimiento entre ubicaciones y máquinas se crean, editan e inactivan en <a href="relaciones.php" class="enlace-ver-todo">Relaciones de abastecimiento</a>. Al registrar una tienda también puedes indicar quién la abastece en el campo "Abastecida por".</p>
                 </article>
 
                 <article class="panel panel-completo-tienda">

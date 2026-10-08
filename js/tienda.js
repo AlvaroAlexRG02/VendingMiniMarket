@@ -1,8 +1,10 @@
 /*=========================================================
   VENDING MINI MARKET — Módulo Tienda (ubicaciones)
   HU-16: las ubicaciones se guardan en la base de datos
-  mediante api/tienda/tienda.php. La relación "abastecida
-  por" usa api/abastecimiento/abastecimiento.php (HU-18).
+  mediante api/tienda/tienda.php. Las relaciones de
+  abastecimiento se gestionan en relaciones.php (HU-18);
+  aquí solo se muestran y se puede indicar "Abastecida por"
+  al registrar una tienda.
 =========================================================*/
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,19 +12,16 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 const API_TIENDA_VENDING = "../api/tienda/tienda.php";
-const API_ABASTECIMIENTO_TIENDA_VENDING = "../api/abastecimiento/abastecimiento.php";
 
 let ubicacionesTiendaVending = [];
 let historialTiendaVending = [];
 let apiTiendaVending = null;
-let apiAbastecimientoTiendaVending = null;
 
 async function inicializarPaginaTiendaVending() {
     const formulario = document.getElementById("formularioTienda");
-    const formularioRelacion = document.getElementById("formularioRelacionTienda");
     const botonLimpiar = document.getElementById("botonLimpiarTienda");
 
-    if (!formulario || !formularioRelacion) {
+    if (!formulario) {
         return;
     }
 
@@ -32,13 +31,10 @@ async function inicializarPaginaTiendaVending() {
     }
 
     apiTiendaVending = window.MaquinasApi.crearCliente(API_TIENDA_VENDING);
-    apiAbastecimientoTiendaVending = window.MaquinasApi.crearCliente(API_ABASTECIMIENTO_TIENDA_VENDING);
 
     eliminarDatosLocalesObsoletosTienda();
 
     formulario.addEventListener("submit", manejarRegistroTiendaVending);
-    formularioRelacion.addEventListener("submit", guardarRelacionOperativaTiendaVending);
-    document.getElementById("origenRelacionTienda")?.addEventListener("change", () => actualizarDestinoRelacionTienda());
     document.getElementById("tipoUbicacionTienda")?.addEventListener("change", actualizarCampoAbastecidaPorTienda);
     document.getElementById("estadoUbicacionTienda")?.addEventListener("change", actualizarCampoAbastecidaPorTienda);
 
@@ -152,41 +148,6 @@ function actualizarCampoAbastecidaPorTienda() {
 
 
 /*=========================================================
-  RELACIÓN OPERATIVA DE ABASTECIMIENTO
-=========================================================*/
-
-async function guardarRelacionOperativaTiendaVending(evento) {
-    evento.preventDefault();
-
-    const origenId = document.getElementById("origenRelacionTienda")?.value || "";
-    const destinoId = document.getElementById("destinoRelacionTienda")?.value || "";
-
-    if (!origenId || !destinoId || origenId === destinoId) {
-        mostrarMensajeTiendaVending("Debe seleccionar dos ubicaciones distintas para configurar la relación.", "error");
-        return;
-    }
-
-    const botonGuardar = evento.target.querySelector('button[type="submit"]');
-    botonGuardar.disabled = true;
-
-    try {
-        const resultado = await apiAbastecimientoTiendaVending("crear_relacion", {
-            id_tienda_origen: Number(origenId),
-            destino_tipo: "UBICACION",
-            id_destino: Number(destinoId)
-        });
-
-        await recargarModuloTiendaVending();
-        mostrarMensajeTiendaVending(resultado.message || "La relación operativa fue registrada correctamente.", "exito");
-    } catch (error) {
-        mostrarMensajeTiendaVending(error.message, "error");
-    } finally {
-        botonGuardar.disabled = false;
-    }
-}
-
-
-/*=========================================================
   ACTIVAR / INACTIVAR
 =========================================================*/
 
@@ -229,7 +190,6 @@ function renderizarModuloTiendaVending() {
     renderizarTablaTiendaVending(ubicacionesTiendaVending);
     renderizarHistorialTiendaVending(historialTiendaVending);
     poblarSelectAbastecimientoTienda();
-    poblarSelectRelacionTienda();
 }
 
 function etiquetaEstadoTienda(ubicacion) {
@@ -376,56 +336,6 @@ function poblarSelectAbastecimientoTienda() {
     `).join("");
 
     select.value = activas.some((ubicacion) => String(ubicacion.id_tienda) === valorActual) ? valorActual : "";
-}
-
-/** Relación de abastecimiento: el origen puede ser cualquier ubicación activa. */
-function poblarSelectRelacionTienda() {
-    const selectOrigen = document.getElementById("origenRelacionTienda");
-    const selectDestino = document.getElementById("destinoRelacionTienda");
-
-    if (!selectOrigen || !selectDestino) {
-        return;
-    }
-
-    const origenActual = selectOrigen.value;
-    const destinoActual = selectDestino.value;
-    const activas = ubicacionesTiendaVending.filter((ubicacion) => ubicacion.estado);
-
-    selectOrigen.innerHTML = activas.map((ubicacion) => `
-        <option value="${escaparAtributoTienda(ubicacion.id_tienda)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
-    `).join("");
-
-    selectOrigen.value = activas.some((ubicacion) => String(ubicacion.id_tienda) === origenActual)
-        ? origenActual
-        : (activas[0] ? String(activas[0].id_tienda) : "");
-
-    actualizarDestinoRelacionTienda(destinoActual);
-}
-
-/** El destino excluye al origen elegido y solo admite tiendas activas (una bodega no puede ser abastecida). */
-function actualizarDestinoRelacionTienda(destinoPreferido) {
-    const selectOrigen = document.getElementById("origenRelacionTienda");
-    const selectDestino = document.getElementById("destinoRelacionTienda");
-
-    if (!selectOrigen || !selectDestino) {
-        return;
-    }
-
-    const origenId = selectOrigen.value;
-    const destinoActual = destinoPreferido !== undefined ? destinoPreferido : selectDestino.value;
-    const disponibles = ubicacionesTiendaVending.filter((ubicacion) =>
-        ubicacion.estado
-        && ubicacion.tipo === "TIENDA"
-        && String(ubicacion.id_tienda) !== origenId
-    );
-
-    selectDestino.innerHTML = disponibles.map((ubicacion) => `
-        <option value="${escaparAtributoTienda(ubicacion.id_tienda)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
-    `).join("");
-
-    selectDestino.value = disponibles.some((ubicacion) => String(ubicacion.id_tienda) === destinoActual)
-        ? destinoActual
-        : (disponibles[0] ? String(disponibles[0].id_tienda) : "");
 }
 
 
