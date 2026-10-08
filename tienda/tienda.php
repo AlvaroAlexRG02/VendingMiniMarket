@@ -33,7 +33,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
     <meta name="description" content="Administración de tiendas y bodegas de Vending Mini Market">
     <title>Tienda | Vending Mini Market</title>
 
-    <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
@@ -299,6 +299,12 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     </div>
 
                     <div id="listaPrincipalesTienda" class="lista-principales-tienda"></div>
+
+                    <div class="panel-encabezado panel-encabezado-secundario-tienda">
+                        <h2>Ubicaciones secundarias</h2>
+                    </div>
+
+                    <div id="listaSecundariasTienda" class="lista-principales-tienda"></div>
                 </article>
 
                 <article class="panel">
@@ -382,6 +388,6 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
     </div>
 
     <script src="../js/app.js"></script>
-    <script src="../js/tienda.js"></script>
+    <script src="../js/tienda.js?v=<?= filemtime(__DIR__ . '/../js/tienda.js') ?>"></script>
 </body>
 </html>

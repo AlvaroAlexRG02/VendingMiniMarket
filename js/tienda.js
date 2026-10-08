@@ -21,6 +21,7 @@ function inicializarPaginaTiendaVending() {
 
     formulario.addEventListener("submit", manejarRegistroTiendaVending);
     formularioRelacion.addEventListener("submit", guardarRelacionOperativaTiendaVending);
+    document.getElementById("origenRelacionTienda")?.addEventListener("change", () => actualizarDestinoRelacionTienda());
 
     if (botonLimpiar) {
         botonLimpiar.addEventListener("click", () => {
@@ -191,15 +192,32 @@ function actualizarResumenTiendaVending(ubicaciones) {
 }
 
 function renderizarPrincipalesTiendaVending(ubicaciones) {
-    const contenedor = document.getElementById("listaPrincipalesTienda");
+    renderizarTarjetasUbicacionTienda(
+        "listaPrincipalesTienda",
+        ubicaciones.filter((ubicacion) => ubicacion.principal),
+        "No hay ubicaciones principales registradas."
+    );
+
+    renderizarTarjetasUbicacionTienda(
+        "listaSecundariasTienda",
+        ubicaciones.filter((ubicacion) => !ubicacion.principal),
+        "No hay ubicaciones secundarias registradas."
+    );
+}
+
+function renderizarTarjetasUbicacionTienda(idContenedor, lista, mensajeVacio) {
+    const contenedor = document.getElementById(idContenedor);
 
     if (!contenedor) {
         return;
     }
 
-    const principales = ubicaciones.filter((ubicacion) => ubicacion.principal);
+    if (lista.length === 0) {
+        contenedor.innerHTML = `<p class="texto-vacio-tienda">${escaparHtmlTienda(mensajeVacio)}</p>`;
+        return;
+    }
 
-    contenedor.innerHTML = principales.map((ubicacion) => `
+    contenedor.innerHTML = lista.map((ubicacion) => `
         <article class="tarjeta-principal-tienda">
             <div class="tarjeta-principal-tienda-encabezado">
                 <strong>${escaparHtmlTienda(ubicacion.nombre)}</strong>
@@ -320,13 +338,33 @@ function poblarSelectRelacionTienda() {
     `).join("");
 
     selectOrigen.innerHTML = opciones;
-    selectDestino.innerHTML = opciones;
 
     const origenPorDefecto = ubicaciones.find((ubicacion) => ubicacion.nombre === "UP2")?.id || ubicaciones[0]?.id || "";
     const destinoPorDefecto = ubicaciones.find((ubicacion) => ubicacion.nombre === "UltraLag")?.id || ubicaciones[1]?.id || "";
 
     selectOrigen.value = origenPorDefecto;
-    selectDestino.value = destinoPorDefecto;
+    actualizarDestinoRelacionTienda(destinoPorDefecto);
+}
+
+function actualizarDestinoRelacionTienda(destinoPreferido) {
+    const selectOrigen = document.getElementById("origenRelacionTienda");
+    const selectDestino = document.getElementById("destinoRelacionTienda");
+
+    if (!selectOrigen || !selectDestino) {
+        return;
+    }
+
+    const origenId = selectOrigen.value;
+    const destinoActual = destinoPreferido !== undefined ? destinoPreferido : selectDestino.value;
+    const disponibles = obtenerUbicacionesTiendaVending().filter((ubicacion) => ubicacion.id !== origenId);
+
+    selectDestino.innerHTML = disponibles.map((ubicacion) => `
+        <option value="${escaparAtributoTienda(ubicacion.id)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
+    `).join("");
+
+    selectDestino.value = disponibles.some((ubicacion) => ubicacion.id === destinoActual)
+        ? destinoActual
+        : (disponibles[0]?.id || "");
 }
 
 function obtenerUbicacionesTiendaVending() {

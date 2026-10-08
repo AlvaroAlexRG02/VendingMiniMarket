@@ -780,6 +780,17 @@ body.pagina-app {
     line-height: 1.5;
 }
 
+.panel-encabezado-secundario-tienda {
+    margin-top: 28px;
+}
+
+.texto-vacio-tienda {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--texto-secundario);
+    font-size: 14px;
+}
+
 .enlace-ver-todo {
     font-size: 13px;
     font-weight: 600;
