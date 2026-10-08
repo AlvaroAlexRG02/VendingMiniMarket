@@ -33,7 +33,7 @@ if (!esAdministradorOGerente()) {
 
     <title>Usuarios | Vending Mini Market</title>
 
-    <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
 
     <link
         rel="stylesheet"
@@ -81,6 +81,16 @@ if (!esAdministradorOGerente()) {
             <a href="../productos/productos.html">
                 <i class="fa-solid fa-box"></i>
                 Productos
+            </a>
+
+            <a href="../tienda/tienda.php">
+                <i class="fa-solid fa-shop"></i>
+                Tienda
+            </a>
+
+            <a href="../maquinas/maquinas.php">
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
             </a>
 
             <a href="../inventario/inventario.html">
@@ -212,11 +222,19 @@ if (!esAdministradorOGerente()) {
                     <div class="perfil-superior-texto">
 
                         <strong id="nombreUsuarioSuperior">
-                            Administrador
+                            <?= htmlspecialchars(
+                                trim(($_SESSION["usuario"]["nombre"] ?? "") . " " . ($_SESSION["usuario"]["apellido"] ?? "")),
+                                ENT_QUOTES,
+                                "UTF-8"
+                            ) ?>
                         </strong>
 
                         <span id="correoUsuarioSuperior">
-                            admin@vending.com
+                            <?= htmlspecialchars($_SESSION["usuario"]["correo"] ?? "", ENT_QUOTES, "UTF-8") ?>
+                        </span>
+
+                        <span id="ubicacionUsuarioSuperior">
+                            Ubicación: <?= htmlspecialchars(resumenUbicacionUsuario($pdo)["texto"], ENT_QUOTES, "UTF-8") ?>
                         </span>
 
                     </div>

@@ -827,7 +827,6 @@ document
 
                 console.error(error);
 
-
                 alert(
                     error.message ||
                     "Ocurrió un error al generar el respaldo."

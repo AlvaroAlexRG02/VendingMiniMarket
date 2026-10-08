@@ -98,6 +98,16 @@
     cursor: not-allowed;
 }
 
+/* Campos de formulario bloqueados: se ven apagados para que se note que no están disponibles */
+.grupo-formulario select:disabled,
+.grupo-formulario input:disabled,
+.grupo-formulario textarea:disabled {
+    background: var(--fondo-pagina);
+    color: var(--texto-tenue);
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
 /* Proveedores dentro del formulario de producto */
 .seccion-proveedores-producto {
     padding: 14px;

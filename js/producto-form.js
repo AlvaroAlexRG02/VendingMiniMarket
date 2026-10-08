@@ -1,5 +1,5 @@
 /*=========================================================
-  VENDING MINI MARKET — Formulario de producto (producto-nuevo.html)
+  VENDING MINI MARKET — Formulario de producto (producto-nuevo.php)
   HU-08 registrar · HU-09 editar (?id=) · HU-13 duplicados
   Requiere: app.js y catalogo-comun.js cargados antes.
 =========================================================*/
@@ -246,7 +246,7 @@
             C.mostrarMensaje(resultado.message, 'exito');
 
             setTimeout(() => {
-                window.location.href = 'productos.html';
+                window.location.href = 'productos.php';
             }, 900);
         } catch (error) {
             guardando = false;

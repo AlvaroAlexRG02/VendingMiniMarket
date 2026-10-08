@@ -1,5 +1,5 @@
 /*=========================================================
-  VENDING MINI MARKET — Catálogo de productos (productos.html)
+  VENDING MINI MARKET — Catálogo de productos (productos.php)
   HU-09 inactivar/activar · HU-10 búsqueda · HU-15 consultar y exportar
   Requiere: app.js y catalogo-comun.js cargados antes.
 =========================================================*/
@@ -11,14 +11,6 @@
     const $ = (id) => document.getElementById(id);
 
     const POR_PAGINA = 25;
-
-    /*
-     * Inventario, ventas y movimientos todavía leen los productos de
-     * localStorage ("productosVending"). Con esta bandera en true, el
-     * catálogo real (base de datos) se copia ahí para que sigan
-     * funcionando. Cuando esos módulos lean de la API, ponerla en false.
-     */
-    const SINCRONIZAR_MODULOS_LOCALES = true;
 
     const ETIQUETAS_CAMBIO = {
         nombre: 'Nombre',
@@ -61,9 +53,6 @@
             registrarEventos();
             await recargar();
 
-            if (SINCRONIZAR_MODULOS_LOCALES) {
-                sincronizarModulosLocales();
-            }
         } catch (error) {
             console.error(error);
             C.mostrarMensaje(error.message, 'error');
@@ -189,7 +178,7 @@
 
             const botonesAdmin = admin
                 ? `
-                    <a href="producto-nuevo.html?id=${producto.id_producto}"
+                    <a href="producto-nuevo.php?id=${producto.id_producto}"
                        class="boton-accion-producto boton-editar-producto"
                        title="Editar producto" aria-label="Editar ${nombre}">
                         <i class="fa-solid fa-pen"></i>
@@ -434,44 +423,6 @@
             C.mostrarDialogo(`Historial: ${producto ? producto.nombre : 'producto'}`, contenedor);
         } catch (error) {
             C.mostrarMensaje(error.message, 'error');
-        }
-    }
-
-
-    /*-----------------------------------------------------
-      COMPATIBILIDAD CON MÓDULOS QUE USAN localStorage
-    -----------------------------------------------------*/
-
-    async function sincronizarModulosLocales() {
-        try {
-            const { data } = await C.api('productos_para_modulos');
-
-            const previos = JSON.parse(localStorage.getItem('productosVending') || '[]');
-            const porId = new Map(
-                (Array.isArray(previos) ? previos : []).map((p) => [String(p.id), p])
-            );
-
-            const nuevos = data.map((p) => {
-                const previo = porId.get(String(p.id_producto)) || {};
-
-                return {
-                    ...previo,
-                    id: String(p.id_producto),
-                    codigo: p.codigo_articulo_retail || '',
-                    nombre: p.nombre,
-                    categoria: p.categoria_nombre || '',
-                    impuesto: Number(p.impuesto_porcentaje),
-                    estado: p.estado ? 'Activo' : 'Inactivo',
-                    stock: Number(previo.stock) || 0,
-                    stockMinimo: Number(previo.stockMinimo) || 0,
-                    precioVenta: Number(previo.precioVenta) || 0,
-                    ubicacion: previo.ubicacion || ''
-                };
-            });
-
-            localStorage.setItem('productosVending', JSON.stringify(nuevos));
-        } catch (error) {
-            console.warn('No se pudo sincronizar con los módulos locales:', error);
         }
     }
 })();

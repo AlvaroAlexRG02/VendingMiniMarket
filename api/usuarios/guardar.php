@@ -2,6 +2,7 @@
 
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../config/session.php";
+require_once __DIR__ . "/../../config/permisos.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -19,6 +20,25 @@ if (!isset($_SESSION["usuario"])) {
     echo json_encode([
         "exito" => false,
         "mensaje" => "Sesión no válida."
+    ]);
+
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Validar rol (Administrador o Gerente General)
+|--------------------------------------------------------------------------
+*/
+
+if (!esAdministradorOGerente()) {
+
+    http_response_code(403);
+
+    echo json_encode([
+        "exito" => false,
+        "mensaje" => "Acceso no autorizado."
     ]);
 
     exit;
@@ -389,6 +409,7 @@ try {
         $auditoria = $pdo->prepare("
             INSERT INTO bitacora_auditoria (
                 id_usuario,
+                id_tienda,
                 entidad,
                 accion,
                 valor_anterior,
@@ -399,6 +420,7 @@ try {
             )
             VALUES (
                 :id_usuario,
+                :id_tienda,
                 'USUARIO',
                 'CREACION',
                 NULL,
@@ -422,6 +444,8 @@ try {
         $auditoria->execute([
             ":id_usuario" =>
                 $_SESSION["usuario"]["id_usuario"],
+
+            ":id_tienda" => (int)$idTienda,
 
             ":valor_nuevo" =>
                 $valorNuevo,
@@ -597,7 +621,8 @@ try {
 
     $consultaRelacionTienda = $pdo->prepare("
         SELECT
-            id_usuario_tienda
+            id_usuario_tienda,
+            id_tienda
         FROM usuario_tienda
         WHERE id_usuario = :id_usuario
         LIMIT 1
@@ -608,6 +633,10 @@ try {
     ]);
 
     $relacionTienda = $consultaRelacionTienda->fetch();
+
+    $tiendaAnterior = $relacionTienda
+        ? (int)$relacionTienda["id_tienda"]
+        : null;
 
 
     if ($relacionTienda) {
@@ -669,6 +698,7 @@ try {
     $auditoria = $pdo->prepare("
         INSERT INTO bitacora_auditoria (
             id_usuario,
+            id_tienda,
             entidad,
             accion,
             valor_anterior,
@@ -679,6 +709,7 @@ try {
         )
         VALUES (
             :id_usuario,
+            :id_tienda,
             'USUARIO',
             'EDICION',
             :valor_anterior,
@@ -706,6 +737,8 @@ try {
         "id_rol" =>
             $usuarioAnterior["id_rol"],
 
+        "id_tienda" => $tiendaAnterior,
+
         "estado" =>
             $usuarioAnterior["estado"]
     ]);
@@ -725,6 +758,8 @@ try {
     $auditoria->execute([
         ":id_usuario" =>
             $_SESSION["usuario"]["id_usuario"],
+
+        ":id_tienda" => (int)$idTienda,
 
         ":valor_anterior" =>
             $valorAnterior,

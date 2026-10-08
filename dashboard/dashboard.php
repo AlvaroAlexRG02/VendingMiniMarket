@@ -10,6 +10,11 @@ if (!isset($_SESSION["usuario"])) {
 }
 
 /*
+ * Ubicación asignada al usuario (HU-19), leída de la base en cada carga.
+ */
+$ubicacionUsuario = resumenUbicacionUsuario($pdo);
+
+/*
  * Evitar que el navegador muestre el dashboard
  * después de cerrar sesión utilizando la caché.
  */
@@ -38,7 +43,7 @@ header("Expires: 0");
     <title>Dashboard | Vending Mini Market</title>
 
     <!-- Hoja de estilos principal -->
-    <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
 
     <!-- Biblioteca de iconos Font Awesome -->
     <link
@@ -95,6 +100,16 @@ header("Expires: 0");
                 Productos
             </a>
 
+            <a href="../tienda/tienda.php">
+                <i class="fa-solid fa-shop"></i>
+                Tienda
+            </a>
+
+            <a href="../maquinas/maquinas.php">
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
+            </a>
+
             <a href="../inventario/inventario.html">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
@@ -119,6 +134,37 @@ header("Expires: 0");
                 <i class="fa-solid fa-users"></i>
                 Usuarios
             </a>
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../bitacora/bitacora.php">
+
+                    <i class="fa-solid fa-clipboard-list"></i>
+
+                    Bitácora
+
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
+
+            <?php endif; ?>
+
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
 
         </nav>
 
@@ -212,6 +258,10 @@ header("Expires: 0");
 
                         <span id="correoUsuarioSuperior">
                             <?= htmlspecialchars($_SESSION["usuario"]["correo"]) ?>
+                        </span>
+
+                        <span id="ubicacionUsuarioSuperior">
+                            Ubicación: <?= htmlspecialchars($ubicacionUsuario["texto"], ENT_QUOTES, "UTF-8") ?>
                         </span> 
 
                     </div>
@@ -229,6 +279,35 @@ header("Expires: 0");
         =========================================== -->
 
         <main class="contenido-app">
+
+            <!-- ==========================================
+                 UBICACIÓN ASIGNADA (HU-19)
+            =========================================== -->
+
+            <?php if ($ubicacionUsuario["sin_ubicacion"]): ?>
+
+            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-error">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Sin ubicación asignada. Solicite al administrador que le asigne una ubicación para poder operar.
+            </div>
+
+            <?php elseif ($ubicacionUsuario["todas"]): ?>
+
+            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-exito">
+                <i class="fa-solid fa-location-dot"></i>
+                Tiene acceso a todas las ubicaciones.
+            </div>
+
+            <?php else: ?>
+
+            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-exito">
+                <i class="fa-solid fa-location-dot"></i>
+                <?= $ubicacionUsuario["cantidad"] > 1 ? "Ubicaciones asignadas" : "Ubicación asignada" ?>:
+                <strong><?= htmlspecialchars($ubicacionUsuario["texto"], ENT_QUOTES, "UTF-8") ?></strong>.
+                Solo puede operar en <?= $ubicacionUsuario["cantidad"] > 1 ? "ellas" : "ella" ?>.
+            </div>
+
+            <?php endif; ?>
 
             <!-- ==========================================
                  ENCABEZADO DEL DASHBOARD
