@@ -157,6 +157,15 @@ header("Expires: 0");
 
             <?php endif; ?>
 
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
+
         </nav>
 
         <!-- Cerrar sesión -->
