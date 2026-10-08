@@ -46,6 +46,17 @@ async function inicializarPaginaTiendaVending() {
         });
     }
 
+    document.getElementById("botonNuevaUbicacionTienda")?.addEventListener("click", () => {
+        alternarPanelRegistroTienda(true);
+    });
+
+    document.getElementById("botonCancelarTienda")?.addEventListener("click", () => {
+        formulario.reset();
+        actualizarCampoAbastecidaPorTienda();
+        limpiarMensajeTiendaVending();
+        alternarPanelRegistroTienda(false);
+    });
+
     actualizarCampoAbastecidaPorTienda();
     await recargarModuloTiendaVending();
 }
@@ -114,6 +125,7 @@ async function manejarRegistroTiendaVending(evento) {
 
         formulario.reset();
         actualizarCampoAbastecidaPorTienda();
+        alternarPanelRegistroTienda(false);
         await recargarModuloTiendaVending();
 
         mostrarMensajeTiendaVending(resultado.message || "La ubicación fue registrada correctamente.", "exito");
@@ -121,6 +133,24 @@ async function manejarRegistroTiendaVending(evento) {
         mostrarMensajeTiendaVending(error.message, "error");
     } finally {
         botonGuardar.disabled = false;
+    }
+}
+
+/** El formulario de registro solo se muestra al pulsar "Nueva ubicación". */
+function alternarPanelRegistroTienda(mostrar) {
+    const panel = document.getElementById("panelRegistroTienda");
+    const boton = document.getElementById("botonNuevaUbicacionTienda");
+
+    if (!panel) {
+        return;
+    }
+
+    panel.hidden = !mostrar;
+    boton?.setAttribute("aria-expanded", String(mostrar));
+
+    if (mostrar) {
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById("nombreUbicacionTienda")?.focus({ preventScroll: true });
     }
 }
 

@@ -165,10 +165,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                         <i class="fa-solid fa-diagram-project"></i>
                         Relaciones de abastecimiento
                     </a>
-                    <a href="#formularioTienda" class="boton boton-azul">
+                    <button type="button" id="botonNuevaUbicacionTienda" class="boton boton-azul" aria-controls="panelRegistroTienda" aria-expanded="false">
                         <i class="fa-solid fa-plus"></i>
                         Nueva ubicación
-                    </a>
+                    </button>
                 </div>
 
             </div>
@@ -225,12 +225,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
             <section class="diseno-tienda">
 
-                <article class="panel">
+                <article class="panel panel-completo-tienda" id="panelRegistroTienda" hidden>
                     <div class="panel-encabezado">
                         <h2>Registro de ubicaciones</h2>
                     </div>
-
-                    <p class="texto-ayuda-tienda">Completa nombre, tipo, estado y relación operativa para registrar una nueva ubicación dentro del sistema.</p>
 
                     <form id="formularioTienda" novalidate>
                         <div class="cuadricula-formulario">
@@ -280,6 +278,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                         </div>
 
                         <div class="acciones-formulario">
+                            <button type="button" id="botonCancelarTienda" class="boton boton-borde">
+                                <i class="fa-solid fa-xmark"></i>
+                                Cancelar
+                            </button>
                             <button type="button" id="botonLimpiarTienda" class="boton boton-borde">
                                 <i class="fa-solid fa-eraser"></i>
                                 Limpiar
@@ -292,7 +294,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     </form>
                 </article>
 
-                <article class="panel">
+                <article class="panel panel-completo-tienda">
                     <div class="panel-encabezado">
                         <h2>Ubicaciones principales</h2>
                     </div>
