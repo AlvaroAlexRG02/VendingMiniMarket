@@ -1064,47 +1064,75 @@ body.pagina-app {
     padding: 0 6px 24px;
 }
 
+/*
+ * Logo de la barra lateral: el enlace es un círculo de 140 px y la imagen se
+ * muestra a 158 px dentro de él (misma proporción que el logo del login: el
+ * JPEG tiene margen blanco, así el dibujo se ve grande y no se corta).
+ */
 .logo-sistema a {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    flex: none;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #fdfdfd; /* igual al fondo del JPEG del logo, para que no se note el borde */
 }
 
 .imagen-logo-sistema {
     display: block;
-    width: 100%;
-    max-width: 175px;
-    height: 115px;
-    padding: 6px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 12px;
+    flex: none;
+    width: 158px;
+    height: 158px;
     object-fit: contain;
 }
 
-/* Logo utilizado en la pantalla de inicio de sesión */
+/*
+ * Logo de la pantalla de inicio de sesión: el contenedor es un círculo de
+ * 200 px y la imagen se muestra a 226 px dentro de él. El JPEG tiene un
+ * margen blanco y el dibujo llega a un 40,9 % del ancho desde el centro,
+ * por eso a ese tamaño el logo se ve grande y queda a unos 8 px del borde.
+ */
+.panel-login-marca .logo-login {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto;
+    justify-content: center;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #fdfdfd; /* igual al fondo del JPEG del logo, para que no se note el borde */
+}
+
 .logo-login-imagen {
     display: block;
-    width: 100%;
-    max-width: 190px;
-    height: 150px;
-    padding: 7px;
-    background: #ffffff;
-    border-radius: 14px;
+    flex: none;
+    width: 226px;
+    height: 226px;
     object-fit: contain;
 }
 
 /* Adaptación del logo para pantallas pequeñas */
 @media (max-width: 900px) {
+    .logo-sistema a {
+        width: 120px;
+        height: 120px;
+    }
+
     .imagen-logo-sistema {
-        max-width: 150px;
-        height: 100px;
+        width: 136px;
+        height: 136px;
+    }
+
+    .panel-login-marca .logo-login {
+        width: 160px;
+        height: 160px;
     }
 
     .logo-login-imagen {
-        max-width: 160px;
-        height: 125px;
+        width: 181px;
+        height: 181px;
     }
 }
 
