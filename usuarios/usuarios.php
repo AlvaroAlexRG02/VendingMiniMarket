@@ -69,7 +69,11 @@ if (!esAdministradorOGerente()) {
             aria-label="Navegación principal"
         >
 
-            <a href="../dashboard/dashboard.php">
+            <a
+                href="dashboard.php"
+                class="activo"
+                aria-current="page"
+            >
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
             </a>
@@ -82,11 +86,6 @@ if (!esAdministradorOGerente()) {
             <a href="../inventario/inventario.html">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
             </a>
 
             <a href="../ventas/ventas.html">
@@ -104,14 +103,41 @@ if (!esAdministradorOGerente()) {
                 Reportes
             </a>
 
-            <a
-                href="usuarios.php"
-                class="activo"
-                aria-current="page"
-            >
+            <a href="../usuarios/usuarios.php">
                 <i class="fa-solid fa-users"></i>
                 Usuarios
             </a>
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../bitacora/bitacora.php">
+
+                    <i class="fa-solid fa-clipboard-list"></i>
+
+                    Bitácora
+
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
+
+            <?php endif; ?>
+
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
 
         </nav>
 

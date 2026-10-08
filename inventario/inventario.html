@@ -59,7 +59,11 @@
             aria-label="Navegación principal"
         >
 
-            <a href="../dashboard/dashboard.php">
+            <a
+                href="dashboard.php"
+                class="activo"
+                aria-current="page"
+            >
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
             </a>
@@ -69,11 +73,25 @@
                 Productos
             </a>
 
+<<<<<<< Updated upstream
             <a
                 href="inventario.html"
                 class="activo"
                 aria-current="page"
             >
+=======
+            <a href="../tienda/tienda.php">
+                <i class="fa-solid fa-shop"></i>
+                Tienda
+            </a>
+
+            <a href="../maquinas/maquinas.php">
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
+            </a>
+
+            <a href="../inventario/inventario.html">
+>>>>>>> Stashed changes
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
             </a>
@@ -97,6 +115,37 @@
                 <i class="fa-solid fa-users"></i>
                 Usuarios
             </a>
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../bitacora/bitacora.php">
+
+                    <i class="fa-solid fa-clipboard-list"></i>
+
+                    Bitácora
+
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
+
+            <?php endif; ?>
+
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
 
         </nav>
 
