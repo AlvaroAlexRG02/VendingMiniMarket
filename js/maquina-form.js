@@ -55,13 +55,16 @@
       CAMPOS
     -----------------------------------------------------*/
 
-    /** Solo ubicaciones activas; en edición se conserva la actual aunque esté inactiva. */
+    /**
+     * Solo ubicaciones activas de tipo Tienda (no bodegas). En edición se conserva
+     * la actual aunque esté inactiva o no sea una tienda.
+     */
     function llenarTiendas(tiendas, seleccionada) {
         const select = $('tiendaMaquina');
         select.innerHTML = '<option value="">Seleccione una ubicación</option>';
 
         tiendas
-            .filter((t) => t.estado || t.id_tienda === seleccionada)
+            .filter((t) => (t.estado && t.tipo === 'TIENDA') || t.id_tienda === seleccionada)
             .forEach((t) => {
                 const opcion = document.createElement('option');
                 opcion.value = t.id_tienda;
@@ -73,6 +76,9 @@
     }
 
     function prepararEdicion(maquina) {
+        // El estado solo se muestra al editar: las máquinas nuevas se crean activas.
+        $('grupoEstadoMaquina').hidden = false;
+
         $('tituloPagina').textContent = 'Editar máquina';
         $('textoPagina').textContent =
             'Actualiza la información de la máquina. Los cambios quedan en su historial.';

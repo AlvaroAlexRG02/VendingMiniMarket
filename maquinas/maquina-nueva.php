@@ -241,7 +241,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                         </div>
 
                         <div class="grupo-formulario">
-                            <label for="modeloMaquina">Modelo</label>
+                            <label for="modeloMaquina">Modelo / Número de serie</label>
                             <input type="text" id="modeloMaquina" maxlength="100"
                                    autocomplete="off">
                         </div>
@@ -253,7 +253,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                                    autocomplete="off">
                         </div>
 
-                        <div class="grupo-formulario">
+                        <div class="grupo-formulario" id="grupoEstadoMaquina" hidden>
                             <label for="estadoMaquina">Estado *</label>
                             <select id="estadoMaquina" required>
                                 <option value="true">Activa</option>

@@ -18,7 +18,7 @@
         nombre: 'Nombre',
         tienda_nombre: 'Ubicación',
         ubicacion: 'Punto operativo',
-        modelo: 'Modelo',
+        modelo: 'Modelo / Número de serie',
         tipo: 'Tipo',
         observaciones: 'Observaciones',
         estado: 'Estado'

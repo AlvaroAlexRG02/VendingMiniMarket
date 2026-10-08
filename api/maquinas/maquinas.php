@@ -6,7 +6,7 @@
  * Tabla: maquina (relacionada con tienda por id_tienda).
  *
  * HU-17  Registro de máquinas          crear_maquina
- *        Asignación de ubicación       id_tienda (Ultrapark 1, Ultrapark 2, UltraLag)
+ *        Asignación de ubicación       id_tienda (solo ubicaciones de tipo Tienda, no Bodega)
  *        Inactivación de máquinas      inactivar_maquina / activar_maquina (estado = FALSE, no se elimina)
  *        Identificador único           codigo UNIQUE, validado antes de guardar
  *
@@ -243,7 +243,7 @@ function accionListarTiendas(array $in): void
     exigirSesion();
 
     $filas = db()->query("
-        SELECT id_tienda, nombre, estado
+        SELECT id_tienda, nombre, estado, tipo
         FROM tienda
         ORDER BY id_tienda
     ")->fetchAll();
@@ -253,6 +253,7 @@ function accionListarTiendas(array $in): void
             'id_tienda' => (int)$f['id_tienda'],
             'nombre'    => $f['nombre'],
             'estado'    => aBool($f['estado']),
+            'tipo'      => $f['tipo'],
         ];
     }, $filas));
 }
@@ -393,10 +394,14 @@ function leerMaquina(array $in): array
     ];
 }
 
-/** La ubicación asignada debe existir y estar activa. */
+/**
+ * La ubicación asignada debe existir, estar activa y ser una tienda (no una bodega).
+ * Una máquina ya asignada a una ubicación puede conservarla al editarla aunque
+ * haya quedado inactiva o no sea una tienda.
+ */
 function validarTienda(int $idTienda, ?int $tiendaActual = null): void
 {
-    $st = db()->prepare('SELECT estado FROM tienda WHERE id_tienda = :id');
+    $st = db()->prepare('SELECT estado, tipo FROM tienda WHERE id_tienda = :id');
     $st->execute([':id' => $idTienda]);
     $fila = $st->fetch();
 
@@ -404,8 +409,13 @@ function validarTienda(int $idTienda, ?int $tiendaActual = null): void
         respuesta(false, null, 'La ubicación seleccionada no existe.', 400);
     }
 
-    // Una máquina ya asignada a una tienda inactiva puede conservar su asignación al editarla.
-    if (!aBool($fila['estado']) && $idTienda !== $tiendaActual) {
+    $conservada = $idTienda === $tiendaActual;
+
+    if ($fila['tipo'] !== 'TIENDA' && !$conservada) {
+        respuesta(false, null, 'Una máquina solo puede asignarse a una ubicación de tipo Tienda, no a una bodega.', 409);
+    }
+
+    if (!aBool($fila['estado']) && !$conservada) {
         respuesta(false, null, 'La ubicación seleccionada está inactiva.', 409);
     }
 }
