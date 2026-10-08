@@ -246,7 +246,6 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                                     <option value="">Seleccione</option>
                                     <option value="Tienda">Tienda</option>
                                     <option value="Bodega">Bodega</option>
-                                    <option value="Centro de abastecimiento">Centro de abastecimiento</option>
                                 </select>
                             </div>
 
@@ -388,6 +387,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
     </div>
 
     <script src="../js/app.js"></script>
+    <script src="../js/maquinas-api.js?v=<?= filemtime(__DIR__ . '/../js/maquinas-api.js') ?>"></script>
     <script src="../js/tienda.js?v=<?= filemtime(__DIR__ . '/../js/tienda.js') ?>"></script>
 </body>
 </html>

@@ -1,11 +1,23 @@
+/*=========================================================
+  VENDING MINI MARKET — Módulo Tienda (ubicaciones)
+  HU-16: las ubicaciones se guardan en la base de datos
+  mediante api/tienda/tienda.php. La relación "abastecida
+  por" usa api/abastecimiento/abastecimiento.php (HU-18).
+=========================================================*/
+
 document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaTiendaVending();
 });
 
-const CLAVE_TIENDAS_VENDING = "tiendasVending";
-const CLAVE_HISTORIAL_TIENDAS_VENDING = "historialTiendasVending";
+const API_TIENDA_VENDING = "../api/tienda/tienda.php";
+const API_ABASTECIMIENTO_TIENDA_VENDING = "../api/abastecimiento/abastecimiento.php";
 
-function inicializarPaginaTiendaVending() {
+let ubicacionesTiendaVending = [];
+let historialTiendaVending = [];
+let apiTiendaVending = null;
+let apiAbastecimientoTiendaVending = null;
+
+async function inicializarPaginaTiendaVending() {
     const formulario = document.getElementById("formularioTienda");
     const formularioRelacion = document.getElementById("formularioRelacionTienda");
     const botonLimpiar = document.getElementById("botonLimpiarTienda");
@@ -14,79 +26,71 @@ function inicializarPaginaTiendaVending() {
         return;
     }
 
-    asegurarDatosInicialesTiendasVending();
-    poblarSelectAbastecimientoTienda();
-    poblarSelectRelacionTienda();
-    renderizarModuloTiendaVending();
+    if (!window.MaquinasApi) {
+        mostrarMensajeTiendaVending("No fue posible cargar el cliente de la API.", "error");
+        return;
+    }
+
+    apiTiendaVending = window.MaquinasApi.crearCliente(API_TIENDA_VENDING);
+    apiAbastecimientoTiendaVending = window.MaquinasApi.crearCliente(API_ABASTECIMIENTO_TIENDA_VENDING);
+
+    eliminarDatosLocalesObsoletosTienda();
 
     formulario.addEventListener("submit", manejarRegistroTiendaVending);
     formularioRelacion.addEventListener("submit", guardarRelacionOperativaTiendaVending);
     document.getElementById("origenRelacionTienda")?.addEventListener("change", () => actualizarDestinoRelacionTienda());
+    document.getElementById("tipoUbicacionTienda")?.addEventListener("change", actualizarCampoAbastecidaPorTienda);
+    document.getElementById("estadoUbicacionTienda")?.addEventListener("change", actualizarCampoAbastecidaPorTienda);
 
     if (botonLimpiar) {
         botonLimpiar.addEventListener("click", () => {
             formulario.reset();
-            poblarSelectAbastecimientoTienda();
+            actualizarCampoAbastecidaPorTienda();
             limpiarMensajeTiendaVending();
         });
     }
+
+    actualizarCampoAbastecidaPorTienda();
+    await recargarModuloTiendaVending();
 }
 
-function asegurarDatosInicialesTiendasVending() {
-    const ubicaciones = leerListaTiendaVending(CLAVE_TIENDAS_VENDING);
-
-    if (ubicaciones.length > 0) {
-        return;
+/** Las ubicaciones ya no se guardan en el navegador: se borran los datos de la versión anterior. */
+function eliminarDatosLocalesObsoletosTienda() {
+    try {
+        localStorage.removeItem("tiendasVending");
+        localStorage.removeItem("historialTiendasVending");
+    } catch (error) {
+        // Sin acceso a localStorage: no hay nada que limpiar.
     }
-
-    const fechaActual = new Date().toISOString();
-    const datosIniciales = [
-        {
-            id: "ubicacion-up1",
-            nombre: "UP1",
-            tipo: "Tienda",
-            estado: "Activa",
-            principal: true,
-            abastecidaPor: "",
-            observaciones: "Ubicación principal de operación.",
-            fechaRegistro: fechaActual
-        },
-        {
-            id: "ubicacion-up2",
-            nombre: "UP2",
-            tipo: "Tienda",
-            estado: "Activa",
-            principal: true,
-            abastecidaPor: "",
-            observaciones: "Ubicación principal con función de abastecimiento.",
-            fechaRegistro: fechaActual
-        },
-        {
-            id: "ubicacion-ultralag",
-            nombre: "UltraLag",
-            tipo: "Bodega",
-            estado: "Activa",
-            principal: true,
-            abastecidaPor: "UP2",
-            observaciones: "Ubicación principal abastecida por UP2.",
-            fechaRegistro: fechaActual
-        }
-    ];
-
-    const historialInicial = [
-        crearEventoHistorialTiendaVending("Registro inicial", "UP1", "Ubicación principal creada para operación multiubicación."),
-        crearEventoHistorialTiendaVending("Registro inicial", "UP2", "Ubicación principal creada para operación multiubicación."),
-        crearEventoHistorialTiendaVending("Registro inicial", "UltraLag", "Ubicación principal creada para operación multiubicación."),
-        crearEventoHistorialTiendaVending("Relación operativa", "UltraLag", "UP2 configurada como punto de abastecimiento de UltraLag.")
-    ];
-
-    guardarListaTiendaVending(CLAVE_TIENDAS_VENDING, datosIniciales);
-    guardarListaTiendaVending(CLAVE_HISTORIAL_TIENDAS_VENDING, historialInicial);
 }
 
-function manejarRegistroTiendaVending(evento) {
+async function recargarModuloTiendaVending() {
+    try {
+        const [ubicaciones, historial] = await Promise.all([
+            apiTiendaVending("listar"),
+            apiTiendaVending("historial")
+        ]);
+
+        ubicacionesTiendaVending = Array.isArray(ubicaciones.data) ? ubicaciones.data : [];
+        historialTiendaVending = Array.isArray(historial.data) ? historial.data : [];
+
+        renderizarModuloTiendaVending();
+        return true;
+    } catch (error) {
+        mostrarMensajeTiendaVending(error.message || "No fue posible cargar las ubicaciones.", "error");
+        return false;
+    }
+}
+
+
+/*=========================================================
+  REGISTRO DE UBICACIONES
+=========================================================*/
+
+async function manejarRegistroTiendaVending(evento) {
     evento.preventDefault();
 
+    const formulario = evento.target;
     const nombre = document.getElementById("nombreUbicacionTienda")?.value.trim() || "";
     const tipo = document.getElementById("tipoUbicacionTienda")?.value || "";
     const estado = document.getElementById("estadoUbicacionTienda")?.value || "Activa";
@@ -99,45 +103,59 @@ function manejarRegistroTiendaVending(evento) {
         return;
     }
 
-    const ubicaciones = obtenerUbicacionesTiendaVending();
-    const existe = ubicaciones.some((ubicacion) => normalizarTexto(ubicacion.nombre) === normalizarTexto(nombre));
+    const botonGuardar = formulario.querySelector('button[type="submit"]');
+    botonGuardar.disabled = true;
 
-    if (existe) {
-        mostrarMensajeTiendaVending("Ya existe una ubicación registrada con ese nombre.", "error");
+    try {
+        const resultado = await apiTiendaVending("crear", {
+            nombre,
+            tipo,
+            estado: estado === "Activa",
+            es_principal: principal,
+            observaciones,
+            id_abastecedora: abastecidaPor ? Number(abastecidaPor) : 0
+        });
+
+        formulario.reset();
+        actualizarCampoAbastecidaPorTienda();
+        await recargarModuloTiendaVending();
+
+        mostrarMensajeTiendaVending(resultado.message || "La ubicación fue registrada correctamente.", "exito");
+    } catch (error) {
+        mostrarMensajeTiendaVending(error.message, "error");
+    } finally {
+        botonGuardar.disabled = false;
+    }
+}
+
+/** Una bodega o una ubicación inactiva no pueden tener una ubicación que las abastezca. */
+function actualizarCampoAbastecidaPorTienda() {
+    const select = document.getElementById("abastecidaPorTienda");
+
+    if (!select) {
         return;
     }
 
-    const nuevaUbicacion = {
-        id: generarIdVending("ubicacion"),
-        nombre,
-        tipo,
-        estado,
-        principal,
-        abastecidaPor,
-        observaciones,
-        fechaRegistro: new Date().toISOString()
-    };
+    const tipo = document.getElementById("tipoUbicacionTienda")?.value || "";
+    const estado = document.getElementById("estadoUbicacionTienda")?.value || "Activa";
+    const bloqueada = tipo === "Bodega" || estado !== "Activa";
 
-    ubicaciones.push(nuevaUbicacion);
-    guardarListaTiendaVending(CLAVE_TIENDAS_VENDING, ubicaciones);
+    if (bloqueada) {
+        select.value = "";
+    }
 
-    agregarEventoHistorialTiendaVending(
-        "Registro de ubicación",
-        nombre,
-        abastecidaPor
-            ? `Ubicación creada como ${tipo.toLowerCase()} con relación operativa desde ${abastecidaPor}.`
-            : `Ubicación creada como ${tipo.toLowerCase()} en estado ${estado.toLowerCase()}.`
-    );
-
-    evento.target.reset();
-    poblarSelectAbastecimientoTienda();
-    poblarSelectRelacionTienda();
-    renderizarModuloTiendaVending();
-
-    mostrarMensajeTiendaVending("La ubicación fue registrada correctamente.", "exito");
+    select.disabled = bloqueada;
+    select.title = bloqueada
+        ? "Solo una tienda activa puede ser abastecida por otra ubicación."
+        : "";
 }
 
-function guardarRelacionOperativaTiendaVending(evento) {
+
+/*=========================================================
+  RELACIÓN OPERATIVA DE ABASTECIMIENTO
+=========================================================*/
+
+async function guardarRelacionOperativaTiendaVending(evento) {
     evento.preventDefault();
 
     const origenId = document.getElementById("origenRelacionTienda")?.value || "";
@@ -148,59 +166,101 @@ function guardarRelacionOperativaTiendaVending(evento) {
         return;
     }
 
-    const ubicaciones = obtenerUbicacionesTiendaVending();
-    const origen = ubicaciones.find((ubicacion) => ubicacion.id === origenId);
-    const destino = ubicaciones.find((ubicacion) => ubicacion.id === destinoId);
+    const botonGuardar = evento.target.querySelector('button[type="submit"]');
+    botonGuardar.disabled = true;
 
-    if (!origen || !destino) {
-        mostrarMensajeTiendaVending("No fue posible identificar las ubicaciones seleccionadas.", "error");
+    try {
+        const resultado = await apiAbastecimientoTiendaVending("crear_relacion", {
+            id_tienda_origen: Number(origenId),
+            destino_tipo: "UBICACION",
+            id_destino: Number(destinoId)
+        });
+
+        await recargarModuloTiendaVending();
+        mostrarMensajeTiendaVending(resultado.message || "La relación operativa fue registrada correctamente.", "exito");
+    } catch (error) {
+        mostrarMensajeTiendaVending(error.message, "error");
+    } finally {
+        botonGuardar.disabled = false;
+    }
+}
+
+
+/*=========================================================
+  ACTIVAR / INACTIVAR
+=========================================================*/
+
+async function alternarEstadoUbicacionTiendaVending(idUbicacion, boton) {
+    const ubicacion = ubicacionesTiendaVending.find((item) => String(item.id_tienda) === String(idUbicacion));
+
+    if (!ubicacion) {
+        mostrarMensajeTiendaVending("No fue posible actualizar el estado de la ubicación.", "error");
         return;
     }
 
-    destino.abastecidaPor = origen.nombre;
-    guardarListaTiendaVending(CLAVE_TIENDAS_VENDING, ubicaciones);
+    if (boton) {
+        boton.disabled = true;
+    }
 
-    agregarEventoHistorialTiendaVending(
-        "Relación operativa",
-        destino.nombre,
-        `${origen.nombre} quedó configurada como punto de abastecimiento de ${destino.nombre}.`
-    );
+    try {
+        const resultado = await apiTiendaVending("cambiar_estado", {
+            id_tienda: ubicacion.id_tienda,
+            estado: !ubicacion.estado
+        });
 
-    renderizarModuloTiendaVending();
-    mostrarMensajeTiendaVending("La relación operativa fue actualizada correctamente.", "exito");
+        await recargarModuloTiendaVending();
+        mostrarMensajeTiendaVending(resultado.message || "El estado de la ubicación se actualizó correctamente.", "exito");
+    } catch (error) {
+        if (boton) {
+            boton.disabled = false;
+        }
+        mostrarMensajeTiendaVending(error.message, "error");
+    }
 }
 
-function renderizarModuloTiendaVending() {
-    const ubicaciones = obtenerUbicacionesTiendaVending();
-    const historial = obtenerHistorialTiendaVending();
 
-    actualizarResumenTiendaVending(ubicaciones);
-    renderizarPrincipalesTiendaVending(ubicaciones);
-    renderizarTablaTiendaVending(ubicaciones);
-    renderizarHistorialTiendaVending(historial);
+/*=========================================================
+  RENDERIZADO
+=========================================================*/
+
+function renderizarModuloTiendaVending() {
+    actualizarResumenTiendaVending(ubicacionesTiendaVending);
+    renderizarPrincipalesTiendaVending(ubicacionesTiendaVending);
+    renderizarTablaTiendaVending(ubicacionesTiendaVending);
+    renderizarHistorialTiendaVending(historialTiendaVending);
     poblarSelectAbastecimientoTienda();
     poblarSelectRelacionTienda();
 }
 
+function etiquetaEstadoTienda(ubicacion) {
+    return ubicacion.estado ? "Activa" : "Inactiva";
+}
+
+function textoAbastecidaPorTienda(ubicacion) {
+    const origenes = Array.isArray(ubicacion.abastecida_por) ? ubicacion.abastecida_por : [];
+
+    return origenes.map((origen) => origen.nombre).join(", ");
+}
+
 function actualizarResumenTiendaVending(ubicaciones) {
-    const relaciones = ubicaciones.filter((ubicacion) => ubicacion.abastecidaPor).length;
+    const relaciones = ubicaciones.filter((ubicacion) => textoAbastecidaPorTienda(ubicacion)).length;
 
     asignarTextoTienda("totalUbicacionesTienda", String(ubicaciones.length));
-    asignarTextoTienda("totalPrincipalesTienda", String(ubicaciones.filter((ubicacion) => ubicacion.principal).length));
-    asignarTextoTienda("totalActivasTienda", String(ubicaciones.filter((ubicacion) => ubicacion.estado === "Activa").length));
+    asignarTextoTienda("totalPrincipalesTienda", String(ubicaciones.filter((ubicacion) => ubicacion.es_principal).length));
+    asignarTextoTienda("totalActivasTienda", String(ubicaciones.filter((ubicacion) => ubicacion.estado).length));
     asignarTextoTienda("totalRelacionesTienda", String(relaciones));
 }
 
 function renderizarPrincipalesTiendaVending(ubicaciones) {
     renderizarTarjetasUbicacionTienda(
         "listaPrincipalesTienda",
-        ubicaciones.filter((ubicacion) => ubicacion.principal),
+        ubicaciones.filter((ubicacion) => ubicacion.es_principal),
         "No hay ubicaciones principales registradas."
     );
 
     renderizarTarjetasUbicacionTienda(
         "listaSecundariasTienda",
-        ubicaciones.filter((ubicacion) => !ubicacion.principal),
+        ubicaciones.filter((ubicacion) => !ubicacion.es_principal),
         "No hay ubicaciones secundarias registradas."
     );
 }
@@ -217,16 +277,20 @@ function renderizarTarjetasUbicacionTienda(idContenedor, lista, mensajeVacio) {
         return;
     }
 
-    contenedor.innerHTML = lista.map((ubicacion) => `
+    contenedor.innerHTML = lista.map((ubicacion) => {
+        const abastecidaPor = textoAbastecidaPorTienda(ubicacion);
+
+        return `
         <article class="tarjeta-principal-tienda">
             <div class="tarjeta-principal-tienda-encabezado">
                 <strong>${escaparHtmlTienda(ubicacion.nombre)}</strong>
-                <span class="insignia ${ubicacion.estado === "Activa" ? "insignia-verde" : "insignia-rojo"}">${escaparHtmlTienda(ubicacion.estado)}</span>
+                <span class="insignia ${ubicacion.estado ? "insignia-verde" : "insignia-rojo"}">${etiquetaEstadoTienda(ubicacion)}</span>
             </div>
-            <p>${escaparHtmlTienda(ubicacion.tipo)}</p>
-            <small>${ubicacion.abastecidaPor ? `Abastecida por ${escaparHtmlTienda(ubicacion.abastecidaPor)}` : "Sin relación de abastecimiento"}</small>
+            <p>${escaparHtmlTienda(ubicacion.tipo_etiqueta)}</p>
+            <small>${abastecidaPor ? `Abastecida por ${escaparHtmlTienda(abastecidaPor)}` : "Sin relación de abastecimiento"}</small>
         </article>
-    `).join("");
+    `;
+    }).join("");
 }
 
 function renderizarTablaTiendaVending(ubicaciones) {
@@ -237,23 +301,22 @@ function renderizarTablaTiendaVending(ubicaciones) {
     }
 
     cuerpo.innerHTML = ubicaciones.map((ubicacion) => {
-        const etiquetaPrincipal = ubicacion.principal ? "Sí" : "No";
-        const textoBoton = ubicacion.estado === "Activa" ? "Desactivar" : "Activar";
+        const abastecidaPor = textoAbastecidaPorTienda(ubicacion);
 
         return `
             <tr>
                 <td>${escaparHtmlTienda(ubicacion.nombre)}</td>
-                <td>${escaparHtmlTienda(ubicacion.tipo)}</td>
+                <td>${escaparHtmlTienda(ubicacion.tipo_etiqueta)}</td>
                 <td>
-                    <span class="insignia ${ubicacion.estado === "Activa" ? "insignia-verde" : "insignia-rojo"}">
-                        ${escaparHtmlTienda(ubicacion.estado)}
+                    <span class="insignia ${ubicacion.estado ? "insignia-verde" : "insignia-rojo"}">
+                        ${etiquetaEstadoTienda(ubicacion)}
                     </span>
                 </td>
-                <td>${etiquetaPrincipal}</td>
-                <td>${ubicacion.abastecidaPor ? escaparHtmlTienda(ubicacion.abastecidaPor) : "Sin relación"}</td>
+                <td>${ubicacion.es_principal ? "Sí" : "No"}</td>
+                <td>${abastecidaPor ? escaparHtmlTienda(abastecidaPor) : "Sin relación"}</td>
                 <td>
-                    <button type="button" class="boton boton-borde boton-tabla-tienda" data-ubicacion="${escaparAtributoTienda(ubicacion.id)}">
-                        ${textoBoton}
+                    <button type="button" class="boton boton-borde boton-tabla-tienda" data-ubicacion="${escaparAtributoTienda(ubicacion.id_tienda)}">
+                        ${ubicacion.estado ? "Desactivar" : "Activar"}
                     </button>
                 </td>
             </tr>
@@ -262,7 +325,7 @@ function renderizarTablaTiendaVending(ubicaciones) {
 
     cuerpo.querySelectorAll(".boton-tabla-tienda").forEach((boton) => {
         boton.addEventListener("click", () => {
-            alternarEstadoUbicacionTiendaVending(boton.dataset.ubicacion || "");
+            alternarEstadoUbicacionTiendaVending(boton.dataset.ubicacion || "", boton);
         });
     });
 }
@@ -276,7 +339,7 @@ function renderizarHistorialTiendaVending(historial) {
 
     cuerpo.innerHTML = historial.map((evento) => `
         <tr>
-            <td>${escaparHtmlTienda(formatearFechaHoraVenta(evento.fecha))}</td>
+            <td>${escaparHtmlTienda(formatearFechaHoraVenta(normalizarFechaTienda(evento.fecha)))}</td>
             <td>${escaparHtmlTienda(evento.accion)}</td>
             <td>${escaparHtmlTienda(evento.ubicacion)}</td>
             <td>${escaparHtmlTienda(evento.detalle)}</td>
@@ -285,28 +348,19 @@ function renderizarHistorialTiendaVending(historial) {
     `).join("");
 }
 
-function alternarEstadoUbicacionTiendaVending(idUbicacion) {
-    const ubicaciones = obtenerUbicacionesTiendaVending();
-    const ubicacion = ubicaciones.find((item) => item.id === idUbicacion);
-
-    if (!ubicacion) {
-        mostrarMensajeTiendaVending("No fue posible actualizar el estado de la ubicación.", "error");
-        return;
-    }
-
-    ubicacion.estado = ubicacion.estado === "Activa" ? "Inactiva" : "Activa";
-    guardarListaTiendaVending(CLAVE_TIENDAS_VENDING, ubicaciones);
-
-    agregarEventoHistorialTiendaVending(
-        "Cambio de estado",
-        ubicacion.nombre,
-        `La ubicación fue marcada como ${ubicacion.estado.toLowerCase()} y el historial operativo se conservó.`
-    );
-
-    renderizarModuloTiendaVending();
-    mostrarMensajeTiendaVending("El estado de la ubicación se actualizó correctamente.", "exito");
+/** PostgreSQL devuelve "2026-10-06 23:56:09.587672+00"; se convierte a ISO 8601 para que todos los navegadores lo lean. */
+function normalizarFechaTienda(fecha) {
+    return String(fecha || "")
+        .replace(" ", "T")
+        .replace(/([+-]\d{2})$/, "$1:00");
 }
 
+
+/*=========================================================
+  SELECTORES
+=========================================================*/
+
+/** "Abastecida por" del formulario de registro: ubicaciones activas. */
 function poblarSelectAbastecimientoTienda() {
     const select = document.getElementById("abastecidaPorTienda");
 
@@ -315,15 +369,16 @@ function poblarSelectAbastecimientoTienda() {
     }
 
     const valorActual = select.value;
-    const ubicaciones = obtenerUbicacionesTiendaVending().filter((ubicacion) => ubicacion.estado === "Activa");
+    const activas = ubicacionesTiendaVending.filter((ubicacion) => ubicacion.estado);
 
-    select.innerHTML = '<option value="">Sin relación operativa</option>' + ubicaciones.map((ubicacion) => `
-        <option value="${escaparAtributoTienda(ubicacion.nombre)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
+    select.innerHTML = '<option value="">Sin relación operativa</option>' + activas.map((ubicacion) => `
+        <option value="${escaparAtributoTienda(ubicacion.id_tienda)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
     `).join("");
 
-    select.value = ubicaciones.some((ubicacion) => ubicacion.nombre === valorActual) ? valorActual : "";
+    select.value = activas.some((ubicacion) => String(ubicacion.id_tienda) === valorActual) ? valorActual : "";
 }
 
+/** Relación de abastecimiento: el origen puede ser cualquier ubicación activa. */
 function poblarSelectRelacionTienda() {
     const selectOrigen = document.getElementById("origenRelacionTienda");
     const selectDestino = document.getElementById("destinoRelacionTienda");
@@ -332,20 +387,22 @@ function poblarSelectRelacionTienda() {
         return;
     }
 
-    const ubicaciones = obtenerUbicacionesTiendaVending();
-    const opciones = ubicaciones.map((ubicacion) => `
-        <option value="${escaparAtributoTienda(ubicacion.id)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
+    const origenActual = selectOrigen.value;
+    const destinoActual = selectDestino.value;
+    const activas = ubicacionesTiendaVending.filter((ubicacion) => ubicacion.estado);
+
+    selectOrigen.innerHTML = activas.map((ubicacion) => `
+        <option value="${escaparAtributoTienda(ubicacion.id_tienda)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
     `).join("");
 
-    selectOrigen.innerHTML = opciones;
+    selectOrigen.value = activas.some((ubicacion) => String(ubicacion.id_tienda) === origenActual)
+        ? origenActual
+        : (activas[0] ? String(activas[0].id_tienda) : "");
 
-    const origenPorDefecto = ubicaciones.find((ubicacion) => ubicacion.nombre === "UP2")?.id || ubicaciones[0]?.id || "";
-    const destinoPorDefecto = ubicaciones.find((ubicacion) => ubicacion.nombre === "UltraLag")?.id || ubicaciones[1]?.id || "";
-
-    selectOrigen.value = origenPorDefecto;
-    actualizarDestinoRelacionTienda(destinoPorDefecto);
+    actualizarDestinoRelacionTienda(destinoActual);
 }
 
+/** El destino excluye al origen elegido y solo admite tiendas activas (una bodega no puede ser abastecida). */
 function actualizarDestinoRelacionTienda(destinoPreferido) {
     const selectOrigen = document.getElementById("origenRelacionTienda");
     const selectDestino = document.getElementById("destinoRelacionTienda");
@@ -356,60 +413,25 @@ function actualizarDestinoRelacionTienda(destinoPreferido) {
 
     const origenId = selectOrigen.value;
     const destinoActual = destinoPreferido !== undefined ? destinoPreferido : selectDestino.value;
-    const disponibles = obtenerUbicacionesTiendaVending().filter((ubicacion) => ubicacion.id !== origenId);
+    const disponibles = ubicacionesTiendaVending.filter((ubicacion) =>
+        ubicacion.estado
+        && ubicacion.tipo === "TIENDA"
+        && String(ubicacion.id_tienda) !== origenId
+    );
 
     selectDestino.innerHTML = disponibles.map((ubicacion) => `
-        <option value="${escaparAtributoTienda(ubicacion.id)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
+        <option value="${escaparAtributoTienda(ubicacion.id_tienda)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
     `).join("");
 
-    selectDestino.value = disponibles.some((ubicacion) => ubicacion.id === destinoActual)
+    selectDestino.value = disponibles.some((ubicacion) => String(ubicacion.id_tienda) === destinoActual)
         ? destinoActual
-        : (disponibles[0]?.id || "");
+        : (disponibles[0] ? String(disponibles[0].id_tienda) : "");
 }
 
-function obtenerUbicacionesTiendaVending() {
-    return leerListaTiendaVending(CLAVE_TIENDAS_VENDING);
-}
 
-function obtenerHistorialTiendaVending() {
-    return leerListaTiendaVending(CLAVE_HISTORIAL_TIENDAS_VENDING)
-        .slice()
-        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-}
-
-function agregarEventoHistorialTiendaVending(accion, ubicacion, detalle) {
-    const historial = obtenerHistorialTiendaVending();
-    historial.push(crearEventoHistorialTiendaVending(accion, ubicacion, detalle));
-    guardarListaTiendaVending(CLAVE_HISTORIAL_TIENDAS_VENDING, historial);
-}
-
-function crearEventoHistorialTiendaVending(accion, ubicacion, detalle) {
-    return {
-        id: generarIdVending("historial-tienda"),
-        accion,
-        ubicacion,
-        detalle,
-        responsable: obtenerNombreUsuarioTiendaVending(),
-        fecha: new Date().toISOString()
-    };
-}
-
-function obtenerNombreUsuarioTiendaVending() {
-    return document.getElementById("nombreUsuarioSuperior")?.textContent.trim() || "Administrador";
-}
-
-function leerListaTiendaVending(clave) {
-    try {
-        const datos = JSON.parse(localStorage.getItem(clave) || "[]");
-        return Array.isArray(datos) ? datos : [];
-    } catch (error) {
-        return [];
-    }
-}
-
-function guardarListaTiendaVending(clave, datos) {
-    localStorage.setItem(clave, JSON.stringify(datos));
-}
+/*=========================================================
+  UTILIDADES
+=========================================================*/
 
 function asignarTextoTienda(id, valor) {
     const elemento = document.getElementById(id);
