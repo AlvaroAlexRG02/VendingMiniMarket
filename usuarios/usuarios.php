@@ -33,7 +33,7 @@ if (!esAdministradorOGerente()) {
 
     <title>Usuarios | Vending Mini Market</title>
 
-    <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
 
     <link
         rel="stylesheet"

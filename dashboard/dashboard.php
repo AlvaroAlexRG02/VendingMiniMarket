@@ -43,7 +43,7 @@ header("Expires: 0");
     <title>Dashboard | Vending Mini Market</title>
 
     <!-- Hoja de estilos principal -->
-    <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
 
     <!-- Biblioteca de iconos Font Awesome -->
     <link

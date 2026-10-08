@@ -1,0 +1,11 @@
+# VendingMiniMarket
+#
+# Los navegadores guardan en caché los .css y .js y a veces siguen mostrando
+# una versión vieja después de cambiar un archivo. "no-cache" no impide
+# guardarlos: obliga al navegador a preguntar al servidor en cada carga y,
+# si el archivo no cambió, responde 304 sin volver a descargarlo.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>

@@ -41,7 +41,7 @@ header("Expires: 0");
 
     <link
         rel="stylesheet"
-        href="../css/estilos.css"
+        href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>"
     >
 
     <link

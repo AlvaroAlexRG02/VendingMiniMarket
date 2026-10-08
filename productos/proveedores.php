@@ -46,7 +46,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <title>Proveedores | Vending Mini Market</title>
 
-    <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
     <link rel="stylesheet" href="../css/catalogo.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
