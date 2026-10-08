@@ -7,11 +7,12 @@
  *                fecha_registro)
  * Relación "abastecida por": tabla relacion_abastecimiento (HU-18).
  *
- * HU-16  Consulta de ubicaciones      listar
+ * HU-16  Consulta de ubicaciones      listar, obtener
  *        Registro de una ubicación    crear
+ *        Edición con trazabilidad      editar
  *        Activar / inactivar          cambiar_estado (no se elimina; el
  *                                     historial se conserva)
- *        Historial operacional        historial (bitacora_auditoria)
+ *        Historial de una ubicación  historial_ubicacion
  *
  * Acceso: Administrador y Gerente General.
  * Usa PDO ($pdo), igual que api/maquinas/maquinas.php.
@@ -265,6 +266,23 @@ function accionListar(array $in): void
     }, $ubicaciones));
 }
 
+function accionObtener(array $in): void
+{
+    exigirAcceso();
+
+    $id = (int)($_GET['id'] ?? $in['id'] ?? 0);
+    if ($id <= 0) {
+        respuesta(false, null, 'Ubicación inválida.', 400);
+    }
+
+    $ubicacion = cargarUbicacion($id);
+    if (!$ubicacion) {
+        respuesta(false, null, 'Ubicación no encontrada.', 404);
+    }
+
+    respuesta(true, $ubicacion);
+}
+
 function accionCrear(array $in): void
 {
     exigirAcceso();
@@ -356,6 +374,97 @@ function accionCrear(array $in): void
     respuesta(true, $nueva, 'La ubicación fue registrada correctamente.', 201);
 }
 
+/**
+ * Edita nombre, tipo, principal y observaciones. El estado se cambia con
+ * cambiar_estado y las relaciones de abastecimiento en api/abastecimiento.
+ */
+function accionEditar(array $in): void
+{
+    exigirAcceso();
+    exigirPost();
+
+    $id = (int)($in['id_tienda'] ?? 0);
+    if ($id <= 0) {
+        respuesta(false, null, 'Ubicación inválida.', 400);
+    }
+
+    $actual = cargarUbicacion($id);
+    if (!$actual) {
+        respuesta(false, null, 'Ubicación no encontrada.', 404);
+    }
+
+    $nombre = campoTexto($in, 'nombre', 100, true, 'El nombre');
+    $tipo   = strtoupper(trim((string)($in['tipo'] ?? '')));
+
+    if (!in_array($tipo, ['TIENDA', 'BODEGA'], true)) {
+        respuesta(false, null, 'El tipo debe ser Tienda o Bodega.', 400);
+    }
+
+    $esPrincipal   = aBool($in['es_principal'] ?? false);
+    $observaciones = campoTexto($in, 'observaciones', 500, false, 'Las observaciones');
+
+    $st = db()->prepare('SELECT 1 FROM tienda WHERE LOWER(nombre) = LOWER(:nombre) AND id_tienda <> :id LIMIT 1');
+    $st->execute([':nombre' => $nombre, ':id' => $id]);
+
+    if ($st->fetchColumn()) {
+        respuesta(false, null, 'Ya existe una ubicación registrada con ese nombre.', 409);
+    }
+
+    // Una bodega no puede ser destino de abastecimiento (HU-18).
+    if ($tipo === 'BODEGA' && $actual['tipo'] !== 'BODEGA') {
+        $st = db()->prepare('SELECT 1 FROM relacion_abastecimiento WHERE id_tienda_destino = :id LIMIT 1');
+        $st->execute([':id' => $id]);
+
+        if ($st->fetchColumn()) {
+            respuesta(
+                false,
+                null,
+                'No se puede cambiar a Bodega: la ubicación es destino de una relación de abastecimiento.',
+                409
+            );
+        }
+    }
+
+    $sinCambios = $nombre === $actual['nombre']
+        && $tipo === $actual['tipo']
+        && $esPrincipal === $actual['es_principal']
+        && ($observaciones ?? '') === (string)($actual['observaciones'] ?? '');
+
+    if ($sinCambios) {
+        respuesta(false, null, 'No hay cambios para guardar.', 409);
+    }
+
+    $nueva = enTransaccion(function () use ($id, $actual, $nombre, $tipo, $esPrincipal, $observaciones) {
+        $antes = fotoUbicacion($id);
+
+        // La columna ubicacion repite el nombre: se mantiene igual si así estaba.
+        $st = db()->prepare("
+            UPDATE tienda SET
+                nombre        = :nombre,
+                ubicacion     = CASE WHEN ubicacion IS NULL OR ubicacion = :anterior THEN :nombre_ubicacion ELSE ubicacion END,
+                tipo          = :tipo,
+                es_principal  = :principal,
+                observaciones = :observaciones
+            WHERE id_tienda = :id
+        ");
+        $st->bindValue(':nombre', $nombre);
+        $st->bindValue(':anterior', $actual['nombre']);
+        $st->bindValue(':nombre_ubicacion', $nombre);
+        $st->bindValue(':tipo', $tipo);
+        $st->bindValue(':principal', $esPrincipal, PDO::PARAM_BOOL);
+        $st->bindValue(':observaciones', $observaciones);
+        $st->bindValue(':id', $id, PDO::PARAM_INT);
+        $st->execute();
+
+        $despues = fotoUbicacion($id);
+        auditar(ENTIDAD_UBICACION, $id, 'EDITAR', $antes, $despues);
+
+        return $despues;
+    }, 'No se pudo actualizar la ubicación.');
+
+    respuesta(true, $nueva, 'La ubicación fue actualizada correctamente.');
+}
+
 /** Activar o inactivar. La ubicación y su historial no se eliminan. */
 function accionCambiarEstado(array $in): void
 {
@@ -407,81 +516,47 @@ function accionCambiarEstado(array $in): void
 
 
 /* ==========================================================
-   HISTORIAL OPERACIONAL
+   HISTORIAL DE UNA UBICACIÓN
 ========================================================== */
 
-function textoHistorial(string $entidad, string $accion, ?array $antes, ?array $despues): array
-{
-    $dato = $despues ?? $antes ?? [];
-
-    if ($entidad === ENTIDAD_RELACION) {
-        $origen  = (string)($dato['origen_nombre'] ?? '');
-        $destino = (string)($dato['destino_nombre'] ?? '');
-        $verbo   = [
-            'CREAR'     => 'configurada',
-            'EDITAR'    => 'modificada',
-            'ACTIVAR'   => 'activada',
-            'INACTIVAR' => 'inactivada',
-        ][$accion] ?? strtolower($accion);
-
-        return [
-            'Relación operativa',
-            $destino,
-            "Relación $origen → $destino $verbo.",
-        ];
-    }
-
-    $nombre = (string)($dato['nombre'] ?? '');
-
-    if ($accion === 'CREAR') {
-        $tipo      = mb_strtolower(etiquetaTipo((string)($dato['tipo'] ?? '')), 'UTF-8');
-        $principal = !empty($dato['es_principal']) ? 'principal' : 'secundaria';
-        $estado    = !empty($dato['estado']) ? 'activa' : 'inactiva';
-
-        return [
-            'Registro de ubicación',
-            $nombre,
-            "Ubicación creada como $tipo $principal en estado $estado.",
-        ];
-    }
-
-    $estado = $accion === 'ACTIVAR' ? 'activa' : 'inactiva';
-
-    return [
-        'Cambio de estado',
-        $nombre,
-        "La ubicación fue marcada como $estado y el historial operativo se conservó.",
-    ];
-}
-
-function accionHistorial(array $in): void
+/** Historial de una ubicación: sus cambios y las relaciones de abastecimiento donde participa. */
+function accionHistorialUbicacion(array $in): void
 {
     exigirAcceso();
+
+    $id = (int)($_GET['id'] ?? $in['id'] ?? 0);
+    if ($id <= 0) {
+        respuesta(false, null, 'Ubicación inválida.', 400);
+    }
+
+    if (!cargarUbicacion($id)) {
+        respuesta(false, null, 'Ubicación no encontrada.', 404);
+    }
 
     $st = db()->prepare("
         SELECT b.id_evento, b.entidad, b.accion, b.valor_anterior, b.valor_nuevo, b.fecha,
                TRIM(CONCAT(u.nombre, ' ', u.apellido)) AS usuario
         FROM bitacora_auditoria b
         LEFT JOIN usuario u ON u.id_usuario = b.id_usuario
-        WHERE b.entidad IN (:ubicacion, :relacion)
+        WHERE (b.entidad = :ubicacion
+               AND COALESCE(b.valor_nuevo->>'id_tienda', b.valor_anterior->>'id_tienda') = :id)
+           OR (b.entidad = :relacion
+               AND (COALESCE(b.valor_nuevo->>'id_tienda_destino', b.valor_anterior->>'id_tienda_destino') = :id
+                    OR COALESCE(b.valor_nuevo->>'id_tienda_origen', b.valor_anterior->>'id_tienda_origen') = :id))
         ORDER BY b.fecha DESC, b.id_evento DESC
         LIMIT 100
     ");
-    $st->execute([':ubicacion' => ENTIDAD_UBICACION, ':relacion' => ENTIDAD_RELACION]);
+    $st->execute([':ubicacion' => ENTIDAD_UBICACION, ':relacion' => ENTIDAD_RELACION, ':id' => (string)$id]);
 
     respuesta(true, array_map(function (array $f): array {
-        $antes   = $f['valor_anterior'] !== null ? json_decode((string)$f['valor_anterior'], true) : null;
-        $despues = $f['valor_nuevo'] !== null ? json_decode((string)$f['valor_nuevo'], true) : null;
-
-        [$accion, $ubicacion, $detalle] = textoHistorial((string)$f['entidad'], (string)$f['accion'], $antes, $despues);
-
         return [
-            'id_evento'   => (int)$f['id_evento'],
-            'fecha'       => $f['fecha'],
-            'accion'      => $accion,
-            'ubicacion'   => $ubicacion,
-            'detalle'     => $detalle,
-            'responsable' => $f['usuario'] !== '' ? $f['usuario'] : '—',
+            'id_evento' => (int)$f['id_evento'],
+            'entidad'   => $f['entidad'],
+            'accion'    => $f['accion'],
+            'antes'     => $f['valor_anterior'] !== null ? json_decode((string)$f['valor_anterior'], true) : null,
+            'despues'   => $f['valor_nuevo'] !== null ? json_decode((string)$f['valor_nuevo'], true) : null,
+            'fecha'     => $f['fecha'],
+            'usuario'   => $f['usuario'] !== '' ? $f['usuario'] : null,
         ];
     }, $st->fetchAll()));
 }
@@ -495,10 +570,12 @@ $entrada = leerEntrada();
 $accion  = (string)($_GET['accion'] ?? $entrada['accion'] ?? '');
 
 $acciones = [
-    'listar'         => 'accionListar',
-    'historial'      => 'accionHistorial',
-    'crear'          => 'accionCrear',
-    'cambiar_estado' => 'accionCambiarEstado',
+    'listar'              => 'accionListar',
+    'obtener'             => 'accionObtener',
+    'historial_ubicacion' => 'accionHistorialUbicacion',
+    'crear'               => 'accionCrear',
+    'editar'              => 'accionEditar',
+    'cambiar_estado'      => 'accionCambiarEstado',
 ];
 
 try {

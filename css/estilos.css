@@ -738,59 +738,6 @@ body.pagina-app {
     grid-column: 1 / -1;
 }
 
-.texto-ayuda-tienda {
-    margin: 0 0 18px;
-    color: var(--texto-secundario);
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-.lista-principales-tienda {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-}
-
-.tarjeta-principal-tienda {
-    border: 1px solid var(--borde);
-    border-radius: var(--radio-sm);
-    background: #fff;
-    padding: 18px;
-}
-
-.tarjeta-principal-tienda-encabezado {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-
-.tarjeta-principal-tienda strong {
-    font-size: 16px;
-}
-
-.tarjeta-principal-tienda p {
-    margin: 0 0 8px;
-    color: var(--texto-principal);
-}
-
-.tarjeta-principal-tienda small {
-    color: var(--texto-secundario);
-    line-height: 1.5;
-}
-
-.panel-encabezado-secundario-tienda {
-    margin-top: 28px;
-}
-
-.texto-vacio-tienda {
-    grid-column: 1 / -1;
-    margin: 0;
-    color: var(--texto-secundario);
-    font-size: 14px;
-}
-
 .enlace-ver-todo {
     font-size: 13px;
     font-weight: 600;

@@ -3,16 +3,27 @@
 require_once __DIR__ . "/../config/session.php";
 require_once __DIR__ . "/../config/permisos.php";
 
+/*
+ * Sin sesión iniciada no se puede entrar a la página,
+ * ni escribiendo el enlace directamente en el navegador.
+ */
 if (!isset($_SESSION["usuario"])) {
     header("Location: ../index/index.html");
     exit;
 }
 
+/*
+ * Esta página es para el Administrador y el Gerente General.
+ */
 if (!esAdministradorOGerente()) {
     header("Location: ../dashboard/dashboard.php");
     exit;
 }
 
+/*
+ * Evitar que el navegador muestre la página después de
+ * cerrar sesión utilizando la caché.
+ */
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
@@ -30,16 +41,20 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Administración de tiendas y bodegas de Vending Mini Market">
-    <title>Tienda | Vending Mini Market</title>
+    <meta name="description" content="Registro de ubicaciones de Vending Mini Market">
+
+    <title>Nueva ubicación | Vending Mini Market</title>
 
     <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
-    <link rel="stylesheet" href="../css/catalogo.css?v=<?= filemtime(__DIR__ . '/../css/catalogo.css') ?>">
+    <link rel="stylesheet" href="../css/catalogo.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body class="pagina-app">
 
+    <!-- ==========================================
+         BARRA LATERAL
+    =========================================== -->
     <aside class="barra-lateral">
 
         <div class="logo-sistema">
@@ -97,12 +112,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 Usuarios
             </a>
 
-            <?php if (esAdministradorOGerente()): ?>
             <a href="../bitacora/bitacora.php">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Bitácora
             </a>
-            <?php endif; ?>
 
         </nav>
 
@@ -115,6 +128,9 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     </aside>
 
+    <!-- ==========================================
+         COLUMNA PRINCIPAL
+    =========================================== -->
     <div class="columna-principal">
 
         <header class="barra-superior">
@@ -126,7 +142,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             <div class="buscador-superior">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="search"
-                       id="buscadorGeneralTienda"
+                       id="buscadorGeneralUbicacionNueva"
                        placeholder="Buscar en el sistema..."
                        aria-label="Buscar en el sistema"
                        autocomplete="off">
@@ -136,7 +152,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <button type="button" class="boton-notificacion" aria-label="Consultar notificaciones">
                     <i class="fa-regular fa-bell"></i>
-                    <span class="contador" id="contadorNotificacionesTienda" aria-label="0 notificaciones">0</span>
+                    <span class="contador" id="contadorNotificacionesUbicacionNueva" aria-label="0 notificaciones">0</span>
                 </button>
 
                 <div class="perfil-superior">
@@ -157,96 +173,101 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             <div class="encabezado-pagina">
 
                 <div>
-                    <h1>Tienda</h1>
-                    <p>Gestiona tiendas, bodegas y relaciones operativas para reflejar la operación multiubicación de UP1, UP2 y UltraLag.</p>
+                    <h1 id="tituloPagina">Nueva ubicación</h1>
+                    <p id="textoPagina">
+                        Registra una tienda o una bodega con su tipo, estado y, si aplica, la ubicación que la abastece.
+                    </p>
                 </div>
 
-                <div class="acciones-encabezado-compras">
-                    <a href="relaciones.php" class="boton boton-borde">
-                        <i class="fa-solid fa-diagram-project"></i>
-                        Relaciones de abastecimiento
-                    </a>
-                    <a href="ubicacion-nueva.php" class="boton boton-azul">
-                        <i class="fa-solid fa-plus"></i>
-                        Nueva ubicación
-                    </a>
-                </div>
+                <a href="tienda.php" class="boton boton-borde">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Volver a tienda
+                </a>
 
             </div>
 
-            <div id="mensajeTienda" class="mensaje-producto" aria-live="polite"></div>
+            <div id="mensajeUbicacion" class="mensaje-producto" aria-live="polite"></div>
 
-            <section class="grilla-estadisticas" aria-label="Resumen de ubicaciones">
+            <section class="panel">
 
-                <article class="tarjeta-estadistica">
-                    <div class="tarjeta-estadistica-encabezado">
-                        <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-shop"></i></div>
-                        <div>
-                            <div class="tarjeta-estadistica-titulo">Ubicaciones registradas</div>
-                            <div class="tarjeta-estadistica-valor" id="totalUbicacionesTienda">0</div>
+                <div class="panel-encabezado">
+
+                    <div>
+                        <h2>Información de la ubicación</h2>
+                        <p class="descripcion-panel">
+                            Complete los campos necesarios. Los marcados con * son obligatorios.
+                        </p>
+                    </div>
+
+                    <div class="tarjeta-estadistica-icono">
+                        <i class="fa-solid fa-shop"></i>
+                    </div>
+
+                </div>
+
+                <form id="formularioUbicacion" novalidate>
+
+                    <div class="cuadricula-formulario">
+
+                        <div class="grupo-formulario">
+                            <label for="nombreUbicacion">Nombre *</label>
+                            <input type="text" id="nombreUbicacion" maxlength="100"
+                                   placeholder="Ejemplo: Bodega Central"
+                                   autocomplete="off" required>
                         </div>
-                    </div>
-                    <div class="tarjeta-estadistica-cambio">Tiendas y bodegas administradas</div>
-                </article>
 
-                <article class="tarjeta-estadistica borde-verde">
-                    <div class="tarjeta-estadistica-encabezado">
-                        <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-location-dot"></i></div>
-                        <div>
-                            <div class="tarjeta-estadistica-titulo">Ubicaciones principales</div>
-                            <div class="tarjeta-estadistica-valor" id="totalPrincipalesTienda">0</div>
+                        <div class="grupo-formulario">
+                            <label for="tipoUbicacion">Tipo *</label>
+                            <select id="tipoUbicacion" required>
+                                <option value="">Seleccione un tipo</option>
+                                <option value="Tienda">Tienda</option>
+                                <option value="Bodega">Bodega</option>
+                            </select>
                         </div>
-                    </div>
-                    <div class="tarjeta-estadistica-cambio">UP1, UP2 y UltraLag contempladas</div>
-                </article>
 
-                <article class="tarjeta-estadistica borde-naranja">
-                    <div class="tarjeta-estadistica-encabezado">
-                        <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-circle-check"></i></div>
-                        <div>
-                            <div class="tarjeta-estadistica-titulo">Ubicaciones activas</div>
-                            <div class="tarjeta-estadistica-valor" id="totalActivasTienda">0</div>
+                        <div class="grupo-formulario">
+                            <label for="estadoUbicacion">Estado *</label>
+                            <select id="estadoUbicacion" required>
+                                <option value="true">Activa</option>
+                                <option value="false">Inactiva</option>
+                            </select>
                         </div>
-                    </div>
-                    <div class="tarjeta-estadistica-cambio">Operación disponible para abastecimiento</div>
-                </article>
 
-                <article class="tarjeta-estadistica borde-morado">
-                    <div class="tarjeta-estadistica-encabezado">
-                        <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-arrow-right-arrow-left"></i></div>
-                        <div>
-                            <div class="tarjeta-estadistica-titulo">Relaciones operativas</div>
-                            <div class="tarjeta-estadistica-valor" id="totalRelacionesTienda">0</div>
+                        <div class="grupo-formulario">
+                            <label for="principalUbicacion">Ubicación principal</label>
+                            <select id="principalUbicacion">
+                                <option value="false">No</option>
+                                <option value="true">Sí</option>
+                            </select>
                         </div>
+
+                        <div class="grupo-formulario" id="grupoAbastecidaPorUbicacion">
+                            <label for="abastecidaPorUbicacion">Abastecida por</label>
+                            <select id="abastecidaPorUbicacion">
+                                <option value="">Sin relación operativa</option>
+                            </select>
+                        </div>
+
+                        <div class="grupo-formulario campo-completo">
+                            <label for="observacionesUbicacion">Observaciones</label>
+                            <textarea id="observacionesUbicacion" rows="3" maxlength="500"
+                                      placeholder="Detalle operativo opcional..."></textarea>
+                        </div>
+
                     </div>
-                    <div class="tarjeta-estadistica-cambio">Puntos de abastecimiento configurados</div>
-                </article>
 
-            </section>
+                    <div class="acciones-formulario">
 
-            <section class="diseno-tienda">
+                        <a href="tienda.php" class="boton boton-borde">Cancelar</a>
 
-                <article class="panel panel-completo-tienda">
-                    <div class="panel-encabezado">
-                        <h2>Ubicaciones registradas</h2>
+                        <button type="submit" id="botonGuardarUbicacion" class="boton boton-azul">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            Guardar ubicación
+                        </button>
+
                     </div>
 
-                    <div class="contenedor-tabla">
-                        <table class="tabla-datos">
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Tipo</th>
-                                    <th>Estado</th>
-                                    <th>Principal</th>
-                                    <th>Abastecida por</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cuerpoTablaTiendas"></tbody>
-                        </table>
-                    </div>
-                </article>
+                </form>
 
             </section>
 
@@ -257,6 +278,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
     <script src="../js/app.js"></script>
     <script src="../js/catalogo-comun.js"></script>
     <script src="../js/maquinas-api.js?v=<?= filemtime(__DIR__ . '/../js/maquinas-api.js') ?>"></script>
-    <script src="../js/tienda.js?v=<?= filemtime(__DIR__ . '/../js/tienda.js') ?>"></script>
+    <script src="../js/ubicacion-form.js?v=<?= filemtime(__DIR__ . '/../js/ubicacion-form.js') ?>"></script>
+
 </body>
 </html>

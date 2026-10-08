@@ -1,10 +1,11 @@
 /*=========================================================
   VENDING MINI MARKET — Módulo Tienda (ubicaciones)
   HU-16: las ubicaciones se guardan en la base de datos
-  mediante api/tienda/tienda.php. Las relaciones de
-  abastecimiento se gestionan en relaciones.php (HU-18);
-  aquí solo se muestran y se puede indicar "Abastecida por"
-  al registrar una tienda.
+  mediante api/tienda/tienda.php. Aquí se listan, se ve su
+  historial y se activan o inactivan; el registro y la edición
+  están en ubicacion-nueva.php y las relaciones de
+  abastecimiento en relaciones.php (HU-18).
+  Requiere: app.js, catalogo-comun.js y maquinas-api.js antes.
 =========================================================*/
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -14,19 +15,15 @@ document.addEventListener("DOMContentLoaded", () => {
 const API_TIENDA_VENDING = "../api/tienda/tienda.php";
 
 let ubicacionesTiendaVending = [];
-let historialTiendaVending = [];
 let apiTiendaVending = null;
 
 async function inicializarPaginaTiendaVending() {
-    const formulario = document.getElementById("formularioTienda");
-    const botonLimpiar = document.getElementById("botonLimpiarTienda");
-
-    if (!formulario) {
+    if (!document.getElementById("cuerpoTablaTiendas")) {
         return;
     }
 
-    if (!window.MaquinasApi) {
-        mostrarMensajeTiendaVending("No fue posible cargar el cliente de la API.", "error");
+    if (!window.MaquinasApi || !window.CatalogoComun) {
+        mostrarMensajeTiendaVending("No fue posible cargar los componentes de la página.", "error");
         return;
     }
 
@@ -34,30 +31,22 @@ async function inicializarPaginaTiendaVending() {
 
     eliminarDatosLocalesObsoletosTienda();
 
-    formulario.addEventListener("submit", manejarRegistroTiendaVending);
-    document.getElementById("tipoUbicacionTienda")?.addEventListener("change", actualizarCampoAbastecidaPorTienda);
-    document.getElementById("estadoUbicacionTienda")?.addEventListener("change", actualizarCampoAbastecidaPorTienda);
+    document.getElementById("cuerpoTablaTiendas").addEventListener("click", (evento) => {
+        const boton = evento.target.closest("[data-accion]");
 
-    if (botonLimpiar) {
-        botonLimpiar.addEventListener("click", () => {
-            formulario.reset();
-            actualizarCampoAbastecidaPorTienda();
-            limpiarMensajeTiendaVending();
-        });
-    }
+        if (!boton) {
+            return;
+        }
 
-    document.getElementById("botonNuevaUbicacionTienda")?.addEventListener("click", () => {
-        alternarPanelRegistroTienda(true);
+        const id = boton.dataset.id || "";
+
+        if (boton.dataset.accion === "historial") {
+            verHistorialUbicacionTienda(id);
+        } else {
+            alternarEstadoUbicacionTiendaVending(id, boton);
+        }
     });
 
-    document.getElementById("botonCancelarTienda")?.addEventListener("click", () => {
-        formulario.reset();
-        actualizarCampoAbastecidaPorTienda();
-        limpiarMensajeTiendaVending();
-        alternarPanelRegistroTienda(false);
-    });
-
-    actualizarCampoAbastecidaPorTienda();
     await recargarModuloTiendaVending();
 }
 
@@ -73,13 +62,9 @@ function eliminarDatosLocalesObsoletosTienda() {
 
 async function recargarModuloTiendaVending() {
     try {
-        const [ubicaciones, historial] = await Promise.all([
-            apiTiendaVending("listar"),
-            apiTiendaVending("historial")
-        ]);
+        const ubicaciones = await apiTiendaVending("listar");
 
         ubicacionesTiendaVending = Array.isArray(ubicaciones.data) ? ubicaciones.data : [];
-        historialTiendaVending = Array.isArray(historial.data) ? historial.data : [];
 
         renderizarModuloTiendaVending();
         return true;
@@ -87,93 +72,6 @@ async function recargarModuloTiendaVending() {
         mostrarMensajeTiendaVending(error.message || "No fue posible cargar las ubicaciones.", "error");
         return false;
     }
-}
-
-
-/*=========================================================
-  REGISTRO DE UBICACIONES
-=========================================================*/
-
-async function manejarRegistroTiendaVending(evento) {
-    evento.preventDefault();
-
-    const formulario = evento.target;
-    const nombre = document.getElementById("nombreUbicacionTienda")?.value.trim() || "";
-    const tipo = document.getElementById("tipoUbicacionTienda")?.value || "";
-    const estado = document.getElementById("estadoUbicacionTienda")?.value || "Activa";
-    const principal = document.getElementById("principalUbicacionTienda")?.value === "true";
-    const abastecidaPor = document.getElementById("abastecidaPorTienda")?.value || "";
-    const observaciones = document.getElementById("observacionesUbicacionTienda")?.value.trim() || "";
-
-    if (!nombre || !tipo) {
-        mostrarMensajeTiendaVending("Debe completar el nombre y el tipo de la ubicación.", "error");
-        return;
-    }
-
-    const botonGuardar = formulario.querySelector('button[type="submit"]');
-    botonGuardar.disabled = true;
-
-    try {
-        const resultado = await apiTiendaVending("crear", {
-            nombre,
-            tipo,
-            estado: estado === "Activa",
-            es_principal: principal,
-            observaciones,
-            id_abastecedora: abastecidaPor ? Number(abastecidaPor) : 0
-        });
-
-        formulario.reset();
-        actualizarCampoAbastecidaPorTienda();
-        alternarPanelRegistroTienda(false);
-        await recargarModuloTiendaVending();
-
-        mostrarMensajeTiendaVending(resultado.message || "La ubicación fue registrada correctamente.", "exito");
-    } catch (error) {
-        mostrarMensajeTiendaVending(error.message, "error");
-    } finally {
-        botonGuardar.disabled = false;
-    }
-}
-
-/** El formulario de registro solo se muestra al pulsar "Nueva ubicación". */
-function alternarPanelRegistroTienda(mostrar) {
-    const panel = document.getElementById("panelRegistroTienda");
-    const boton = document.getElementById("botonNuevaUbicacionTienda");
-
-    if (!panel) {
-        return;
-    }
-
-    panel.hidden = !mostrar;
-    boton?.setAttribute("aria-expanded", String(mostrar));
-
-    if (mostrar) {
-        panel.scrollIntoView({ behavior: "smooth", block: "start" });
-        document.getElementById("nombreUbicacionTienda")?.focus({ preventScroll: true });
-    }
-}
-
-/** Una bodega o una ubicación inactiva no pueden tener una ubicación que las abastezca. */
-function actualizarCampoAbastecidaPorTienda() {
-    const select = document.getElementById("abastecidaPorTienda");
-
-    if (!select) {
-        return;
-    }
-
-    const tipo = document.getElementById("tipoUbicacionTienda")?.value || "";
-    const estado = document.getElementById("estadoUbicacionTienda")?.value || "Activa";
-    const bloqueada = tipo === "Bodega" || estado !== "Activa";
-
-    if (bloqueada) {
-        select.value = "";
-    }
-
-    select.disabled = bloqueada;
-    select.title = bloqueada
-        ? "Solo una tienda activa puede ser abastecida por otra ubicación."
-        : "";
 }
 
 
@@ -189,6 +87,21 @@ async function alternarEstadoUbicacionTiendaVending(idUbicacion, boton) {
         return;
     }
 
+    const activar = !ubicacion.estado;
+
+    const confirmado = await window.CatalogoComun.confirmar({
+        titulo: activar ? "Activar ubicación" : "Inactivar ubicación",
+        texto: activar
+            ? `"${ubicacion.nombre}" volverá a aceptar operaciones.`
+            : `"${ubicacion.nombre}" dejará de aceptar nuevas operaciones, pero su historial se conserva.`,
+        textoConfirmar: activar ? "Activar" : "Inactivar",
+        peligro: !activar
+    });
+
+    if (!confirmado) {
+        return;
+    }
+
     if (boton) {
         boton.disabled = true;
     }
@@ -196,7 +109,7 @@ async function alternarEstadoUbicacionTiendaVending(idUbicacion, boton) {
     try {
         const resultado = await apiTiendaVending("cambiar_estado", {
             id_tienda: ubicacion.id_tienda,
-            estado: !ubicacion.estado
+            estado: activar
         });
 
         await recargarModuloTiendaVending();
@@ -211,15 +124,137 @@ async function alternarEstadoUbicacionTiendaVending(idUbicacion, boton) {
 
 
 /*=========================================================
+  HISTORIAL DE UNA UBICACIÓN — viene de bitacora_auditoria
+=========================================================*/
+
+const ACCIONES_HISTORIAL_UBICACION_TIENDA = {
+    UBICACION: {
+        CREAR: "Ubicación registrada",
+        EDITAR: "Ubicación editada",
+        INACTIVAR: "Ubicación inactivada",
+        ACTIVAR: "Ubicación activada"
+    },
+    RELACION_ABASTECIMIENTO: {
+        CREAR: "Relación de abastecimiento configurada",
+        EDITAR: "Relación de abastecimiento modificada",
+        INACTIVAR: "Relación de abastecimiento inactivada",
+        ACTIVAR: "Relación de abastecimiento activada"
+    }
+};
+
+const ETIQUETAS_CAMBIO_UBICACION_TIENDA = {
+    nombre: "Nombre",
+    tipo: "Tipo",
+    es_principal: "Principal",
+    observaciones: "Observaciones",
+    estado: "Estado"
+};
+
+function formatearValorCambioTienda(clave, valor) {
+    if (valor === null || valor === undefined || valor === "") {
+        return "—";
+    }
+
+    if (clave === "estado") {
+        return valor ? "Activa" : "Inactiva";
+    }
+
+    if (clave === "es_principal") {
+        return valor ? "Sí" : "No";
+    }
+
+    if (clave === "tipo") {
+        return valor === "BODEGA" ? "Bodega" : "Tienda";
+    }
+
+    return String(valor);
+}
+
+function cambiosUbicacionTienda(antes, despues) {
+    if (!antes || !despues) {
+        return [];
+    }
+
+    return Object.keys(ETIQUETAS_CAMBIO_UBICACION_TIENDA)
+        .filter((clave) => String(antes[clave] ?? "") !== String(despues[clave] ?? ""))
+        .map((clave) =>
+            `${ETIQUETAS_CAMBIO_UBICACION_TIENDA[clave]}: ${formatearValorCambioTienda(clave, antes[clave])} → ${formatearValorCambioTienda(clave, despues[clave])}`
+        );
+}
+
+/** Detalle de un registro: cambios de campos o la relación de que se trata. */
+function detalleHistorialUbicacionTienda(registro) {
+    if (registro.entidad === "RELACION_ABASTECIMIENTO") {
+        const dato = registro.despues || registro.antes || {};
+        const texto = dato.origen_nombre && dato.destino_nombre
+            ? `${dato.origen_nombre} → ${dato.destino_nombre}`
+            : "";
+
+        return texto ? [texto] : [];
+    }
+
+    if (registro.accion === "CREAR") {
+        const despues = registro.despues || {};
+
+        return [
+            `Tipo: ${formatearValorCambioTienda("tipo", despues.tipo)}`,
+            `Estado inicial: ${formatearValorCambioTienda("estado", despues.estado)}`
+        ];
+    }
+
+    return cambiosUbicacionTienda(registro.antes, registro.despues);
+}
+
+async function verHistorialUbicacionTienda(idUbicacion) {
+    const C = window.CatalogoComun;
+    const ubicacion = ubicacionesTiendaVending.find((item) => String(item.id_tienda) === String(idUbicacion));
+
+    try {
+        const { data } = await apiTiendaVending("historial_ubicacion", null, { id: idUbicacion });
+        const contenedor = document.createElement("div");
+
+        if (!data.length) {
+            contenedor.innerHTML = "<p>Esta ubicación todavía no tiene movimientos registrados.</p>";
+        } else {
+            const lista = document.createElement("ul");
+            lista.className = "lista-historial";
+
+            data.forEach((registro) => {
+                const elemento = document.createElement("li");
+                const titulo = (ACCIONES_HISTORIAL_UBICACION_TIENDA[registro.entidad] || {})[registro.accion] || registro.accion;
+                const detalle = detalleHistorialUbicacionTienda(registro);
+
+                elemento.innerHTML = `
+                    <strong>${C.escapeHtml(titulo)}</strong>
+                    <small>
+                        ${C.escapeHtml(C.fechaHora(normalizarFechaTienda(registro.fecha)))}
+                        ${registro.usuario ? " · " + C.escapeHtml(registro.usuario) : ""}
+                    </small>
+                    ${detalle.length
+                        ? `<ul>${detalle.map((linea) => `<li>${C.escapeHtml(linea)}</li>`).join("")}</ul>`
+                        : ""}
+                `;
+
+                lista.appendChild(elemento);
+            });
+
+            contenedor.appendChild(lista);
+        }
+
+        C.mostrarDialogo(`Historial: ${ubicacion ? ubicacion.nombre : "ubicación"}`, contenedor);
+    } catch (error) {
+        mostrarMensajeTiendaVending(error.message, "error");
+    }
+}
+
+
+/*=========================================================
   RENDERIZADO
 =========================================================*/
 
 function renderizarModuloTiendaVending() {
     actualizarResumenTiendaVending(ubicacionesTiendaVending);
-    renderizarPrincipalesTiendaVending(ubicacionesTiendaVending);
     renderizarTablaTiendaVending(ubicacionesTiendaVending);
-    renderizarHistorialTiendaVending(historialTiendaVending);
-    poblarSelectAbastecimientoTienda();
 }
 
 function etiquetaEstadoTienda(ubicacion) {
@@ -241,48 +276,6 @@ function actualizarResumenTiendaVending(ubicaciones) {
     asignarTextoTienda("totalRelacionesTienda", String(relaciones));
 }
 
-function renderizarPrincipalesTiendaVending(ubicaciones) {
-    renderizarTarjetasUbicacionTienda(
-        "listaPrincipalesTienda",
-        ubicaciones.filter((ubicacion) => ubicacion.es_principal),
-        "No hay ubicaciones principales registradas."
-    );
-
-    renderizarTarjetasUbicacionTienda(
-        "listaSecundariasTienda",
-        ubicaciones.filter((ubicacion) => !ubicacion.es_principal),
-        "No hay ubicaciones secundarias registradas."
-    );
-}
-
-function renderizarTarjetasUbicacionTienda(idContenedor, lista, mensajeVacio) {
-    const contenedor = document.getElementById(idContenedor);
-
-    if (!contenedor) {
-        return;
-    }
-
-    if (lista.length === 0) {
-        contenedor.innerHTML = `<p class="texto-vacio-tienda">${escaparHtmlTienda(mensajeVacio)}</p>`;
-        return;
-    }
-
-    contenedor.innerHTML = lista.map((ubicacion) => {
-        const abastecidaPor = textoAbastecidaPorTienda(ubicacion);
-
-        return `
-        <article class="tarjeta-principal-tienda">
-            <div class="tarjeta-principal-tienda-encabezado">
-                <strong>${escaparHtmlTienda(ubicacion.nombre)}</strong>
-                <span class="insignia ${ubicacion.estado ? "insignia-verde" : "insignia-rojo"}">${etiquetaEstadoTienda(ubicacion)}</span>
-            </div>
-            <p>${escaparHtmlTienda(ubicacion.tipo_etiqueta)}</p>
-            <small>${abastecidaPor ? `Abastecida por ${escaparHtmlTienda(abastecidaPor)}` : "Sin relación de abastecimiento"}</small>
-        </article>
-    `;
-    }).join("");
-}
-
 function renderizarTablaTiendaVending(ubicaciones) {
     const cuerpo = document.getElementById("cuerpoTablaTiendas");
 
@@ -292,10 +285,12 @@ function renderizarTablaTiendaVending(ubicaciones) {
 
     cuerpo.innerHTML = ubicaciones.map((ubicacion) => {
         const abastecidaPor = textoAbastecidaPorTienda(ubicacion);
+        const nombre = escaparHtmlTienda(ubicacion.nombre);
+        const id = escaparAtributoTienda(ubicacion.id_tienda);
 
         return `
             <tr>
-                <td>${escaparHtmlTienda(ubicacion.nombre)}</td>
+                <td>${nombre}</td>
                 <td>${escaparHtmlTienda(ubicacion.tipo_etiqueta)}</td>
                 <td>
                     <span class="insignia ${ubicacion.estado ? "insignia-verde" : "insignia-rojo"}">
@@ -305,37 +300,36 @@ function renderizarTablaTiendaVending(ubicaciones) {
                 <td>${ubicacion.es_principal ? "Sí" : "No"}</td>
                 <td>${abastecidaPor ? escaparHtmlTienda(abastecidaPor) : "Sin relación"}</td>
                 <td>
-                    <button type="button" class="boton boton-borde boton-tabla-tienda" data-ubicacion="${escaparAtributoTienda(ubicacion.id_tienda)}">
-                        ${ubicacion.estado ? "Desactivar" : "Activar"}
-                    </button>
+                    <div class="acciones-producto-tabla">
+                        <button type="button"
+                                class="boton-accion-producto boton-historial-producto"
+                                data-accion="historial" data-id="${id}"
+                                title="Ver historial" aria-label="Ver historial de ${nombre}">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </button>
+                        <a href="ubicacion-nueva.php?id=${id}"
+                           class="boton-accion-producto boton-editar-producto"
+                           title="Editar ubicación" aria-label="Editar ${nombre}">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                        ${ubicacion.estado
+                            ? `<button type="button"
+                                       class="boton-accion-producto boton-inactivar-producto"
+                                       data-accion="inactivar" data-id="${id}"
+                                       title="Inactivar ubicación" aria-label="Inactivar ${nombre}">
+                                    <i class="fa-solid fa-ban"></i>
+                               </button>`
+                            : `<button type="button"
+                                       class="boton-accion-producto boton-activar-producto"
+                                       data-accion="activar" data-id="${id}"
+                                       title="Activar ubicación" aria-label="Activar ${nombre}">
+                                    <i class="fa-solid fa-circle-check"></i>
+                               </button>`}
+                    </div>
                 </td>
             </tr>
         `;
     }).join("");
-
-    cuerpo.querySelectorAll(".boton-tabla-tienda").forEach((boton) => {
-        boton.addEventListener("click", () => {
-            alternarEstadoUbicacionTiendaVending(boton.dataset.ubicacion || "", boton);
-        });
-    });
-}
-
-function renderizarHistorialTiendaVending(historial) {
-    const cuerpo = document.getElementById("cuerpoHistorialTiendas");
-
-    if (!cuerpo) {
-        return;
-    }
-
-    cuerpo.innerHTML = historial.map((evento) => `
-        <tr>
-            <td>${escaparHtmlTienda(formatearFechaHoraVenta(normalizarFechaTienda(evento.fecha)))}</td>
-            <td>${escaparHtmlTienda(evento.accion)}</td>
-            <td>${escaparHtmlTienda(evento.ubicacion)}</td>
-            <td>${escaparHtmlTienda(evento.detalle)}</td>
-            <td>${escaparHtmlTienda(evento.responsable)}</td>
-        </tr>
-    `).join("");
 }
 
 /** PostgreSQL devuelve "2026-10-06 23:56:09.587672+00"; se convierte a ISO 8601 para que todos los navegadores lo lean. */
@@ -343,29 +337,6 @@ function normalizarFechaTienda(fecha) {
     return String(fecha || "")
         .replace(" ", "T")
         .replace(/([+-]\d{2})$/, "$1:00");
-}
-
-
-/*=========================================================
-  SELECTORES
-=========================================================*/
-
-/** "Abastecida por" del formulario de registro: ubicaciones activas. */
-function poblarSelectAbastecimientoTienda() {
-    const select = document.getElementById("abastecidaPorTienda");
-
-    if (!select) {
-        return;
-    }
-
-    const valorActual = select.value;
-    const activas = ubicacionesTiendaVending.filter((ubicacion) => ubicacion.estado);
-
-    select.innerHTML = '<option value="">Sin relación operativa</option>' + activas.map((ubicacion) => `
-        <option value="${escaparAtributoTienda(ubicacion.id_tienda)}">${escaparHtmlTienda(ubicacion.nombre)}</option>
-    `).join("");
-
-    select.value = activas.some((ubicacion) => String(ubicacion.id_tienda) === valorActual) ? valorActual : "";
 }
 
 
