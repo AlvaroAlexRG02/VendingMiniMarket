@@ -10,6 +10,10 @@
  *        Inactivación de máquinas      inactivar_maquina / activar_maquina (estado = FALSE, no se elimina)
  *        Identificador único           codigo UNIQUE, validado antes de guardar
  *
+ * HU-19  Consulta por ubicación       Encargado y Dependiente solo ven las máquinas de sus
+ *                                      ubicaciones asignadas (config/ubicaciones.php);
+ *                                      Administrador y Gerente General ven todas.
+ *
  * Usa PDO ($pdo), igual que api/catalogo/catalogo.php.
  */
 
@@ -18,6 +22,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../../config/database.php';   // define $pdo
 require_once __DIR__ . '/../../config/session.php';    // inicia la sesión
+require_once __DIR__ . '/../../config/ubicaciones.php'; // ubicaciones del usuario (HU-19)
 
 
 /* ==========================================================
@@ -238,6 +243,60 @@ function fotoMaquina(int $id): array
     return $m ?? ['id_maquina' => $id];
 }
 
+/**
+ * HU-19: ubicaciones cuyas máquinas puede ver el usuario de la sesión.
+ * Devuelve null si ve todas (Administrador y Gerente General); si no, los id de
+ * sus ubicaciones asignadas (puede ser una lista vacía). Se lee de la base en
+ * cada llamada, así una reasignación se aplica de inmediato.
+ */
+function ubicacionesVisibles(): ?array
+{
+    $idRol = (int)($_SESSION['usuario']['id_rol'] ?? 0);
+
+    if (in_array($idRol, UBICACION_ROLES_VEN_TODAS, true)) {
+        return null;
+    }
+
+    $asignadas = ubicacionesAsignadas(db(), (int)($_SESSION['usuario']['id_usuario'] ?? 0));
+
+    return array_map(function (array $t): int {
+        return $t['id_tienda'];
+    }, $asignadas);
+}
+
+/** Condición SQL que limita $columna a las ubicaciones visibles; null si no hay límite. */
+function condicionVisibilidad(string $columna, array &$params): ?string
+{
+    $visibles = ubicacionesVisibles();
+
+    if ($visibles === null) {
+        return null;
+    }
+
+    if (!$visibles) {
+        return 'FALSE';
+    }
+
+    $marcadores = [];
+
+    foreach ($visibles as $i => $id) {
+        $marcadores[] = ':vis' . $i;
+        $params[':vis' . $i] = $id;
+    }
+
+    return $columna . ' IN (' . implode(', ', $marcadores) . ')';
+}
+
+/** Responde 403 si el usuario no puede consultar la ubicación de la máquina. */
+function exigirVerMaquina(array $maquina): void
+{
+    $evaluacion = evaluarAccesoUbicacion(db(), (int)$maquina['id_tienda'], 'consulta');
+
+    if (!$evaluacion['permitido']) {
+        respuesta(false, null, $evaluacion['motivo'], 403);
+    }
+}
+
 function accionListarTiendas(array $in): void
 {
     exigirSesion();
@@ -247,6 +306,15 @@ function accionListarTiendas(array $in): void
         FROM tienda
         ORDER BY id_tienda
     ")->fetchAll();
+
+    // Encargado y Dependiente solo ven sus ubicaciones asignadas.
+    $visibles = ubicacionesVisibles();
+
+    if ($visibles !== null) {
+        $filas = array_values(array_filter($filas, function (array $f) use ($visibles): bool {
+            return in_array((int)$f['id_tienda'], $visibles, true);
+        }));
+    }
 
     respuesta(true, array_map(function (array $f): array {
         return [
@@ -284,6 +352,11 @@ function accionListarMaquinas(array $in): void
         $where[] = 'm.estado = FALSE';
     }
 
+    $visibilidad = condicionVisibilidad('m.id_tienda', $params);
+    if ($visibilidad !== null) {
+        $where[] = $visibilidad;
+    }
+
     $sql = SQL_MAQUINA_BASE
         . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
         . ' ORDER BY t.id_tienda, m.codigo';
@@ -308,6 +381,8 @@ function accionObtenerMaquina(array $in): void
         respuesta(false, null, 'Máquina no encontrada.', 404);
     }
 
+    exigirVerMaquina($maquina);
+
     respuesta(true, $maquina);
 }
 
@@ -315,14 +390,19 @@ function accionResumenMaquinas(array $in): void
 {
     exigirSesion();
 
-    $fila = db()->query("
+    $params     = [];
+    $visibilidad = condicionVisibilidad('id_tienda', $params);
+
+    $st = db()->prepare("
         SELECT
             COUNT(*)                                  AS total,
             COUNT(*) FILTER (WHERE estado = TRUE)     AS activas,
             COUNT(*) FILTER (WHERE estado = FALSE)    AS inactivas,
             COUNT(DISTINCT id_tienda)                 AS tiendas_con_maquinas
-        FROM maquina
-    ")->fetch();
+        FROM maquina" . ($visibilidad !== null ? " WHERE $visibilidad" : '') . "
+    ");
+    $st->execute($params);
+    $fila = $st->fetch();
 
     respuesta(true, [
         'total'                => (int)$fila['total'],
@@ -339,6 +419,15 @@ function accionHistorialMaquina(array $in): void
     $id = (int)($_GET['id'] ?? $in['id'] ?? 0);
     if ($id <= 0) {
         respuesta(false, null, 'Máquina inválida.', 400);
+    }
+
+    // Solo se ve el historial de las máquinas de las ubicaciones visibles (HU-19).
+    $maquina = obtenerMaquina($id);
+
+    if ($maquina) {
+        exigirVerMaquina($maquina);
+    } elseif (ubicacionesVisibles() !== null) {
+        respuesta(false, null, 'Máquina no encontrada.', 404);
     }
 
     $st = db()->prepare("
