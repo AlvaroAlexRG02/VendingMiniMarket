@@ -62,11 +62,16 @@ function exigirSesion(): array
     return $_SESSION['usuario'];
 }
 
+/** Administrador y Gerente General gestionan las relaciones de abastecimiento. */
 function esAdministrador(): bool
 {
+    if (in_array((int)($_SESSION['usuario']['id_rol'] ?? 0), [1, 2], true)) {
+        return true;
+    }
+
     $rol = mb_strtolower(trim((string)($_SESSION['usuario']['rol'] ?? '')), 'UTF-8');
 
-    return in_array($rol, ['administrador', 'admin'], true);
+    return in_array($rol, ['administrador', 'admin', 'gerente general', 'gerente'], true);
 }
 
 function exigirAdministrador(): array
@@ -74,7 +79,7 @@ function exigirAdministrador(): array
     $usuario = exigirSesion();
 
     if (!esAdministrador()) {
-        respuesta(false, null, 'No tiene permisos de administrador.', 403);
+        respuesta(false, null, 'No tiene permisos para modificar relaciones de abastecimiento.', 403);
     }
 
     return $usuario;

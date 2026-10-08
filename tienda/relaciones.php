@@ -228,8 +228,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
             </section>
 
-            <?php if (esAdministrador()): ?>
-            <!-- FORMULARIO (solo administrador) -->
+            <?php if (esAdministradorOGerente()): ?>
+            <!-- FORMULARIO (administrador y gerente general) -->
             <section class="panel" id="panelFormularioRelacion">
 
                 <div class="panel-encabezado">
@@ -433,7 +433,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <!-- TABLA -->
                 <div id="contenedorTablaRelaciones" class="contenedor-tabla"
-                     data-es-admin="<?= esAdministrador() ? '1' : '0' ?>">
+                     data-es-admin="<?= esAdministradorOGerente() ? '1' : '0' ?>">
 
                     <table class="tabla-datos">
 
