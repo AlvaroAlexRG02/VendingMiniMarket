@@ -2,6 +2,7 @@
 
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../config/session.php";
+require_once __DIR__ . "/../../config/permisos.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -11,6 +12,17 @@ if (!isset($_SESSION["usuario"])) {
     echo json_encode([
         "exito" => false,
         "mensaje" => "Sesión no válida."
+    ]);
+
+    exit;
+}
+
+if (!esAdministradorOGerente()) {
+    http_response_code(403);
+
+    echo json_encode([
+        "exito" => false,
+        "mensaje" => "Acceso no autorizado."
     ]);
 
     exit;
