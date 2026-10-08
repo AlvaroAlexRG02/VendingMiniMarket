@@ -80,60 +80,91 @@ $usuario = $_SESSION["usuario"];
 
 
     <nav
-        class="nav-lateral"
-        aria-label="Navegación principal"
-    >
-
-        <a href="../dashboard/dashboard.php">
-            <i class="fa-solid fa-chart-pie"></i>
-            Dashboard
-        </a>
-
-        <a href="../productos/productos.html">
-            <i class="fa-solid fa-box"></i>
-            Productos
-        </a>
-
-        <a href="../inventario/inventario.html">
-            <i class="fa-solid fa-clipboard-list"></i>
-            Inventario
-        </a>
-
-        <a href="../compras/compras.html">
-            <i class="fa-solid fa-cart-shopping"></i>
-            Compras
-        </a>
-
-        <a href="../ventas/ventas.html">
-            <i class="fa-solid fa-chart-column"></i>
-            Ventas
-        </a>
-
-        <a href="../alertas/alertas.html">
-            <i class="fa-solid fa-bell"></i>
-            Alertas
-        </a>
-
-        <a href="../reportes/reportes.html">
-            <i class="fa-solid fa-chart-line"></i>
-            Reportes
-        </a>
-
-        <a href="../usuarios/usuarios.php">
-            <i class="fa-solid fa-users"></i>
-            Usuarios
-        </a>
-
-        <a
-            href="incidencias.php"
-            class="activo"
-            aria-current="page"
+            class="nav-lateral"
+            aria-label="Navegación principal"
         >
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            Incidencias
-        </a>
 
-    </nav>
+            <a
+                href="dashboard.php"
+                class="activo"
+                aria-current="page"
+            >
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../tienda/tienda.php">
+                <i class="fa-solid fa-shop"></i>
+                Tienda
+            </a>
+
+            <a href="../maquinas/maquinas.php">
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.php">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../bitacora/bitacora.php">
+
+                    <i class="fa-solid fa-clipboard-list"></i>
+
+                    Bitácora
+
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
+
+            <?php endif; ?>
+
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
+
+        </nav>
 
 
     <div class="pie-barra-lateral">

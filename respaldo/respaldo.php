@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . "/../config/session.php";
+require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/permisos.php";
 
 if (!isset($_SESSION["usuario"])) {
@@ -18,10 +19,35 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
 
+$nombreUsuario = $_SESSION["usuario"]["nombre"] ?? "";
+$apellidoUsuario = $_SESSION["usuario"]["apellido"] ?? "";
+$nombreCompleto = trim($nombreUsuario . " " . $apellidoUsuario);
+
+if ($nombreCompleto === "") {
+    $nombreCompleto = "Usuario";
+}
+
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
+
+<style>
+    .pagina-app .columna-principal {
+        margin-left: 0px;
+        width: calc(100% - 230px);
+        min-height: 100vh;
+    }
+
+    .pagina-app .barra-superior {
+        width: 100%;
+    }
+
+    .pagina-app .contenido-app {
+        width: 100%;
+        box-sizing: border-box;
+    }
+</style>
 
 <head>
 
@@ -49,500 +75,710 @@ header("Expires: 0");
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     >
 
-    <style>
-
-        body.pagina-respaldo {
-            padding: 35px 45px;
-            box-sizing: border-box;
-        }
-
-        .contenedor-respaldo {
-            width: 100%;
-            max-width: 1500px;
-            margin: 0 auto;
-        }
-
-        .encabezado-respaldo {
-            margin-bottom: 30px;
-        }
-
-        .encabezado-respaldo h1 {
-            margin-bottom: 8px;
-        }
-
-        .tarjeta-respaldo {
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-sizing: border-box;
-        }
-
-        .respaldo-principal {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 20px;
-        }
-
-        .dato-respaldo {
-            padding: 20px;
-            border: 1px solid #e1e5eb;
-            border-radius: 10px;
-        }
-
-        .dato-respaldo h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-
-        .dato-respaldo p {
-            margin: 0;
-        }
-
-        .tabla-respaldo {
-            width: 100%;
-            overflow-x: auto;
-        }
-
-        .tabla-respaldo table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .tabla-respaldo th,
-        .tabla-respaldo td {
-            padding: 12px 14px;
-            text-align: left;
-            white-space: nowrap;
-        }
-
-        .tabla-respaldo th {
-            font-weight: 700;
-        }
-
-        .mensaje-respaldo {
-            padding: 20px;
-            text-align: center;
-        }
-
-        @media (max-width: 900px) {
-
-            body.pagina-respaldo {
-                padding: 25px 20px;
-            }
-
-            .respaldo-principal {
-                grid-template-columns: 1fr;
-            }
-
-        }
-
-    </style>
-
 </head>
 
 
-<body class="pagina-respaldo">
 
-    <main class="contenedor-respaldo">
+<body class="pagina-app">
+
+    <!-- =====================================================
+         BARRA LATERAL
+    ====================================================== -->
+
+    <aside class="barra-lateral">
+
+        <div class="logo-sistema">
+
+        <a
+            href="../dashboard/dashboard.php"
+            aria-label="Ir al Dashboard"
+        >
+
+            <img
+                src="../img/logo/logo-vending.jpeg"
+                alt="Logo de Vending Mini Market"
+                class="imagen-logo-sistema"
+            >
+
+        </a>
+
+    </div>
+
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
+
+            <a
+                href="dashboard.php"
+                class="activo"
+                aria-current="page"
+            >
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
+
+            <a href="../productos/productos.html">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="../tienda/tienda.php">
+                <i class="fa-solid fa-shop"></i>
+                Tienda
+            </a>
+
+            <a href="../maquinas/maquinas.php">
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
+            </a>
+
+            <a href="../inventario/inventario.html">
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a href="../alertas/alertas.html">
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a href="../reportes/reportes.html">
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
+            <a href="../usuarios/usuarios.php">
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../bitacora/bitacora.php">
+
+                    <i class="fa-solid fa-clipboard-list"></i>
+
+                    Bitácora
+
+                </a>
+
+            <?php endif; ?>
 
 
-        <!-- ==========================================
-             ENCABEZADO
-        =========================================== -->
+            <?php if (esAdministradorOGerente()): ?>
 
-        <header class="encabezado-respaldo">
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
 
-            <h1>
-                <i class="fa-solid fa-database"></i>
-                Gestión de respaldos
-            </h1>
+            <?php endif; ?>
 
-          
-            <p>
-                Verificación y seguimiento de los respaldos del sistema.
-            </p>
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
+
+        </nav>
+
+
+        <div class="pie-barra-lateral">
+
+            <a href="../perfil/perfil.php">
+                <i class="fa-solid fa-user"></i>
+                Mi perfil
+            </a>
+
+            <a href="../index/logout.php">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         COLUMNA PRINCIPAL
+    ====================================================== -->
+
+    <div class="columna-principal">
+
+        <!-- =================================================
+             BARRA SUPERIOR
+        ================================================== -->
+
+        <header class="barra-superior">
 
             <button
                 type="button"
-                id="btnRegistrarRespaldo"
-                class="btn btn-primary"
+                class="boton-menu"
+                id="botonMenu"
+                aria-label="Abrir menú"
             >
-                Generar Respaldo
+                <i class="fa-solid fa-bars"></i>
             </button>
+
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="text"
+                    placeholder="Buscar..."
+                    aria-label="Buscar"
+                >
+
+            </div>
+
+
+            <div class="acciones-superiores">
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Notificaciones"
+                >
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="contador">0</span>
+                </button>
+
+
+                <div class="perfil-superior">
+
+                    <div class="perfil-superior-icono">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+
+                    <div class="perfil-superior-texto">
+
+                        <strong>
+                            <?= htmlspecialchars($nombreCompleto) ?>
+                        </strong>
+
+                        <span>
+                            <?= htmlspecialchars($_SESSION["usuario"]["nombre_rol"] ?? "Usuario") ?>
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
 
         </header>
 
 
-        <!-- ==========================================
-             ÚLTIMO RESPALDO
-        =========================================== -->
+        <!-- =================================================
+             CONTENIDO
+        ================================================== -->
 
-        <section class="tarjeta-respaldo">
-
-            <h2>
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                Último respaldo
-            </h2>
+        <section class="contenido-app">
 
 
-            <div
-                id="ultimoRespaldo"
-                class="respaldo-principal"
-            >
+            <!-- ENCABEZADO -->
 
-                <div class="dato-respaldo">
+            <div class="encabezado-pagina">
 
-                    <h3>
-                        Fecha
-                    </h3>
+                <div>
 
-                    <p id="fechaUltimoRespaldo">
-                        Cargando...
+                    <h1>
+                        <i class="fa-solid fa-database"></i>
+                        Gestión de respaldos
+                    </h1>
+
+                    <p>
+                        Generación y seguimiento de los respaldos del sistema.
                     </p>
 
                 </div>
 
 
-                <div class="dato-respaldo">
-
-                    <h3>
-                        Estado
-                    </h3>
-
-                    <p id="estadoUltimoRespaldo">
-                        Cargando...
-                    </p>
-
-                </div>
-
-
-                <div class="dato-respaldo">
-
-                    <h3>
-                        Tipo
-                    </h3>
-
-                    <p id="tipoUltimoRespaldo">
-                        Cargando...
-                    </p>
-
-                </div>
+                <button
+                    type="button"
+                    id="btnRegistrarRespaldo"
+                    class="boton boton-azul"
+                >
+                    <i class="fa-solid fa-database"></i>
+                    Generar respaldo
+                </button>
 
             </div>
 
-        </section>
+
+            <!-- =================================================
+                 ESTADÍSTICAS
+            ================================================== -->
+
+            <div class="grilla-estadisticas">
 
 
-        <!-- ==========================================
-             HISTORIAL
-        =========================================== -->
+                <div class="tarjeta-estadistica borde-azul">
 
-        <section class="tarjeta-respaldo">
+                    <div class="icono-estadistica">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
 
-            <h2>
-                <i class="fa-solid fa-list"></i>
-                Historial de respaldos
-            </h2>
+                    <div>
 
+                        <span>
+                            Último respaldo
+                        </span>
 
-            <div class="tabla-respaldo">
+                        <strong id="fechaUltimoRespaldo">
+                            Cargando...
+                        </strong>
 
-                <table>
+                    </div>
 
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                Fecha
-                            </th>
-
-                            <th>
-                                Tipo
-                            </th>
-
-                            <th>
-                                Estado
-                            </th>
-
-                            <th>
-                                Cobertura
-                            </th>
-
-                            <th>
-                                Usuario
-                            </th>
-
-                        </tr>
-
-                    </thead>
+                </div>
 
 
-                    <tbody id="tablaRespaldos">
+                <div class="tarjeta-estadistica borde-verde">
 
-                        <tr>
+                    <div class="icono-estadistica">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
 
-                            <td
-                                colspan="5"
-                                class="mensaje-respaldo"
-                            >
-                                Cargando respaldos...
+                    <div>
 
-                            </td>
+                        <span>
+                            Estado
+                        </span>
 
-                        </tr>
+                        <strong id="estadoUltimoRespaldo">
+                            Cargando...
+                        </strong>
 
-                    </tbody>
+                    </div>
 
-                </table>
+                </div>
+
+
+                <div class="tarjeta-estadistica borde-morado">
+
+                    <div class="icono-estadistica">
+                        <i class="fa-solid fa-file-zipper"></i>
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Tipo
+                        </span>
+
+                        <strong id="tipoUltimoRespaldo">
+                            Cargando...
+                        </strong>
+
+                    </div>
+
+                </div>
+
 
             </div>
 
+
+            <!-- =================================================
+                 HISTORIAL
+            ================================================== -->
+
+            <section class="panel">
+
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            Historial de respaldos
+                        </h2>
+
+                        <p class="descripcion-panel">
+                            Consulta los respaldos generados y su información.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="contenedor-tabla">
+
+                    <table class="tabla-datos">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Fecha</th>
+
+                                <th>Tipo</th>
+
+                                <th>Estado</th>
+
+                                <th>Cobertura</th>
+
+                                <th>Usuario</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="tablaRespaldos">
+
+                            <tr>
+
+                                <td
+                                    colspan="5"
+                                    class="estado-vacio-productos"
+                                >
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                    Cargando respaldos...
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+
         </section>
 
+     </div>
 
-    </main>
+</body>
 
 
-    <script>
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
 
-        const fechaUltimoRespaldo =
-            document.getElementById(
-                "fechaUltimoRespaldo"
+<script src="../js/app.js"></script>
+
+<script>
+
+const fechaUltimoRespaldo =
+    document.getElementById("fechaUltimoRespaldo");
+
+const estadoUltimoRespaldo =
+    document.getElementById("estadoUltimoRespaldo");
+
+const tipoUltimoRespaldo =
+    document.getElementById("tipoUltimoRespaldo");
+
+const tablaRespaldos =
+    document.getElementById("tablaRespaldos");
+
+
+function escaparHTML(valor) {
+
+    if (
+        valor === null ||
+        valor === undefined
+    ) {
+        return "";
+    }
+
+    return String(valor)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function formatearFecha(fecha) {
+
+    if (!fecha) {
+        return "-";
+    }
+
+    const fechaObjeto = new Date(fecha);
+
+    if (
+        Number.isNaN(
+            fechaObjeto.getTime()
+        )
+    ) {
+        return fecha;
+    }
+
+    return fechaObjeto.toLocaleString("es-CR");
+}
+
+
+function obtenerClaseEstado(estado) {
+
+    const estadoNormalizado =
+        String(estado || "")
+            .toUpperCase();
+
+    if (
+        estadoNormalizado.includes("EXITOS") ||
+        estadoNormalizado.includes("COMPLET")
+    ) {
+        return "estado-exito";
+    }
+
+    if (
+        estadoNormalizado.includes("ERROR") ||
+        estadoNormalizado.includes("FALL")
+    ) {
+        return "estado-error";
+    }
+
+    if (
+        estadoNormalizado.includes("PROCES")
+    ) {
+        return "estado-proceso";
+    }
+
+    return "estado-neutral";
+}
+
+
+function formatearEstado(estado) {
+
+    const valor =
+        String(estado || "-");
+
+    const clase =
+        obtenerClaseEstado(valor);
+
+    return `
+        <span class="estado-badge ${clase}">
+            ${escaparHTML(valor)}
+        </span>
+    `;
+}
+
+
+async function cargarRespaldos() {
+
+    try {
+
+        const respuesta =
+            await fetch(
+                "../api/respaldo/listar.php"
             );
 
-        const estadoUltimoRespaldo =
-            document.getElementById(
-                "estadoUltimoRespaldo"
+
+        const resultado =
+            await respuesta.json();
+
+
+        if (
+            !respuesta.ok ||
+            !resultado.success
+        ) {
+
+            throw new Error(
+                resultado.message ||
+                "No fue posible consultar los respaldos."
             );
-
-        const tipoUltimoRespaldo =
-            document.getElementById(
-                "tipoUltimoRespaldo"
-            );
-
-        const tablaRespaldos =
-            document.getElementById(
-                "tablaRespaldos"
-            );
-
-
-        function escaparHTML(valor) {
-
-            if (
-                valor === null ||
-                valor === undefined
-            ) {
-                return "";
-            }
-
-            return String(valor)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
 
         }
 
 
-        function formatearFecha(fecha) {
+        const respaldos =
+            resultado.data || [];
 
-            if (!fecha) {
-                return "-";
-            }
 
-            const fechaObjeto =
-                new Date(fecha);
+        if (respaldos.length === 0) {
 
-            if (
-                Number.isNaN(
-                    fechaObjeto.getTime()
-                )
-            ) {
-                return fecha;
-            }
+            fechaUltimoRespaldo.textContent =
+                "Sin registros";
 
-            return fechaObjeto.toLocaleString(
-                "es-CR"
-            );
+            estadoUltimoRespaldo.textContent =
+                "Sin registros";
 
+            tipoUltimoRespaldo.textContent =
+                "Sin registros";
+
+
+            tablaRespaldos.innerHTML = `
+
+                <tr>
+
+                    <td
+                        colspan="5"
+                        class="estado-vacio-productos"
+                    >
+
+                        <i class="fa-solid fa-database"></i>
+
+                        <span>
+                            No hay respaldos registrados.
+                        </span>
+
+                    </td>
+
+                </tr>
+
+            `;
+
+            return;
         }
 
 
-        async function cargarRespaldos() {
-
-            try {
-
-                const respuesta =
-                    await fetch(
-                        "../api/respaldo/listar.php"
-                    );
+        const ultimo =
+            respaldos[0];
 
 
-                const resultado =
-                    await respuesta.json();
+        fechaUltimoRespaldo.textContent =
+            formatearFecha(
+                ultimo.fecha_inicio
+            );
 
 
-                if (
-                    !respuesta.ok ||
-                    !resultado.success
-                ) {
-
-                    throw new Error(
-                        resultado.message ||
-                        "No fue posible consultar los respaldos."
-                    );
-
-                }
+        estadoUltimoRespaldo.innerHTML =
+            formatearEstado(
+                ultimo.estado
+            );
 
 
-                const respaldos =
-                    resultado.data || [];
+        tipoUltimoRespaldo.textContent =
+            ultimo.tipo || "-";
 
 
-                /*
-                 * No existen respaldos registrados.
-                 */
-                if (respaldos.length === 0) {
+        tablaRespaldos.innerHTML =
+            respaldos.map(
+                function (respaldo) {
 
-                    fechaUltimoRespaldo.textContent =
-                        "Sin registros";
+                    return `
 
-                    estadoUltimoRespaldo.textContent =
-                        "Sin registros";
-
-                    tipoUltimoRespaldo.textContent =
-                        "Sin registros";
-
-
-                    tablaRespaldos.innerHTML = `
                         <tr>
-                            <td
-                                colspan="5"
-                                class="mensaje-respaldo"
-                            >
-                                No hay respaldos registrados.
+
+                            <td>
+                                ${escaparHTML(
+                                    formatearFecha(
+                                        respaldo.fecha_inicio
+                                    )
+                                )}
                             </td>
+
+
+                            <td>
+                                <span class="etiqueta-tabla">
+                                    ${escaparHTML(
+                                        respaldo.tipo || "-"
+                                    )}
+                                </span>
+                            </td>
+
+
+                            <td>
+                                ${formatearEstado(
+                                    respaldo.estado
+                                )}
+                            </td>
+
+
+                            <td>
+                                ${escaparHTML(
+                                    respaldo.cobertura || "-"
+                                )}
+                            </td>
+
+
+                            <td>
+                                <strong>
+                                    ${escaparHTML(
+                                        respaldo.usuario || "-"
+                                    )}
+                                </strong>
+                            </td>
+
                         </tr>
+
                     `;
 
-                    return;
-
                 }
+            ).join("");
 
 
-                /*
-                 * El primer registro es el más reciente.
-                 */
-                const ultimo =
-                    respaldos[0];
+    } catch (error) {
+
+        console.error(error);
 
 
-                fechaUltimoRespaldo.textContent =
-                    formatearFecha(
-                        ultimo.fecha_inicio
-                    );
+        fechaUltimoRespaldo.textContent =
+            "No disponible";
 
-                estadoUltimoRespaldo.textContent =
-                    ultimo.estado || "-";
+        estadoUltimoRespaldo.textContent =
+            "No disponible";
 
-                tipoUltimoRespaldo.textContent =
-                    ultimo.tipo || "-";
+        tipoUltimoRespaldo.textContent =
+            "No disponible";
 
 
-                /*
-                 * Historial.
-                 */
-                tablaRespaldos.innerHTML =
-                    respaldos.map(
-                        function (respaldo) {
+        tablaRespaldos.innerHTML = `
 
-                            return `
-                                <tr>
+            <tr>
 
-                                    <td>
-                                        ${escaparHTML(
-                                            formatearFecha(
-                                                respaldo.fecha_inicio
-                                            )
-                                        )}
-                                    </td>
+                <td
+                    colspan="5"
+                    class="estado-vacio-productos"
+                >
 
-                                    <td>
-                                        ${escaparHTML(
-                                            respaldo.tipo || "-"
-                                        )}
-                                    </td>
+                    <i class="fa-solid fa-triangle-exclamation"></i>
 
-                                    <td>
-                                        ${escaparHTML(
-                                            respaldo.estado || "-"
-                                        )}
-                                    </td>
+                    <span>
+                        No fue posible cargar los respaldos.
+                    </span>
 
-                                    <td>
-                                        ${escaparHTML(
-                                            respaldo.cobertura || "-"
-                                        )}
-                                    </td>
+                </td>
 
-                                    <td>
-                                        ${escaparHTML(
-                                            respaldo.usuario || "-"
-                                        )}
-                                    </td>
+            </tr>
 
-                                </tr>
-                            `;
+        `;
 
-                        }
-                    ).join("");
+    }
+
+}
 
 
-            } catch (error) {
-
-                console.error(error);
-
-                fechaUltimoRespaldo.textContent =
-                    "No disponible";
-
-                estadoUltimoRespaldo.textContent =
-                    "No disponible";
-
-                tipoUltimoRespaldo.textContent =
-                    "No disponible";
+cargarRespaldos();
 
 
-                tablaRespaldos.innerHTML = `
-                    <tr>
-                        <td
-                            colspan="5"
-                            class="mensaje-respaldo"
-                        >
-                            No fue posible cargar los respaldos.
-                        </td>
-                    </tr>
-                `;
-
-            }
-
-        }
-
-
-        cargarRespaldos();
-
-            document
-        .getElementById("btnRegistrarRespaldo")
-        .addEventListener("click", async function () {
+document
+    .getElementById("btnRegistrarRespaldo")
+    .addEventListener(
+        "click",
+        async function () {
 
             const boton = this;
+
 
             try {
 
                 boton.disabled = true;
-                boton.textContent = "Generando respaldo...";
+
+                boton.innerHTML = `
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    Generando...
+                `;
+
 
                 const respuesta =
                     await fetch(
@@ -555,8 +791,10 @@ header("Expires: 0");
                         }
                     );
 
+
                 const resultado =
                     await respuesta.json();
+
 
                 if (
                     !respuesta.ok ||
@@ -570,6 +808,7 @@ header("Expires: 0");
 
                 }
 
+
                 alert(
                     "Respaldo generado correctamente.\n\n" +
                     "Archivo: " +
@@ -580,7 +819,9 @@ header("Expires: 0");
                     " bytes"
                 );
 
-                cargarRespaldos();
+
+                await cargarRespaldos();
+
 
             } catch (error) {
 
@@ -591,15 +832,22 @@ header("Expires: 0");
                     "Ocurrió un error al generar el respaldo."
                 );
 
+
             } finally {
 
                 boton.disabled = false;
-                boton.textContent = "Generar respaldo";
+
+                boton.innerHTML = `
+                    <i class="fa-solid fa-database"></i>
+                    Generar respaldo
+                `;
+
             }
 
-        });
+        }
+    );
 
-    </script>
+</script>
 
 </body>
 

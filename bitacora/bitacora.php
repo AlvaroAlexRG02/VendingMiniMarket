@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . "/../config/session.php";
+require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/permisos.php";
 
 if (!isset($_SESSION["usuario"])) {
@@ -17,6 +18,17 @@ if (!esAdministradorOGerente()) {
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
+
+$nombreUsuario = $_SESSION["usuario"]["nombre"] ?? "";
+$apellidoUsuario = $_SESSION["usuario"]["apellido"] ?? "";
+
+$nombreCompleto = trim(
+    $nombreUsuario . " " . $apellidoUsuario
+);
+
+if ($nombreCompleto === "") {
+    $nombreCompleto = "Usuario";
+}
 
 ?>
 

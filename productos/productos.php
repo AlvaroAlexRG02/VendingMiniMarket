@@ -57,14 +57,21 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             </a>
         </div>
 
-        <nav class="nav-lateral" aria-label="Navegación principal">
+       <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
 
-            <a href="../dashboard/dashboard.php">
+            <a
+                href="dashboard.php"
+                class="activo"
+                aria-current="page"
+            >
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
             </a>
 
-            <a href="productos.php" class="activo" aria-current="page">
+            <a href="../productos/productos.html">
                 <i class="fa-solid fa-box"></i>
                 Productos
             </a>
@@ -103,6 +110,37 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <i class="fa-solid fa-users"></i>
                 Usuarios
             </a>
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../bitacora/bitacora.php">
+
+                    <i class="fa-solid fa-clipboard-list"></i>
+
+                    Bitácora
+
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
+
+            <?php endif; ?>
+
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
 
         </nav>
 

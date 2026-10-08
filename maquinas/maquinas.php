@@ -57,14 +57,21 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             </a>
         </div>
 
-        <nav class="nav-lateral" aria-label="Navegación principal">
+        <nav
+            class="nav-lateral"
+            aria-label="Navegación principal"
+        >
 
-            <a href="../dashboard/dashboard.php">
+            <a
+                href="dashboard.php"
+                class="activo"
+                aria-current="page"
+            >
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
             </a>
 
-            <a href="../productos/productos.php">
+            <a href="../productos/productos.html">
                 <i class="fa-solid fa-box"></i>
                 Productos
             </a>
@@ -74,7 +81,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 Tienda
             </a>
 
-            <a href="maquinas.php" class="activo" aria-current="page">
+            <a href="../maquinas/maquinas.php">
                 <i class="fa-solid fa-cash-register"></i>
                 Máquinas
             </a>
@@ -105,10 +112,34 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             </a>
 
             <?php if (esAdministradorOGerente()): ?>
-            <a href="../bitacora/bitacora.php">
-                <i class="fa-solid fa-clipboard-list"></i>
-                Bitácora
-            </a>
+
+                <a href="../bitacora/bitacora.php">
+
+                    <i class="fa-solid fa-clipboard-list"></i>
+
+                    Bitácora
+
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a href="../respaldo/respaldo.php">
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
+
+            <?php endif; ?>
+
+           <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
             <?php endif; ?>
 
         </nav>
