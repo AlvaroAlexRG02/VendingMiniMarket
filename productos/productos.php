@@ -57,7 +57,15 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             </a>
         </div>
 
+<<<<<<< Updated upstream
        <nav
+=======
+<<<<<<< HEAD
+        <nav
+=======
+       <nav
+>>>>>>> e3f3c22ec65a82610ae5ceb6b991bd6bd0f5cfef
+>>>>>>> Stashed changes
             class="nav-lateral"
             aria-label="Navegación principal"
         >

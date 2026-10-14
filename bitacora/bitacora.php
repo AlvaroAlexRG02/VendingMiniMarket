@@ -64,271 +64,674 @@ if ($nombreCompleto === "") {
 </head>
 
 
-<body class="pagina-bitacora">
-
-    <div class="contenedor-bitacora">
+<body class="pagina-app">
 
 
-        <!-- =========================
-             ENCABEZADO
-        ========================== -->
+    <!-- =====================================================
+         BARRA LATERAL
+    ====================================================== -->
 
-        <header class="encabezado-bitacora">
+    <aside class="barra-lateral">
 
-            <div>
+        <div class="logo-sistema">
 
-                <h1>
+        <a
+            href="../dashboard/dashboard.php"
+            aria-label="Ir al Dashboard"
+        >
+
+            <img
+                src="../img/logo/logo-vending.jpeg"
+                alt="Logo de Vending Mini Market"
+                class="imagen-logo-sistema"
+            >
+
+        </a>
+
+    </div>
+
+
+        <nav class="nav-lateral">
+
+            <a href="../dashboard/dashboard.php">
+
+                <i class="fa-solid fa-house"></i>
+
+                Inicio
+
+            </a>
+
+
+            <a href="../usuarios/usuarios.php">
+
+                <i class="fa-solid fa-users"></i>
+
+                Usuarios
+
+            </a>
+
+
+            <a href="../catalogo/catalogo.php">
+
+                <i class="fa-solid fa-box"></i>
+
+                Catálogo
+
+            </a>
+
+
+            <a href="../tiendas/tiendas.php">
+
+                <i class="fa-solid fa-store"></i>
+
+                Tiendas
+
+            </a>
+
+
+            <a href="../maquinas/maquinas.php">
+
+                <i class="fa-solid fa-cube"></i>
+
+                Máquinas
+
+            </a>
+
+
+            <a href="../inventario/inventario.php">
+
+                <i class="fa-solid fa-boxes-stacked"></i>
+
+                Inventario
+
+            </a>
+
+
+            <a href="../compras/compras.php">
+
+                <i class="fa-solid fa-cart-shopping"></i>
+
+                Compras
+
+            </a>
+
+
+            <a href="../ventas/ventas.php">
+
+                <i class="fa-solid fa-cash-register"></i>
+
+                Ventas
+
+            </a>
+
+
+            <a href="../reportes/reportes.php">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                Reportes
+
+            </a>
+
+
+            <?php if (esAdministradorOGerente()): ?>
+
+                <a
+                    href="bitacora.php"
+                    class="activo"
+                    aria-current="page"
+                >
+
                     <i class="fa-solid fa-clipboard-list"></i>
-                    Bitácora de auditoría
-                </h1>
 
-                <p>
-                    Consulta de acciones y eventos registrados en el sistema.
-                </p>
+                    Bitácora
+
+                </a>
+
+
+                <a href="../respaldo/respaldo.php">
+
+                    <i class="fa-solid fa-database"></i>
+
+                    Respaldos
+
+                </a>
+
+            <?php endif; ?>
+
+
+            <?php if (esAdministrador()): ?>
+
+                <a href="../incidencias/incidencias.php">
+
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+
+                    Incidencias
+
+                </a>
+
+            <?php endif; ?>
+
+        </nav>
+
+
+        <div class="pie-barra-lateral">
+
+            <a href="../perfil/perfil.php">
+
+                <i class="fa-solid fa-user"></i>
+
+                Mi perfil
+
+            </a>
+
+
+            <a href="../index/logout.php">
+
+                <i class="fa-solid fa-right-from-bracket"></i>
+
+                Cerrar sesión
+
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         COLUMNA PRINCIPAL
+    ====================================================== -->
+
+    <div class="columna-principal">
+
+
+        <!-- =================================================
+             BARRA SUPERIOR
+        ================================================== -->
+
+        <header class="barra-superior">
+
+
+            <button
+                type="button"
+                class="boton-menu"
+                id="botonMenu"
+                aria-label="Abrir menú"
+            >
+
+                <i class="fa-solid fa-bars"></i>
+
+            </button>
+
+
+            <div class="buscador-superior">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="text"
+                    placeholder="Buscar..."
+                    aria-label="Buscar"
+                >
+
+            </div>
+
+
+            <div class="acciones-superiores">
+
+
+                <button
+                    type="button"
+                    class="boton-notificacion"
+                    aria-label="Notificaciones"
+                >
+
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span class="contador">0</span>
+
+                </button>
+
+
+                <div class="perfil-superior">
+
+
+                    <div class="perfil-superior-icono">
+
+                        <i class="fa-solid fa-user"></i>
+
+                    </div>
+
+
+                    <div class="perfil-superior-texto">
+
+                        <strong>
+
+                            <?= htmlspecialchars($nombreCompleto) ?>
+
+                        </strong>
+
+
+                        <span>
+
+                            <?= htmlspecialchars(
+                                $_SESSION["usuario"]["nombre_rol"]
+                                ?? "Usuario"
+                            ) ?>
+
+                        </span>
+
+                    </div>
+
+                </div>
 
             </div>
 
         </header>
 
 
-        <!-- =========================
-             FILTROS
-        ========================== -->
+        <!-- =================================================
+             CONTENIDO
+        ================================================== -->
 
-        <section class="tarjeta-bitacora">
+        <section class="contenido-app">
 
-            <div class="encabezado-seccion">
 
-                <h2>
-                    <i class="fa-solid fa-filter"></i>
-                    Filtros de consulta
-                </h2>
+            <!-- =================================================
+                 ENCABEZADO DE PÁGINA
+            ================================================== -->
+
+            <div class="encabezado-pagina">
+
+                <div>
+
+                    <h1>
+
+                        <i class="fa-solid fa-clipboard-list"></i>
+
+                        Bitácora de auditoría
+
+                    </h1>
+
+
+                    <p>
+
+                        Consulta de acciones y eventos registrados
+                        en el sistema.
+
+                    </p>
+
+                </div>
 
             </div>
 
 
-            <form
-                id="formularioFiltros"
-                class="filtros-bitacora"
-            >
+            <!-- =================================================
+                 FILTROS
+            ================================================== -->
 
-                <div class="filtro-bitacora">
-
-                    <label for="usuario">
-                        Usuario
-                    </label>
-
-                    <select id="usuario">
-
-                        <option value="">
-                            Todos los usuarios
-                        </option>
-
-                    </select>
-
-                </div>
+            <section class="panel">
 
 
-                <div class="filtro-bitacora">
+                <div class="panel-encabezado">
 
-                    <label for="fechaInicio">
-                        Fecha inicial
-                    </label>
+                    <div>
 
-                    <input
-                        type="date"
-                        id="fechaInicio"
-                    >
+                        <h2>
+
+                            <i class="fa-solid fa-filter"></i>
+
+                            Filtros de consulta
+
+                        </h2>
+
+
+                        <p class="descripcion-panel">
+
+                            Utiliza los filtros para consultar
+                            los registros de auditoría.
+
+                        </p>
+
+                    </div>
 
                 </div>
 
 
-                <div class="filtro-bitacora">
+                <form
+                    id="formularioFiltros"
+                    class="barra-filtros"
+                >
 
-                    <label for="fechaFin">
-                        Fecha final
-                    </label>
 
-                    <input
-                        type="date"
-                        id="fechaFin"
-                    >
+                    <div class="grupo-formulario">
+
+                        <label for="usuario">
+
+                            Usuario
+
+                        </label>
+
+
+                        <select
+                            id="usuario"
+                            class="selector-filtro"
+                        >
+
+                            <option value="">
+
+                                Todos los usuarios
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="grupo-formulario">
+
+                        <label for="fechaInicio">
+
+                            Fecha inicial
+
+                        </label>
+
+
+                        <input
+                            type="date"
+                            id="fechaInicio"
+                            class="selector-filtro"
+                        >
+
+                    </div>
+
+
+                    <div class="grupo-formulario">
+
+                        <label for="fechaFin">
+
+                            Fecha final
+
+                        </label>
+
+
+                        <input
+                            type="date"
+                            id="fechaFin"
+                            class="selector-filtro"
+                        >
+
+                    </div>
+
+
+                    <div class="grupo-formulario">
+
+                        <label for="entidad">
+
+                            Módulo
+
+                        </label>
+
+
+                        <select
+                            id="entidad"
+                            class="selector-filtro"
+                        >
+
+                            <option value="">
+
+                                Todos los módulos
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="grupo-formulario">
+
+                        <label for="accion">
+
+                            Acción
+
+                        </label>
+
+
+                        <select
+                            id="accion"
+                            class="selector-filtro"
+                        >
+
+                            <option value="">
+
+                                Todas las acciones
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="grupo-formulario">
+
+                        <label for="resultado">
+
+                            Resultado
+
+                        </label>
+
+
+                        <select
+                            id="resultado"
+                            class="selector-filtro"
+                        >
+
+                            <option value="">
+
+                                Todos los resultados
+
+                            </option>
+
+
+                            <option value="EXITOSO">
+
+                                Exitoso
+
+                            </option>
+
+
+                            <option value="ERROR">
+
+                                Error
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="acciones-modal-producto">
+
+                        <button
+                            type="submit"
+                            class="boton boton-azul"
+                        >
+
+                            <i class="fa-solid fa-magnifying-glass"></i>
+
+                            Buscar
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            id="botonLimpiar"
+                            class="boton boton-borde"
+                        >
+
+                            <i class="fa-solid fa-rotate-left"></i>
+
+                            Limpiar
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+
+            <!-- =================================================
+                 MENSAJE
+            ================================================== -->
+
+            <p
+                id="mensajeBitacora"
+                aria-live="polite"
+            ></p>
+
+
+            <!-- =================================================
+                 REGISTROS
+            ================================================== -->
+
+            <section class="panel">
+
+
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>
+
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+
+                            Registros de auditoría
+
+                        </h2>
+
+
+                        <p class="descripcion-panel">
+
+                            Historial de acciones realizadas
+                            dentro del sistema.
+
+                        </p>
+
+                    </div>
 
                 </div>
 
 
-                <div class="filtro-bitacora">
+                <div class="contenedor-tabla">
 
-                    <label for="entidad">
-                        Módulo
-                    </label>
 
-                    <select id="entidad">
+                    <table class="tabla-datos">
 
-                        <option value="">
-                            Todos los módulos
-                        </option>
 
-                    </select>
+                        <thead>
+
+                            <tr>
+
+                                <th>
+
+                                    Fecha
+
+                                </th>
+
+
+                                <th>
+
+                                    Usuario
+
+                                </th>
+
+
+                                <th>
+
+                                    Tienda
+
+                                </th>
+
+
+                                <th>
+
+                                    Módulo
+
+                                </th>
+
+
+                                <th>
+
+                                    Acción
+
+                                </th>
+
+
+                                <th>
+
+                                    Resultado
+
+                                </th>
+
+
+                                <th>
+
+                                    IP
+
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="tablaBitacora">
+
+
+                            <tr>
+
+                                <td
+                                    colspan="7"
+                                    class="estado-vacio-productos"
+                                >
+
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+
+                                    Cargando registros...
+
+                                </td>
+
+                            </tr>
+
+
+                        </tbody>
+
+
+                    </table>
 
                 </div>
 
+            </section>
 
-                <div class="filtro-bitacora">
-
-                    <label for="accion">
-                        Acción
-                    </label>
-
-                    <select id="accion">
-
-                        <option value="">
-                            Todas las acciones
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <div class="filtro-bitacora">
-
-                    <label for="resultado">
-                        Resultado
-                    </label>
-
-                    <select id="resultado">
-
-                        <option value="">
-                            Todos los resultados
-                        </option>
-
-                        <option value="EXITOSO">
-                            Exitoso
-                        </option>
-
-                        <option value="ERROR">
-                            Error
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <div class="acciones-bitacora">
-
-                    <button
-                        type="submit"
-                        class="boton boton-primario"
-                    >
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        Buscar
-                    </button>
-
-                    <button
-                        type="button"
-                        id="botonLimpiar"
-                        class="boton boton-secundario"
-                    >
-                        <i class="fa-solid fa-rotate-left"></i>
-                        Limpiar
-                    </button>
-
-                </div>
-
-            </form>
 
         </section>
-
-
-        <!-- =========================
-             MENSAJE
-        ========================== -->
-
-        <p
-            id="mensajeBitacora"
-            aria-live="polite"
-        ></p>
-
-
-        <!-- =========================
-             TABLA
-        ========================== -->
-
-        <section class="tarjeta">
-
-            <div class="encabezado-seccion">
-
-                <h2>
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    Registros de auditoría
-                </h2>
-
-            </div>
-
-
-            <div class="tabla-bitacora-contenedor">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                Fecha
-                            </th>
-
-                            <th>
-                                Usuario
-                            </th>
-
-                            <th>
-                                Tienda
-                            </th>
-
-                            <th>
-                                Módulo
-                            </th>
-
-                            <th>
-                                Acción
-                            </th>
-
-                            <th>
-                                Resultado
-                            </th>
-
-                            <th>
-                                IP
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody id="tablaBitacora">
-
-                        <tr>
-
-                            <td colspan="7">
-                                Cargando registros...
-                            </td>
-
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </section>
-
 
     </div>
+
+
+    <!-- =====================================================
+         JAVASCRIPT
+    ====================================================== -->
+
+    <script src="../js/app.js"></script>
 
 
     <script>
@@ -350,19 +753,33 @@ if ($nombreCompleto === "") {
          * Formatea la fecha recibida
          * desde PostgreSQL.
          */
+
         function formatearFecha(fecha) {
 
             if (!fecha) {
+
                 return "-";
+
             }
 
-            const fechaObjeto = new Date(fecha);
 
-            if (Number.isNaN(fechaObjeto.getTime())) {
+            const fechaObjeto =
+                new Date(fecha);
+
+
+            if (
+                Number.isNaN(
+                    fechaObjeto.getTime()
+                )
+            ) {
+
                 return fecha;
+
             }
+
 
             return fechaObjeto.toLocaleString("es-CR");
+
         }
 
 
@@ -371,11 +788,18 @@ if ($nombreCompleto === "") {
          * insertar directamente datos provenientes
          * de la base de datos.
          */
+
         function escaparHTML(valor) {
 
-            if (valor === null || valor === undefined) {
+            if (
+                valor === null ||
+                valor === undefined
+            ) {
+
                 return "";
+
             }
+
 
             return String(valor)
                 .replace(/&/g, "&amp;")
@@ -383,22 +807,32 @@ if ($nombreCompleto === "") {
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+
         }
 
+
         /*
-        * Carga las opciones de los filtros.
-        */
+         * Carga las opciones de los filtros.
+         */
+
         async function cargarOpcionesFiltros() {
 
             try {
 
-                const respuesta = await fetch(
-                    "../api/bitacora/opciones.php"
-                );
+                const respuesta =
+                    await fetch(
+                        "../api/bitacora/opciones.php"
+                    );
 
-                const datos = await respuesta.json();
 
-                if (!respuesta.ok || !datos.success) {
+                const datos =
+                    await respuesta.json();
+
+
+                if (
+                    !respuesta.ok ||
+                    !datos.success
+                ) {
 
                     console.error(
                         datos.message ||
@@ -406,73 +840,102 @@ if ($nombreCompleto === "") {
                     );
 
                     return;
+
                 }
 
 
                 /*
-                * Usuarios
-                */
+                 * Usuarios
+                 */
+
                 const selectUsuario =
                     document.getElementById("usuario");
 
-                datos.usuarios.forEach(function (usuario) {
 
-                    const opcion =
-                        document.createElement("option");
+                datos.usuarios.forEach(
+                    function (usuario) {
 
-                    opcion.value =
-                        usuario.id_usuario;
+                        const opcion =
+                            document.createElement("option");
 
-                    opcion.textContent =
-                        usuario.usuario;
 
-                    selectUsuario.appendChild(opcion);
+                        opcion.value =
+                            usuario.id_usuario;
 
-                });
+
+                        opcion.textContent =
+                            usuario.usuario;
+
+
+                        selectUsuario.appendChild(
+                            opcion
+                        );
+
+                    }
+                );
 
 
                 /*
-                * Entidades / módulos
-                */
+                 * Entidades / módulos
+                 */
+
                 const selectEntidad =
                     document.getElementById("entidad");
 
-                datos.entidades.forEach(function (entidad) {
 
-                    const opcion =
-                        document.createElement("option");
+                datos.entidades.forEach(
+                    function (entidad) {
 
-                    opcion.value =
-                        entidad.entidad;
+                        const opcion =
+                            document.createElement("option");
 
-                    opcion.textContent =
-                        entidad.entidad;
 
-                    selectEntidad.appendChild(opcion);
+                        opcion.value =
+                            entidad.entidad;
 
-                });
+
+                        opcion.textContent =
+                            entidad.entidad;
+
+
+                        selectEntidad.appendChild(
+                            opcion
+                        );
+
+                    }
+                );
 
 
                 /*
-                * Acciones
-                */
+                 * Acciones
+                 */
+
                 const selectAccion =
                     document.getElementById("accion");
 
-                datos.acciones.forEach(function (accion) {
 
-                    const opcion =
-                        document.createElement("option");
+                datos.acciones.forEach(
+                    function (accion) {
 
-                    opcion.value =
-                        accion.accion;
+                        const opcion =
+                            document.createElement("option");
 
-                    opcion.textContent =
-                        accion.accion;
 
-                    selectAccion.appendChild(opcion);
+                        opcion.value =
+                            accion.accion;
 
-                });
+
+                        opcion.textContent =
+                            accion.accion;
+
+
+                        selectAccion.appendChild(
+                            opcion
+                        );
+
+                    }
+                );
+
 
             } catch (error) {
 
@@ -484,180 +947,319 @@ if ($nombreCompleto === "") {
             }
 
         }
+
+
         /*
          * Carga los registros de la bitácora.
          */
+
         async function cargarBitacora() {
 
+
             tablaBitacora.innerHTML = `
+
                 <tr>
-                    <td colspan="7">
+
+                    <td
+                        colspan="7"
+                        class="estado-vacio-productos"
+                    >
+
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+
                         Cargando registros...
+
                     </td>
+
                 </tr>
+
             `;
+
 
             mensajeBitacora.textContent = "";
 
 
-            const parametros = new URLSearchParams();
+            const parametros =
+                new URLSearchParams();
 
 
             const usuario =
                 document.getElementById("usuario").value;
 
+
             const fechaInicio =
                 document.getElementById("fechaInicio").value;
+
 
             const fechaFin =
                 document.getElementById("fechaFin").value;
 
+
             const entidad =
                 document.getElementById("entidad").value;
 
+
             const accion =
                 document.getElementById("accion").value;
+
 
             const resultado =
                 document.getElementById("resultado").value;
 
 
             if (usuario) {
-                parametros.append("usuario", usuario);
+
+                parametros.append(
+                    "usuario",
+                    usuario
+                );
+
             }
+
 
             if (fechaInicio) {
-                parametros.append("fecha_inicio", fechaInicio);
+
+                parametros.append(
+                    "fecha_inicio",
+                    fechaInicio
+                );
+
             }
+
 
             if (fechaFin) {
-                parametros.append("fecha_fin", fechaFin);
+
+                parametros.append(
+                    "fecha_fin",
+                    fechaFin
+                );
+
             }
+
 
             if (entidad) {
-                parametros.append("entidad", entidad);
+
+                parametros.append(
+                    "entidad",
+                    entidad
+                );
+
             }
+
 
             if (accion) {
-                parametros.append("accion", accion);
+
+                parametros.append(
+                    "accion",
+                    accion
+                );
+
             }
 
+
             if (resultado) {
-                parametros.append("resultado", resultado);
+
+                parametros.append(
+                    "resultado",
+                    resultado
+                );
+
             }
 
 
             try {
 
-                const respuesta = await fetch(
-                    "../api/bitacora/listar.php?" +
-                    parametros.toString()
-                );
+                const respuesta =
+                    await fetch(
+                        "../api/bitacora/listar.php?" +
+                        parametros.toString()
+                    );
 
 
-                const datos = await respuesta.json();
+                const datos =
+                    await respuesta.json();
 
 
-                if (!respuesta.ok || !datos.success) {
+                if (
+                    !respuesta.ok ||
+                    !datos.success
+                ) {
 
                     tablaBitacora.innerHTML = `
+
                         <tr>
-                            <td colspan="7">
-                                No fue posible cargar la bitácora.
+
+                            <td
+                                colspan="7"
+                                class="estado-vacio-productos"
+                            >
+
+                                No fue posible cargar
+                                la bitácora.
+
                             </td>
+
                         </tr>
+
                     `;
+
 
                     mensajeBitacora.textContent =
                         datos.message ||
                         "No fue posible consultar los registros.";
 
+
                     return;
+
                 }
 
 
-                const registros = datos.data || [];
+                const registros =
+                    datos.data || [];
 
 
                 if (registros.length === 0) {
 
                     tablaBitacora.innerHTML = `
+
                         <tr>
-                            <td colspan="7">
+
+                            <td
+                                colspan="7"
+                                class="estado-vacio-productos"
+                            >
+
+                                <i class="fa-solid fa-clipboard-list"></i>
+
                                 No se encontraron registros.
+
                             </td>
+
                         </tr>
+
                     `;
 
+
                     return;
+
                 }
 
 
                 tablaBitacora.innerHTML =
-                    registros.map(function (registro) {
+                    registros.map(
+                        function (registro) {
 
-                        return `
-                            <tr>
+                            return `
 
-                                <td>
-                                    ${escaparHTML(
-                                        formatearFecha(registro.fecha)
-                                    )}
-                                </td>
+                                <tr>
 
-                                <td>
-                                    ${escaparHTML(
-                                        registro.usuario || "-"
-                                    )}
-                                </td>
+                                    <td>
 
-                                <td>
-                                    ${escaparHTML(
-                                        registro.tienda || "-"
-                                    )}
-                                </td>
+                                        ${escaparHTML(
+                                            formatearFecha(
+                                                registro.fecha
+                                            )
+                                        )}
 
-                                <td>
-                                    ${escaparHTML(
-                                        registro.entidad || "-"
-                                    )}
-                                </td>
+                                    </td>
 
-                                <td>
-                                    ${escaparHTML(
-                                        registro.accion || "-"
-                                    )}
-                                </td>
 
-                                <td>
-                                    ${escaparHTML(
-                                        registro.resultado || "-"
-                                    )}
-                                </td>
+                                    <td>
 
-                                <td>
-                                    ${escaparHTML(
-                                        registro.ip_origen || "-"
-                                    )}
-                                </td>
+                                        <strong>
 
-                            </tr>
-                        `;
+                                            ${escaparHTML(
+                                                registro.usuario || "-"
+                                            )}
 
-                    }).join("");
+                                        </strong>
+
+                                    </td>
+
+
+                                    <td>
+
+                                        ${escaparHTML(
+                                            registro.tienda || "-"
+                                        )}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <span class="etiqueta-tabla">
+
+                                            ${escaparHTML(
+                                                registro.entidad || "-"
+                                            )}
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <td>
+
+                                        ${escaparHTML(
+                                            registro.accion || "-"
+                                        )}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <span class="estado-badge">
+
+                                            ${escaparHTML(
+                                                registro.resultado || "-"
+                                            )}
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <td>
+
+                                        ${escaparHTML(
+                                            registro.ip_origen || "-"
+                                        )}
+
+                                    </td>
+
+                                </tr>
+
+                            `;
+
+                        }
+                    ).join("");
 
 
             } catch (error) {
 
                 console.error(error);
 
+
                 tablaBitacora.innerHTML = `
+
                     <tr>
-                        <td colspan="7">
+
+                        <td
+                            colspan="7"
+                            class="estado-vacio-productos"
+                        >
+
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+
                             No fue posible comunicarse
                             con el servidor.
+
                         </td>
+
                     </tr>
+
                 `;
 
             }
@@ -668,6 +1270,7 @@ if ($nombreCompleto === "") {
         /*
          * Buscar registros.
          */
+
         formularioFiltros.addEventListener(
             "submit",
             function (evento) {
@@ -683,6 +1286,7 @@ if ($nombreCompleto === "") {
         /*
          * Limpiar filtros.
          */
+
         botonLimpiar.addEventListener(
             "click",
             function () {
@@ -698,10 +1302,13 @@ if ($nombreCompleto === "") {
         /*
          * Cargar información al abrir la página.
          */
+
         cargarOpcionesFiltros();
+
         cargarBitacora();
 
     </script>
+
 
 </body>
 
