@@ -57,71 +57,97 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             </a>
         </div>
 
-<<<<<<< Updated upstream
-       <nav
-=======
-<<<<<<< HEAD
-        <nav
-=======
-       <nav
->>>>>>> e3f3c22ec65a82610ae5ceb6b991bd6bd0f5cfef
->>>>>>> Stashed changes
-            class="nav-lateral"
-            aria-label="Navegación principal"
-        >
 
-            <a
-                href="dashboard.php"
-                class="activo"
-                aria-current="page"
-            >
-                <i class="fa-solid fa-chart-pie"></i>
-                Dashboard
+       <nav class="nav-lateral">
+
+            <a href="../dashboard/dashboard.php">
+
+                <i class="fa-solid fa-house"></i>
+
+                Dashboards
+
             </a>
 
-            <a href="../productos/productos.html">
-                <i class="fa-solid fa-box"></i>
-                Productos
-            </a>
-
-            <a href="../tienda/tienda.php">
-                <i class="fa-solid fa-shop"></i>
-                Tienda
-            </a>
-
-            <a href="../maquinas/maquinas.php">
-                <i class="fa-solid fa-cash-register"></i>
-                Máquinas
-            </a>
-
-            <a href="../inventario/inventario.html">
-                <i class="fa-solid fa-clipboard-list"></i>
-                Inventario
-            </a>
-
-            <a href="../ventas/ventas.html">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas
-            </a>
-
-            <a href="../alertas/alertas.html">
-                <i class="fa-solid fa-bell"></i>
-                Alertas
-            </a>
-
-            <a href="../reportes/reportes.html">
-                <i class="fa-solid fa-chart-line"></i>
-                Reportes
-            </a>
 
             <a href="../usuarios/usuarios.php">
+
                 <i class="fa-solid fa-users"></i>
+
                 Usuarios
+
             </a>
+
+
+            <a href="../catalogo/catalogo.php">
+
+                <i class="fa-solid fa-box"></i>
+
+                Catálogo
+
+            </a>
+
+
+            <a href="../tiendas/tiendas.php">
+
+                <i class="fa-solid fa-store"></i>
+
+                Tiendas
+
+            </a>
+
+
+            <a href="../maquinas/maquinas.php">
+
+                <i class="fa-solid fa-cube"></i>
+
+                Máquinas
+
+            </a>
+
+
+            <a href="../inventario/inventario.php">
+
+                <i class="fa-solid fa-boxes-stacked"></i>
+
+                Inventario
+
+            </a>
+
+
+            <a href="../compras/compras.php">
+
+                <i class="fa-solid fa-cart-shopping"></i>
+
+                Compras
+
+            </a>
+
+
+            <a href="../ventas/ventas.php">
+
+                <i class="fa-solid fa-cash-register"></i>
+
+                Ventas
+
+            </a>
+
+
+            <a href="../reportes/reportes.php">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                Reportes
+
+            </a>
+
 
             <?php if (esAdministradorOGerente()): ?>
 
-                <a href="../bitacora/bitacora.php">
+                <a
+                    href="bitacora.php"
+                    class="activo"
+                    aria-current="page"
+                >
 
                     <i class="fa-solid fa-clipboard-list"></i>
 
@@ -129,23 +155,26 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 </a>
 
-            <?php endif; ?>
-
-
-            <?php if (esAdministradorOGerente()): ?>
 
                 <a href="../respaldo/respaldo.php">
+
                     <i class="fa-solid fa-database"></i>
+
                     Respaldos
+
                 </a>
 
             <?php endif; ?>
 
-           <?php if (esAdministrador()): ?>
+
+            <?php if (esAdministrador()): ?>
 
                 <a href="../incidencias/incidencias.php">
+
                     <i class="fa-solid fa-triangle-exclamation"></i>
+
                     Incidencias
+
                 </a>
 
             <?php endif; ?>
