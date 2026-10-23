@@ -64,7 +64,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <i class="fa-solid fa-house"></i>
 
-                Dashboards
+                Dashboard
 
             </a>
 
@@ -145,8 +145,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <a
                     href="bitacora.php"
-                    class="activo"
-                    aria-current="page"
+                    
                 >
 
                     <i class="fa-solid fa-clipboard-list"></i>
