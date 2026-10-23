@@ -110,9 +110,9 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
             Máquinas
         </a>
 
-        <a href="/VendingMiniMarket/inventario/inventario.html"
-           class="<?= $paginaActual === 'inventario.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'inventario.html' ? 'aria-current="page"' : '' ?>>
+        <a href="/VendingMiniMarket/inventario/inventario.php"
+           class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-clipboard-list"></i>
             Inventario
         </a>
@@ -152,17 +152,6 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
                <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>>
                 <i class="fa-solid fa-database"></i>
                 Respaldos
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
-            </a>
-
-            <a href="../ventas/ventas.html">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas
-            </a>
             </a>
 
         <?php endif; ?>
