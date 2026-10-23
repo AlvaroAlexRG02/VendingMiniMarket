@@ -103,16 +103,6 @@ header("Expires: 0");
             Tiendas
         </a>
 
-        <a href="../compras/compras.html">
-            <i class="fa-solid fa-cart-shopping"></i>
-            Compras
-        </a>
-
-        <a href="../ventas/ventas.html">
-            <i class="fa-solid fa-chart-column"></i>
-            Ventas
-        </a>
-
         <a href="/VendingMiniMarket/maquinas/maquinas.php"
            class="<?= $paginaActual === 'maquinas.php' ? 'activo' : '' ?>"
            <?= $paginaActual === 'maquinas.php' ? 'aria-current="page"' : '' ?>>
@@ -120,16 +110,16 @@ header("Expires: 0");
             Máquinas
         </a>
 
-        <a href="/VendingMiniMarket/inventario/inventario.html"
-           class="<?= $paginaActual === 'inventario.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'inventario.html' ? 'aria-current="page"' : '' ?>>
+        <a href="/VendingMiniMarket/inventario/inventario.php"
+           class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-clipboard-list"></i>
             Inventario
         </a>
 
-        <a href="/VendingMiniMarket/compras/compras.html"
-           class="<?= $paginaActual === 'compras.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'compras.html' ? 'aria-current="page"' : '' ?>>
+        <a href="/VendingMiniMarket/compras/compras.php"
+           class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-cart-shopping"></i>
             Compras
         </a>

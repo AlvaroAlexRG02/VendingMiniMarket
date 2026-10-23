@@ -1,3 +1,20 @@
+<?php
+
+require_once __DIR__ . "/../config/session.php";
+require_once __DIR__ . "/../config/permisos.php";
+
+if (!isset($_SESSION["usuario"])) {
+    header("Location: ../index/index.html");
+    exit;
+}
+
+$paginaActual = basename($_SERVER["PHP_SELF"]);
+
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: 0");
+
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -85,9 +102,9 @@
             Máquinas
         </a>
 
-        <a href="/VendingMiniMarket/inventario/inventario.html"
-           class="<?= $paginaActual === 'inventario.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'inventario.thml' ? 'aria-current="page"' : '' ?>>
+        <a href="/VendingMiniMarket/inventario/inventario.php"
+           class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-clipboard-list"></i>
             Inventario
         </a>
@@ -127,17 +144,6 @@
                <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>>
                 <i class="fa-solid fa-database"></i>
                 Respaldos
-            </a>
-
-            <a href="../compras/compras.html">
-                <i class="fa-solid fa-cart-shopping"></i>
-                Compras
-            </a>
-
-            <a href="../ventas/ventas.html">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas
-            </a>
             </a>
 
         <?php endif; ?>

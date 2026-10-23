@@ -85,16 +85,16 @@ function inicializarNavegacionLateral() {
         },
         {
             nombre: "Inventario",
-            ruta: "inventario/inventario.html",
+            ruta: "inventario/inventario.php",
             icono: "fa-clipboard-list",
-            rutasActivas: ["inventario/inventario.html", "inventario/movimientos.html"]
+            rutasActivas: ["inventario/inventario.php", "inventario/movimientos.html"]
         },
         {
             nombre: "Compras",
-            ruta: "compras/compras.html",
+            ruta: "compras/compras.php",
             icono: "fa-cart-shopping",
             rutasActivas: [
-                "compras/compras.html",
+                "compras/compras.php",
                 "compras/facturas.html",
                 "compras/pedido.html",
                 "compras/pedido.php"

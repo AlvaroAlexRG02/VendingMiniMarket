@@ -102,13 +102,13 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                 Máquinas
             </a>
 
-            <a href="../inventario/inventario.html">
+            <a href="../inventario/inventario.php">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
             </a>
 
             <a
-                href="compras.html"
+                href="compras.php"
                 class="activo"
             >
                 <i class="fa-solid fa-cart-shopping"></i>
@@ -241,7 +241,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                 <div class="acciones-encabezado-pedidos">
 
                     <a
-                        href="compras.html"
+                        href="compras.php"
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-arrow-left"></i>

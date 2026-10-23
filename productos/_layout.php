@@ -72,7 +72,7 @@ function catalogoLayoutInicio(string $tituloPestana, string $titulo, string $sub
                 Máquinas
             </a>
 
-            <a href="../inventario/inventario.html">
+            <a href="../inventario/inventario.php">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
             </a>
