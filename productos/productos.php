@@ -26,6 +26,10 @@ $nombreUsuario = trim(
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
+/* HU-14: administrador o Soporte TI autorizado pueden importar el catálogo. */
+$rolUsuario     = mb_strtolower(trim((string)($_SESSION["usuario"]["rol"] ?? "")), "UTF-8");
+$puedeImportar  = esAdministrador() || str_contains($rolUsuario, "soporte");
+
 ?>
 
 <!DOCTYPE html>
@@ -57,29 +61,17 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             </a>
         </div>
 
-<<<<<<< Updated upstream
-       <nav
-=======
-<<<<<<< HEAD
         <nav
-=======
-       <nav
->>>>>>> e3f3c22ec65a82610ae5ceb6b991bd6bd0f5cfef
->>>>>>> Stashed changes
             class="nav-lateral"
             aria-label="Navegación principal"
         >
 
-            <a
-                href="dashboard.php"
-                class="activo"
-                aria-current="page"
-            >
+            <a href="../dashboard/dashboard.php">
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
             </a>
 
-            <a href="../productos/productos.html">
+            <a href="productos.php" class="activo" aria-current="page">
                 <i class="fa-solid fa-box"></i>
                 Productos
             </a>
@@ -217,6 +209,20 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                         <i class="fa-solid fa-file-csv"></i>
                         Exportar CSV
                     </button>
+
+                    <?php if (esAdministrador()): ?>
+                    <a href="precios.php" class="boton boton-borde">
+                        <i class="fa-solid fa-calculator"></i>
+                        Precios
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if ($puedeImportar): ?>
+                    <a href="importar.php" class="boton boton-borde">
+                        <i class="fa-solid fa-file-import"></i>
+                        Importar catálogo
+                    </a>
+                    <?php endif; ?>
 
                     <?php if (esAdministrador()): ?>
                     <a href="categorias.php" class="boton boton-borde">
