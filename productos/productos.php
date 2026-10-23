@@ -26,10 +26,6 @@ $nombreUsuario = trim(
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
-/* HU-14: administrador o Soporte TI autorizado pueden importar el catálogo. */
-$rolUsuario     = mb_strtolower(trim((string)($_SESSION["usuario"]["rol"] ?? "")), "UTF-8");
-$puedeImportar  = esAdministrador() || str_contains($rolUsuario, "soporte");
-
 ?>
 
 <!DOCTYPE html>
@@ -61,59 +57,96 @@ $puedeImportar  = esAdministrador() || str_contains($rolUsuario, "soporte");
             </a>
         </div>
 
-        <nav
-            class="nav-lateral"
-            aria-label="Navegación principal"
-        >
+
+       <nav class="nav-lateral">
 
             <a href="../dashboard/dashboard.php">
-                <i class="fa-solid fa-chart-pie"></i>
+
+                <i class="fa-solid fa-house"></i>
+
                 Dashboard
+
             </a>
 
-            <a href="productos.php" class="activo" aria-current="page">
-                <i class="fa-solid fa-box"></i>
-                Productos
-            </a>
-
-            <a href="../tienda/tienda.php">
-                <i class="fa-solid fa-shop"></i>
-                Tienda
-            </a>
-
-            <a href="../maquinas/maquinas.php">
-                <i class="fa-solid fa-cash-register"></i>
-                Máquinas
-            </a>
-
-            <a href="../inventario/inventario.html">
-                <i class="fa-solid fa-clipboard-list"></i>
-                Inventario
-            </a>
-
-            <a href="../ventas/ventas.html">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas
-            </a>
-
-            <a href="../alertas/alertas.html">
-                <i class="fa-solid fa-bell"></i>
-                Alertas
-            </a>
-
-            <a href="../reportes/reportes.html">
-                <i class="fa-solid fa-chart-line"></i>
-                Reportes
-            </a>
 
             <a href="../usuarios/usuarios.php">
+
                 <i class="fa-solid fa-users"></i>
+
                 Usuarios
+
             </a>
+
+
+            <a href="../catalogo/catalogo.php">
+
+                <i class="fa-solid fa-box"></i>
+
+                Catálogo
+
+            </a>
+
+
+            <a href="../tiendas/tiendas.php">
+
+                <i class="fa-solid fa-store"></i>
+
+                Tiendas
+
+            </a>
+
+
+            <a href="../maquinas/maquinas.php">
+
+                <i class="fa-solid fa-cube"></i>
+
+                Máquinas
+
+            </a>
+
+
+            <a href="../inventario/inventario.php">
+
+                <i class="fa-solid fa-boxes-stacked"></i>
+
+                Inventario
+
+            </a>
+
+
+            <a href="../compras/compras.php">
+
+                <i class="fa-solid fa-cart-shopping"></i>
+
+                Compras
+
+            </a>
+
+
+            <a href="../ventas/ventas.php">
+
+                <i class="fa-solid fa-cash-register"></i>
+
+                Ventas
+
+            </a>
+
+
+            <a href="../reportes/reportes.php">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                Reportes
+
+            </a>
+
 
             <?php if (esAdministradorOGerente()): ?>
 
-                <a href="../bitacora/bitacora.php">
+                <a
+                    href="bitacora.php"
+                    
+                >
 
                     <i class="fa-solid fa-clipboard-list"></i>
 
@@ -121,23 +154,26 @@ $puedeImportar  = esAdministrador() || str_contains($rolUsuario, "soporte");
 
                 </a>
 
-            <?php endif; ?>
-
-
-            <?php if (esAdministradorOGerente()): ?>
 
                 <a href="../respaldo/respaldo.php">
+
                     <i class="fa-solid fa-database"></i>
+
                     Respaldos
+
                 </a>
 
             <?php endif; ?>
 
-           <?php if (esAdministrador()): ?>
+
+            <?php if (esAdministrador()): ?>
 
                 <a href="../incidencias/incidencias.php">
+
                     <i class="fa-solid fa-triangle-exclamation"></i>
+
                     Incidencias
+
                 </a>
 
             <?php endif; ?>
@@ -210,20 +246,19 @@ $puedeImportar  = esAdministrador() || str_contains($rolUsuario, "soporte");
                         Exportar CSV
                     </button>
 
+                    <!-- NUEVO: precios e importación -->
                     <?php if (esAdministrador()): ?>
                     <a href="precios.php" class="boton boton-borde">
                         <i class="fa-solid fa-calculator"></i>
                         Precios
                     </a>
-                    <?php endif; ?>
 
-                    <?php if ($puedeImportar): ?>
                     <a href="importar.php" class="boton boton-borde">
                         <i class="fa-solid fa-file-import"></i>
                         Importar catálogo
                     </a>
                     <?php endif; ?>
-
+                    
                     <?php if (esAdministrador()): ?>
                     <a href="categorias.php" class="boton boton-borde">
                         <i class="fa-solid fa-tags"></i>
