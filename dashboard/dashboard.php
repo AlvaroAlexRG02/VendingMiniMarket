@@ -115,6 +115,11 @@ header("Expires: 0");
                 Inventario
             </a>
 
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
             <a href="../ventas/ventas.html">
                 <i class="fa-solid fa-chart-column"></i>
                 Ventas
