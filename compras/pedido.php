@@ -403,6 +403,61 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
 
             </section>
 
+            <?php if ($puedeActualizarEstado): ?>
+
+            <!-- ==========================================
+                 RECEPCIONES PENDIENTES DE CONFIRMAR (HU-32)
+            =========================================== -->
+
+            <section class="panel" id="panelRecepcionesPendientes" hidden>
+
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>Recepciones pendientes de confirmar</h2>
+
+                        <p class="descripcion-panel">
+                            Registradas por un Dependiente; requieren tu
+                            confirmación para actualizar el inventario.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div
+                    id="contenedorRecepcionesPendientes"
+                    class="contenedor-tabla"
+                >
+
+                    <table class="tabla-datos">
+
+                        <caption class="texto-solo-lectores">
+                            Recepciones pendientes de confirmar
+                        </caption>
+
+                        <thead>
+                            <tr>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Proveedor</th>
+                                <th scope="col">Tienda</th>
+                                <th scope="col">Registrado por</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="cuerpoTablaRecepcionesPendientes">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+            <?php endif; ?>
+
             <!-- ==========================================
                  LISTADO
             =========================================== -->
@@ -836,8 +891,114 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
 
     </div>
 
+    <!-- ==========================================
+         MODAL: RECIBIR PEDIDO (HU-32)
+    =========================================== -->
+
+    <div
+        id="modalRecepcion"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-recepcion
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-pedido-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalRecepcion"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+
+                    <h2 id="tituloModalRecepcion">
+                        Recibir pedido
+                    </h2>
+
+                    <p>
+                        Indica las cantidades recibidas de cada producto.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalRecepcion"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar formulario"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <form id="formularioRecepcion">
+
+                <input type="hidden" id="idPedidoRecepcion">
+
+                <div
+                    id="listaProductosRecepcion"
+                    class="lista-productos-compra"
+                >
+                    <!-- JavaScript agregará las filas -->
+                </div>
+
+                <div class="grupo-formulario">
+
+                    <label for="observacionesRecepcion">
+                        Observaciones
+                    </label>
+
+                    <textarea
+                        id="observacionesRecepcion"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Detalles adicionales de la recepción"
+                    ></textarea>
+
+                </div>
+
+                <p
+                    id="mensajeFormularioRecepcion"
+                    class="mensaje-login"
+                    aria-live="polite"
+                ></p>
+
+                <div class="acciones-modal-producto">
+
+                    <button
+                        type="button"
+                        id="botonCancelarRecepcion"
+                        class="boton boton-borde"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="boton boton-azul"
+                    >
+                        <i class="fa-solid fa-truck-ramp-box"></i>
+                        Registrar recepción
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
     <script src="../js/app.js"></script>
     <script src="../js/pedido-api.js"></script>
+    <script src="../js/recepcion-api.js"></script>
     <script src="../js/pedido.js"></script>
 
 </body>
