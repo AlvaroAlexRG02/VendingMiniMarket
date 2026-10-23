@@ -110,9 +110,9 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             Inventario
         </a>
 
-        <a href="/VendingMiniMarket/compras/compras.php"
-           class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
+        <a href="/VendingMiniMarket/compras/compras.html"
+           class="<?= $paginaActual === 'compras.html' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'compras.html' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-cart-shopping"></i>
             Compras
         </a>

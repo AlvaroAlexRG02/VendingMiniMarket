@@ -3,6 +3,7 @@
 =========================================================*/
 
 document.addEventListener("DOMContentLoaded", () => {
+    inicializarNavegacionLateral();
     inicializarMostrarContrasena();
     inicializarMenuLateral();
     inicializarSesionVending();
@@ -18,6 +19,146 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaComprasVending();
     inicializarPaginaFacturasVending();
 });
+
+function inicializarNavegacionLateral() {
+    const navegaciones = document.querySelectorAll(".nav-lateral");
+
+    if (navegaciones.length === 0) {
+        return;
+    }
+
+    const scriptAplicacion = Array.from(document.scripts).find((script) => {
+        return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+    });
+
+    if (!scriptAplicacion) {
+        return;
+    }
+
+    const raizAplicacion = new URL("../", scriptAplicacion.src);
+    const rutaRaiz = raizAplicacion.pathname;
+    const rutaActual = window.location.pathname.startsWith(rutaRaiz)
+        ? window.location.pathname.slice(rutaRaiz.length)
+        : window.location.pathname.replace(/^\/+/, "");
+
+    const paginas = [
+        {
+            nombre: "Dashboard",
+            ruta: "dashboard/dashboard.php",
+            icono: "fa-chart-pie",
+            rutasActivas: ["dashboard/dashboard.php"]
+        },
+        {
+            nombre: "Usuarios",
+            ruta: "usuarios/usuarios.php",
+            icono: "fa-users",
+            rutasActivas: ["usuarios/usuarios.php"]
+        },
+        {
+            nombre: "Productos",
+            ruta: "productos/productos.php",
+            icono: "fa-box",
+            rutasActivas: [
+                "productos/productos.php",
+                "productos/productos.html",
+                "productos/producto-nuevo.php",
+                "productos/producto-nuevo.html",
+                "productos/categorias.php",
+                "productos/proveedores.php"
+            ]
+        },
+        {
+            nombre: "Tiendas",
+            ruta: "tienda/tienda.php",
+            icono: "fa-shop",
+            rutasActivas: [
+                "tienda/tienda.php",
+                "tienda/relaciones.php",
+                "tienda/ubicacion-nueva.php"
+            ]
+        },
+        {
+            nombre: "Máquinas",
+            ruta: "maquinas/maquinas.php",
+            icono: "fa-cash-register",
+            rutasActivas: ["maquinas/maquinas.php", "maquinas/maquina-nueva.php"]
+        },
+        {
+            nombre: "Inventario",
+            ruta: "inventario/inventario.html",
+            icono: "fa-clipboard-list",
+            rutasActivas: ["inventario/inventario.html", "inventario/movimientos.html"]
+        },
+        {
+            nombre: "Compras",
+            ruta: "compras/compras.html",
+            icono: "fa-cart-shopping",
+            rutasActivas: [
+                "compras/compras.html",
+                "compras/facturas.html",
+                "compras/pedido.html",
+                "compras/pedido.php"
+            ]
+        },
+        {
+            nombre: "Ventas",
+            ruta: "ventas/ventas.html",
+            icono: "fa-chart-column",
+            rutasActivas: ["ventas/ventas.html"]
+        },
+        {
+            nombre: "Alertas",
+            ruta: "alertas/alertas.html",
+            icono: "fa-bell",
+            rutasActivas: ["alertas/alertas.html"]
+        },
+        {
+            nombre: "Reportes",
+            ruta: "reportes/reportes.php",
+            icono: "fa-chart-line",
+            rutasActivas: ["reportes/reportes.php"]
+        },
+        {
+            nombre: "Bitácora",
+            ruta: "bitacora/bitacora.php",
+            icono: "fa-clipboard-list",
+            rutasActivas: ["bitacora/bitacora.php"]
+        },
+        {
+            nombre: "Respaldos",
+            ruta: "respaldo/respaldo.php",
+            icono: "fa-database",
+            rutasActivas: ["respaldo/respaldo.php"]
+        },
+        {
+            nombre: "Incidencias",
+            ruta: "incidencias/incidencias.php",
+            icono: "fa-triangle-exclamation",
+            rutasActivas: ["incidencias/incidencias.php"]
+        }
+    ];
+
+    navegaciones.forEach((navegacion) => {
+        navegacion.replaceChildren();
+        navegacion.setAttribute("aria-label", "Navegación principal");
+
+        paginas.forEach((pagina) => {
+            const enlace = document.createElement("a");
+            const icono = document.createElement("i");
+            const activa = pagina.rutasActivas.includes(rutaActual);
+
+            enlace.href = new URL(pagina.ruta, raizAplicacion).href;
+            enlace.classList.toggle("activo", activa);
+            if (activa) {
+                enlace.setAttribute("aria-current", "page");
+            }
+
+            icono.className = `fa-solid ${pagina.icono}`;
+            enlace.append(icono, document.createTextNode(pagina.nombre));
+            navegacion.appendChild(enlace);
+        });
+    });
+}
 
 /*=========================================================
   INICIO DE SESIÓN

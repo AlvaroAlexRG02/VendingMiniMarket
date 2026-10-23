@@ -430,10 +430,12 @@ body.pagina-app {
 
 .nav-lateral {
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
     margin-top: 8px;
+    overflow-y: auto;
 }
 
 .nav-lateral a {

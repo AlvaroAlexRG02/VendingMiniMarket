@@ -1,3 +1,30 @@
+<?php
+
+require_once __DIR__ . "/../config/session.php";
+require_once __DIR__ . "/../config/permisos.php";
+
+
+if (!isset($_SESSION["usuario"])) {
+    header("Location: ../index/index.html");
+    exit;
+}
+
+$paginaActual = basename($_SERVER['PHP_SELF']);
+
+/*
+ * Ubicación asignada al usuario (HU-19), leída de la base en cada carga.
+ */
+$ubicacionUsuario = resumenUbicacionUsuario($pdo);
+
+/*
+ * Evitar que el navegador muestre el dashboard
+ * después de cerrar sesión utilizando la caché.
+ */
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: 0");
+
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -114,9 +141,9 @@
             Ventas
         </a>
 
-        <a href="/VendingMiniMarket/reportes/reportes.html"
-           class="<?= $paginaActual === 'reportes.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'reportes.html' ? 'aria-current="page"' : '' ?>>
+        <a href="/VendingMiniMarket/reportes/reportes.php"
+           class="<?= $paginaActual === 'reportes.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'reportes.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-chart-line"></i>
             Reportes
         </a>

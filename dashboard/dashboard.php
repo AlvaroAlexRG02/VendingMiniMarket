@@ -142,9 +142,9 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
             Ventas
         </a>
 
-        <a href="/VendingMiniMarket/reportes/reportes.html"
-           class="<?= $paginaActual === 'reportes.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'reportes.html' ? 'aria-current="page"' : '' ?>>
+        <a href="/VendingMiniMarket/reportes/reportes.php"
+           class="<?= $paginaActual === 'reportes.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'reportes.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-chart-line"></i>
             Reportes
         </a>
