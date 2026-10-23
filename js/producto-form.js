@@ -4,31 +4,41 @@
   Requiere: app.js y catalogo-comun.js cargados antes.
 =========================================================*/
 
+
 (() => {
     'use strict';
 
+
     const C = window.CatalogoComun;
     const $ = (id) => document.getElementById(id);
+
 
     let idProducto = null;
     let guardando = false;
     let proveedoresDisponibles = [];
 
 
+
+
     document.addEventListener('DOMContentLoaded', iniciar);
+
 
     async function iniciar() {
         const formulario = $('formularioProducto');
+
 
         if (!formulario) {
             return;
         }
 
+
         try {
             await C.cargarSesion({ soloAdmin: true });
 
+
             const parametro = new URLSearchParams(window.location.search).get('id');
             idProducto = parametro && Number(parametro) > 0 ? Number(parametro) : null;
+
 
             const [categorias, impuestos, proveedores] = await Promise.all([
                 C.api('listar_categorias'),
@@ -36,20 +46,26 @@
                 C.api('listar_proveedores')
             ]);
 
+
             proveedoresDisponibles = proveedores.data;
+
 
             const producto = idProducto
                 ? (await C.api('obtener_producto', null, { id: idProducto })).data
                 : null;
 
+
             llenarCategorias(categorias.data, producto?.id_categoria);
             llenarImpuestos(impuestos.data, producto?.id_impuesto);
+
 
             if (producto) {
                 prepararEdicion(producto);
             } else {
                 actualizarMensajeSinProveedores();
+                await mostrarSiguienteCodigo();
             }
+
 
             $('botonAgregarProveedorProducto').addEventListener('click', () => agregarFilaProveedor());
             $('listaProveedoresProducto').addEventListener('click', alHacerClicEnProveedores);
@@ -61,13 +77,30 @@
     }
 
 
+
+
     /*-----------------------------------------------------
       CAMPOS
     -----------------------------------------------------*/
 
+
+    /* Producto nuevo: muestra el código CR que recibirá al guardarse. */
+    async function mostrarSiguienteCodigo() {
+        try {
+            const r = await C.api('siguiente_codigo');
+            $('codigoInternoProducto').value = r.data.codigo;
+            $('ayudaCodigoInterno').textContent =
+                'Se asignará automáticamente al guardar (siguiente disponible).';
+        } catch (error) {
+            $('codigoInternoProducto').placeholder = 'Se asignará al guardar';
+        }
+    }
+
+
     function llenarCategorias(categorias, seleccionada) {
         const select = $('categoriaProducto');
         select.innerHTML = '<option value="">Seleccione una categoría</option>';
+
 
         categorias
             .filter((c) => c.estado || c.id_categoria === seleccionada)
@@ -78,12 +111,15 @@
                 select.appendChild(opcion);
             });
 
+
         select.value = seleccionada ? String(seleccionada) : '';
     }
+
 
     function llenarImpuestos(impuestos, seleccionado) {
         const select = $('impuestoProducto');
         select.innerHTML = '<option value="">Seleccione un impuesto</option>';
+
 
         impuestos
             .filter((i) => i.estado || i.id_impuesto === seleccionado)
@@ -94,6 +130,7 @@
                 select.appendChild(opcion);
             });
 
+
         if (seleccionado) {
             select.value = String(seleccionado);
         } else {
@@ -103,33 +140,43 @@
         }
     }
 
+
     function prepararEdicion(producto) {
         $('tituloPagina').textContent = 'Editar producto';
         $('textoPagina').textContent = 'Actualiza la información del producto. Los cambios quedan en su historial.';
         $('botonGuardarProducto').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar cambios';
         document.title = 'Editar producto | Vending Mini Market';
 
+
         $('nombreProducto').value = producto.nombre || '';
         $('codigoInternoProducto').value = producto.codigo_articulo_retail || '';
+        $('codigoInternoProducto').placeholder = 'Sin código asignado';
+        $('ayudaCodigoInterno').textContent = 'El código interno no cambia al editar.';
         $('codigoBarrasProducto').value = producto.codigo_barras || '';
         $('descripcionProducto').value = producto.descripcion || '';
+
 
         (producto.proveedores || []).forEach((p) => agregarFilaProveedor(p));
         actualizarMensajeSinProveedores();
     }
 
 
+
+
     /*-----------------------------------------------------
       PROVEEDORES DEL PRODUCTO (producto_proveedor)
     -----------------------------------------------------*/
+
 
     function agregarFilaProveedor(existente = null) {
         const fila = document.createElement('div');
         fila.className = 'fila-proveedor-producto';
 
+
         const select = document.createElement('select');
         select.setAttribute('aria-label', 'Proveedor');
         select.innerHTML = '<option value="">Seleccione un proveedor</option>';
+
 
         proveedoresDisponibles
             .filter((p) => p.estado || (existente && p.id_proveedor === existente.id_proveedor))
@@ -140,9 +187,11 @@
                 select.appendChild(opcion);
             });
 
+
         if (existente) {
             select.value = String(existente.id_proveedor);
         }
+
 
         const costo = document.createElement('input');
         costo.type = 'number';
@@ -151,9 +200,11 @@
         costo.placeholder = 'Costo (₡), opcional';
         costo.setAttribute('aria-label', 'Costo del proveedor');
 
+
         if (existente && existente.costo !== null && existente.costo !== undefined) {
             costo.value = existente.costo;
         }
+
 
         const quitar = document.createElement('button');
         quitar.type = 'button';
@@ -163,18 +214,23 @@
         quitar.setAttribute('aria-label', 'Quitar proveedor');
         quitar.innerHTML = '<i class="fa-solid fa-xmark"></i>';
 
+
         fila.append(select, costo, quitar);
         $('listaProveedoresProducto').appendChild(fila);
 
+
         actualizarMensajeSinProveedores();
+
 
         if (!existente) {
             select.focus();
         }
     }
 
+
     function alHacerClicEnProveedores(evento) {
         const boton = evento.target.closest('[data-quitar]');
+
 
         if (boton) {
             boton.closest('.fila-proveedor-producto').remove();
@@ -182,10 +238,12 @@
         }
     }
 
+
     function actualizarMensajeSinProveedores() {
         const hay = $('listaProveedoresProducto').children.length > 0;
         $('mensajeSinProveedoresProducto').hidden = hay;
     }
+
 
     function leerProveedores() {
         return Array.from($('listaProveedoresProducto').children)
@@ -197,14 +255,17 @@
     }
 
 
+
+
     /*-----------------------------------------------------
       GUARDAR
     -----------------------------------------------------*/
 
+
     function leerDatos() {
         return {
             nombre: $('nombreProducto').value.trim(),
-            codigo_articulo_retail: $('codigoInternoProducto').value.trim(),
+            codigo_articulo_retail: idProducto ? $('codigoInternoProducto').value.trim() : '',
             codigo_barras: $('codigoBarrasProducto').value.trim(),
             id_categoria: $('categoriaProducto').value,
             id_impuesto: $('impuestoProducto').value,
@@ -213,37 +274,47 @@
         };
     }
 
+
     async function guardar(evento) {
         evento.preventDefault();
+
 
         if (guardando) {
             return;
         }
 
+
         const datos = leerDatos();
         const repetidos = new Set(datos.proveedores.map((p) => p.id_proveedor));
+
 
         if (repetidos.size !== datos.proveedores.length) {
             C.mostrarMensaje('Un proveedor está repetido en la lista.', 'error');
             return;
         }
 
+
         await enviar(datos);
     }
+
 
     async function enviar(datos) {
         const boton = $('botonGuardarProducto');
 
+
         guardando = true;
         boton.disabled = true;
         C.limpiarMensaje();
+
 
         try {
             const accion = idProducto ? 'editar_producto' : 'crear_producto';
             const carga = idProducto ? { ...datos, id_producto: idProducto } : datos;
             const resultado = await C.api(accion, carga);
 
+
             C.mostrarMensaje(resultado.message, 'exito');
+
 
             setTimeout(() => {
                 window.location.href = 'productos.php';
@@ -252,18 +323,22 @@
             guardando = false;
             boton.disabled = false;
 
+
             await manejarError(error, datos);
         }
     }
+
 
     /** HU-13: muestra los posibles duplicados y, si corresponde, permite continuar. */
     async function manejarError(error, datos) {
         const duplicados = error.data?.duplicados;
 
+
         if (!duplicados || !duplicados.length) {
             C.mostrarMensaje(error.message, 'error');
             return;
         }
+
 
         const lista = duplicados
             .map((d) => {
@@ -272,16 +347,19 @@
             })
             .join('\n');
 
+
         if (!error.data.puede_continuar) {
             C.mostrarMensaje(`${error.message}\n${lista}`, 'error');
             return;
         }
+
 
         const continuar = await C.confirmar({
             titulo: 'Posible producto duplicado',
             texto: `${error.message}\n\n${lista}\n\n¿Desea guardar de todas formas?`,
             textoConfirmar: 'Guardar de todas formas'
         });
+
 
         if (continuar) {
             guardando = true;
