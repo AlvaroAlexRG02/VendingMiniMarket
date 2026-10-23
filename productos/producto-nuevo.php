@@ -219,9 +219,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                         <div class="grupo-formulario">
                             <label for="codigoInternoProducto">Código interno</label>
-                            <input type="text" id="codigoInternoProducto" maxlength="100"
-                                   placeholder="Código de artículo. Ejemplo: COCA-600"
-                                   autocomplete="off">
+                               <input type="text" id="codigoInternoProducto" maxlength="100"
+                                    placeholder="Cargando siguiente código..."
+                                    autocomplete="off" readonly>
+                                <small id="ayudaCodigoInterno">Se asigna automáticamente (CR600, CR601...).</small>
                         </div>
 
                         <div class="grupo-formulario">

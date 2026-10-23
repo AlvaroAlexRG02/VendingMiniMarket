@@ -1,5 +1,6 @@
 <?php
 
+
 /**
  * API del catálogo — VendingMiniMarket
  *
@@ -17,19 +18,26 @@
  * Usa PDO ($pdo), igual que api/auth/login.php.
  */
 
+
 ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
+
 require_once __DIR__ . '/../../config/database.php';   // define $pdo
 require_once __DIR__ . '/../../config/session.php';    // inicia la sesión
+require_once __DIR__ . '/precios_lib.php';             // código interno CR
+
 
 const POR_PAGINA_DEFECTO = 25;
 const POR_PAGINA_MAXIMO  = 100;
 
 
+
+
 /* ==========================================================
    UTILIDADES GENERALES
 ========================================================== */
+
 
 function db(): PDO
 {
@@ -37,19 +45,23 @@ function db(): PDO
     return $pdo;
 }
 
+
 function respuesta(bool $success, $data = null, string $message = '', int $status = 200): void
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
 
+
     echo json_encode(
         ['success' => $success, 'data' => $data, 'message' => $message],
         JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
     );
 
+
     exit;
 }
+
 
 function exigirSesion(): array
 {
@@ -57,26 +69,33 @@ function exigirSesion(): array
         respuesta(false, null, 'Debe iniciar sesión.', 401);
     }
 
+
     return $_SESSION['usuario'];
 }
+
 
 function esAdministrador(): bool
 {
     $rol = mb_strtolower(trim((string)($_SESSION['usuario']['rol'] ?? '')), 'UTF-8');
 
+
     return in_array($rol, ['administrador', 'admin'], true);
 }
+
 
 function exigirAdministrador(): array
 {
     $usuario = exigirSesion();
 
+
     if (!esAdministrador()) {
         respuesta(false, null, 'No tiene permisos de administrador.', 403);
     }
 
+
     return $usuario;
 }
+
 
 function exigirPost(): void
 {
@@ -85,44 +104,54 @@ function exigirPost(): void
     }
 }
 
+
 function leerEntrada(): array
 {
     $crudo = file_get_contents('php://input');
     $datos = json_decode($crudo === false ? '' : $crudo, true);
 
+
     return is_array($datos) ? $datos : $_POST;
 }
+
 
 function aBool($valor): bool
 {
     return $valor === true || $valor === 1 || $valor === '1' || $valor === 't' || $valor === 'true';
 }
 
+
 function manejarErrorBD(PDOException $e, string $mensajeGeneral): void
 {
     $codigo = (string)$e->getCode();
+
 
     if ($codigo === '23505') {
         respuesta(false, null, 'Ya existe un registro con el mismo código o nombre.', 409);
     }
 
+
     if ($codigo === '23503') {
         respuesta(false, null, 'La operación se relaciona con un registro que no existe.', 409);
     }
 
+
     error_log('[catalogo] ' . $e->getMessage());
     respuesta(false, null, $mensajeGeneral, 500);
 }
+
 
 /** Ejecuta $accion dentro de una transacción; revierte todo si algo falla. */
 function enTransaccion(callable $accion, string $mensajeError)
 {
     $pdo = db();
 
+
     try {
         $pdo->beginTransaction();
         $resultado = $accion();
         $pdo->commit();
+
 
         return $resultado;
     } catch (PDOException $e) {
@@ -134,9 +163,12 @@ function enTransaccion(callable $accion, string $mensajeError)
 }
 
 
+
+
 /* ==========================================================
    BITÁCORA (historial) — tabla bitacora_auditoria
 ========================================================== */
+
 
 function auditar(string $entidad, string $accion, ?array $antes, ?array $despues): void
 {
@@ -146,6 +178,7 @@ function auditar(string $entidad, string $accion, ?array $antes, ?array $despues
         VALUES
             (:id_usuario, :entidad, :accion, CAST(:anterior AS jsonb), CAST(:nuevo AS jsonb), 'EXITOSO', :ip, NOW())
     ");
+
 
     $st->execute([
         ':id_usuario' => (int)($_SESSION['usuario']['id_usuario'] ?? 0) ?: null,
@@ -158,13 +191,17 @@ function auditar(string $entidad, string $accion, ?array $antes, ?array $despues
 }
 
 
+
+
 /* ==========================================================
    VALIDACIÓN DE CAMPOS
 ========================================================== */
 
+
 function campoTexto(array $in, string $clave, int $max, bool $obligatorio, string $etiqueta): ?string
 {
     $valor = trim((string)($in[$clave] ?? ''));
+
 
     if ($valor === '') {
         if ($obligatorio) {
@@ -173,12 +210,15 @@ function campoTexto(array $in, string $clave, int $max, bool $obligatorio, strin
         return null;
     }
 
+
     if (mb_strlen($valor, 'UTF-8') > $max) {
         respuesta(false, null, "$etiqueta no puede superar $max caracteres.", 400);
     }
 
+
     return $valor;
 }
+
 
 /** Minúsculas, sin tildes ni símbolos: "Coca-Cola 600 ml" => "cocacola600ml". */
 function normalizar(string $texto): string
@@ -188,8 +228,10 @@ function normalizar(string $texto): string
         'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
     ]);
 
+
     return preg_replace('/[^a-z0-9]/', '', $texto) ?? '';
 }
+
 
 /** Misma normalización de arriba, pero en SQL. */
 function sqlNormalizado(string $columna): string
@@ -198,9 +240,12 @@ function sqlNormalizado(string $columna): string
 }
 
 
+
+
 /* ==========================================================
    PRODUCTOS — LECTURA
 ========================================================== */
+
 
 const SQL_PRODUCTO_BASE = "
     SELECT
@@ -226,6 +271,7 @@ const SQL_PRODUCTO_BASE = "
     JOIN impuesto  i ON i.id_impuesto  = p.id_impuesto
 ";
 
+
 function normalizarFilaProducto(array $f): array
 {
     $f['id_producto']         = (int)$f['id_producto'];
@@ -234,8 +280,10 @@ function normalizarFilaProducto(array $f): array
     $f['impuesto_porcentaje'] = (float)$f['impuesto_porcentaje'];
     $f['estado']              = aBool($f['estado']);
 
+
     return $f;
 }
+
 
 function obtenerProducto(int $id): ?array
 {
@@ -243,8 +291,10 @@ function obtenerProducto(int $id): ?array
     $st->execute([':id' => $id]);
     $fila = $st->fetch();
 
+
     return $fila ? normalizarFilaProducto($fila) : null;
 }
+
 
 function proveedoresDeProducto(int $idProducto): array
 {
@@ -257,6 +307,7 @@ function proveedoresDeProducto(int $idProducto): array
     ");
     $st->execute([':id' => $idProducto]);
 
+
     return array_map(function (array $f): array {
         return [
             'id_proveedor'     => (int)$f['id_proveedor'],
@@ -267,14 +318,17 @@ function proveedoresDeProducto(int $idProducto): array
     }, $st->fetchAll());
 }
 
+
 /** WHERE compartido por la consulta y la exportación (HU-10, HU-15). */
 function filtrosProductos(array &$params): string
 {
     $condiciones = [];
 
+
     $busqueda = trim((string)($_GET['busqueda'] ?? ''));
     if ($busqueda !== '') {
         $partes = [];
+
 
         $normalizada = normalizar($busqueda);
         if ($normalizada !== '') {
@@ -282,6 +336,7 @@ function filtrosProductos(array &$params): string
             $partes[] = sqlNormalizado('p.nombre') . ' LIKE :b_nombre';
             $params[':b_nombre'] = '%' . $normalizada . '%';
         }
+
 
         // Códigos: coincidencia parcial literal. Se usa '!' como carácter de
         // escape (no '\') porque el analizador de PDO trata '\' como escape
@@ -292,14 +347,17 @@ function filtrosProductos(array &$params): string
         $params[':b_interno'] = $like;
         $params[':b_barras']  = $like;
 
+
         $condiciones[] = '(' . implode(' OR ', $partes) . ')';
     }
+
 
     $categoria = (int)($_GET['categoria'] ?? 0);
     if ($categoria > 0) {
         $condiciones[] = 'p.id_categoria = :f_categoria';
         $params[':f_categoria'] = $categoria;
     }
+
 
     $estado = mb_strtolower(trim((string)($_GET['estado'] ?? '')), 'UTF-8');
     if ($estado === 'activos' || $estado === 'activo') {
@@ -308,32 +366,40 @@ function filtrosProductos(array &$params): string
         $condiciones[] = 'p.estado = FALSE';
     }
 
+
     return $condiciones ? ' WHERE ' . implode(' AND ', $condiciones) : '';
 }
+
 
 function accionListarProductos(array $in): void
 {
     exigirSesion();
 
+
     $params = [];
     $where  = filtrosProductos($params);
 
+
     $porPagina = (int)($_GET['por_pagina'] ?? POR_PAGINA_DEFECTO);
     $porPagina = max(1, min(POR_PAGINA_MAXIMO, $porPagina));
+
 
     $conteo = db()->prepare('SELECT COUNT(*) FROM producto p' . $where);
     $conteo->execute($params);
     $total = (int)$conteo->fetchColumn();
 
+
     $totalPaginas = max(1, (int)ceil($total / $porPagina));
     $pagina       = max(1, min($totalPaginas, (int)($_GET['pagina'] ?? 1)));
     $offset       = ($pagina - 1) * $porPagina;
+
 
     $st = db()->prepare(
         SQL_PRODUCTO_BASE . $where .
         ' ORDER BY LOWER(p.nombre), p.id_producto LIMIT ' . $porPagina . ' OFFSET ' . $offset
     );
     $st->execute($params);
+
 
     respuesta(true, [
         'items'         => array_map('normalizarFilaProducto', $st->fetchAll()),
@@ -344,25 +410,32 @@ function accionListarProductos(array $in): void
     ], 'Productos consultados correctamente.');
 }
 
+
 function accionObtenerProducto(array $in): void
 {
     exigirSesion();
 
+
     $id = (int)($_GET['id'] ?? $in['id'] ?? 0);
     $producto = $id > 0 ? obtenerProducto($id) : null;
+
 
     if (!$producto) {
         respuesta(false, null, 'Producto no encontrado.', 404);
     }
 
+
     $producto['proveedores'] = proveedoresDeProducto($id);
+
 
     respuesta(true, $producto);
 }
 
+
 function accionResumenProductos(array $in): void
 {
     exigirSesion();
+
 
     $r = db()->query("
         SELECT
@@ -372,7 +445,9 @@ function accionResumenProductos(array $in): void
         FROM producto
     ")->fetch();
 
+
     $categorias = (int)db()->query('SELECT COUNT(*) FROM categoria WHERE estado')->fetchColumn();
+
 
     respuesta(true, [
         'total'              => (int)$r['total'],
@@ -382,10 +457,12 @@ function accionResumenProductos(array $in): void
     ]);
 }
 
+
 /** Lista mínima de productos activos para los módulos que aún usan localStorage. */
 function accionProductosParaModulos(array $in): void
 {
     exigirSesion();
+
 
     $st = db()->query("
         SELECT p.id_producto, p.codigo_articulo_retail, p.nombre, p.estado,
@@ -395,6 +472,7 @@ function accionProductosParaModulos(array $in): void
         JOIN impuesto  i ON i.id_impuesto  = p.id_impuesto
         ORDER BY LOWER(p.nombre), p.id_producto
     ");
+
 
     $filas = array_map(function (array $f): array {
         return [
@@ -407,14 +485,18 @@ function accionProductosParaModulos(array $in): void
         ];
     }, $st->fetchAll());
 
+
     respuesta(true, $filas);
 }
+
 
 function accionListarImpuestos(array $in): void
 {
     exigirSesion();
 
+
     $st = db()->query('SELECT id_impuesto, nombre, porcentaje, estado FROM impuesto ORDER BY porcentaje DESC, nombre');
+
 
     respuesta(true, array_map(function (array $f): array {
         return [
@@ -427,47 +509,61 @@ function accionListarImpuestos(array $in): void
 }
 
 
+
+
 /* ==========================================================
    PRODUCTOS — EXPORTAR (HU-15)
 ========================================================== */
 
+
 function celdaCsv($valor): string
 {
     $texto = (string)($valor ?? '');
+
 
     // Evita que Excel interprete texto como fórmula.
     if ($texto !== '' && preg_match('/^[=+\-@\t\r]/', $texto)) {
         $texto = "'" . $texto;
     }
 
+
     return $texto;
 }
+
 
 function accionExportarProductos(array $in): void
 {
     exigirSesion();
 
+
     $params = [];
     $where  = filtrosProductos($params);
+
 
     $st = db()->prepare(SQL_PRODUCTO_BASE . $where . ' ORDER BY LOWER(p.nombre), p.id_producto');
     $st->execute($params);
 
+
     $archivo = 'catalogo_productos_' . date('Ymd_His') . '.csv';
+
 
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $archivo . '"');
     header('Cache-Control: no-store');
 
+
     $salida = fopen('php://output', 'w');
+
 
     // BOM para que Excel reconozca UTF-8 (tildes y ñ).
     fwrite($salida, "\xEF\xBB\xBF");
+
 
     fputcsv($salida, [
         'Código interno', 'Código de barras', 'Nombre', 'Descripción', 'Categoría',
         'Impuesto', 'Proveedores', 'Estado',
     ], ';', '"', '\\');
+
 
     // Se recorre fila por fila para no cargar todo el catálogo en memoria.
     while ($f = $st->fetch()) {
@@ -483,14 +579,18 @@ function accionExportarProductos(array $in): void
         ], ';', '"', '\\');
     }
 
+
     fclose($salida);
     exit;
 }
 
 
+
+
 /* ==========================================================
    PRODUCTOS — ESCRITURA (HU-08, HU-09, HU-13)
 ========================================================== */
+
 
 function leerProveedoresProducto(array $in): array
 {
@@ -499,7 +599,9 @@ function leerProveedoresProducto(array $in): array
         respuesta(false, null, 'La lista de proveedores no es válida.', 400);
     }
 
+
     $resultado = [];
+
 
     foreach ($lista as $item) {
         $id = (int)($item['id_proveedor'] ?? 0);
@@ -507,9 +609,11 @@ function leerProveedoresProducto(array $in): array
             continue;
         }
 
+
         if (isset($resultado[$id])) {
             respuesta(false, null, 'Un proveedor está repetido en la lista.', 400);
         }
+
 
         $costo = $item['costo'] ?? null;
         if ($costo === '' || $costo === null) {
@@ -520,11 +624,14 @@ function leerProveedoresProducto(array $in): array
             $costo = round((float)$costo, 2);
         }
 
+
         $resultado[$id] = ['id_proveedor' => $id, 'costo' => $costo];
     }
 
+
     return array_values($resultado);
 }
+
 
 function leerProducto(array $in, ?array $actual): array
 {
@@ -535,9 +642,11 @@ function leerProducto(array $in, ?array $actual): array
         'descripcion'            => campoTexto($in, 'descripcion', 500, false, 'La descripción'),
     ];
 
+
     if (normalizar($producto['nombre']) === '') {
         respuesta(false, null, 'El nombre del producto debe incluir letras o números.', 400);
     }
+
 
     // Categoría: obligatoria; activa (o la misma que ya tenía el producto).
     $idCategoria = (int)($in['id_categoria'] ?? 0);
@@ -545,19 +654,24 @@ function leerProducto(array $in, ?array $actual): array
         respuesta(false, null, 'Seleccione una categoría.', 400);
     }
 
+
     $st = db()->prepare('SELECT estado FROM categoria WHERE id_categoria = :id');
     $st->execute([':id' => $idCategoria]);
     $categoria = $st->fetch();
+
 
     if (!$categoria) {
         respuesta(false, null, 'La categoría seleccionada no existe.', 400);
     }
 
+
     if (!aBool($categoria['estado']) && (!$actual || $actual['id_categoria'] !== $idCategoria)) {
         respuesta(false, null, 'La categoría seleccionada está inactiva.', 400);
     }
 
+
     $producto['id_categoria'] = $idCategoria;
+
 
     // Impuesto: obligatorio; activo (o el mismo que ya tenía el producto).
     $idImpuesto = (int)($in['id_impuesto'] ?? 0);
@@ -565,22 +679,28 @@ function leerProducto(array $in, ?array $actual): array
         respuesta(false, null, 'Seleccione un impuesto.', 400);
     }
 
+
     $st = db()->prepare('SELECT estado FROM impuesto WHERE id_impuesto = :id');
     $st->execute([':id' => $idImpuesto]);
     $impuesto = $st->fetch();
+
 
     if (!$impuesto) {
         respuesta(false, null, 'El impuesto seleccionado no existe.', 400);
     }
 
+
     if (!aBool($impuesto['estado']) && (!$actual || $actual['id_impuesto'] !== $idImpuesto)) {
         respuesta(false, null, 'El impuesto seleccionado está inactivo.', 400);
     }
 
+
     $producto['id_impuesto'] = $idImpuesto;
+
 
     return $producto;
 }
+
 
 /** Cada proveedor elegido debe existir y estar activo (o ya estar asociado al producto). */
 function validarProveedoresProducto(array $proveedores, ?array $actual): void
@@ -589,6 +709,7 @@ function validarProveedoresProducto(array $proveedores, ?array $actual): void
         return;
     }
 
+
     $yaAsociados = [];
     if ($actual) {
         foreach (proveedoresDeProducto($actual['id_producto']) as $p) {
@@ -596,21 +717,26 @@ function validarProveedoresProducto(array $proveedores, ?array $actual): void
         }
     }
 
+
     $st = db()->prepare('SELECT estado FROM proveedor WHERE id_proveedor = :id');
+
 
     foreach ($proveedores as $p) {
         $st->execute([':id' => $p['id_proveedor']]);
         $fila = $st->fetch();
 
+
         if (!$fila) {
             respuesta(false, null, 'Uno de los proveedores seleccionados no existe.', 400);
         }
+
 
         if (!aBool($fila['estado']) && empty($yaAsociados[$p['id_proveedor']])) {
             respuesta(false, null, 'Uno de los proveedores seleccionados está inactivo.', 400);
         }
     }
 }
+
 
 /**
  * HU-13. Mismo código interno o de barras => se bloquea.
@@ -622,6 +748,7 @@ function verificarDuplicados(array $p, int $excluirId, bool $confirmado): void
     $codigoInterno = mb_strtolower((string)($p['codigo_articulo_retail'] ?? ''), 'UTF-8');
     $codigoBarras  = mb_strtolower((string)($p['codigo_barras'] ?? ''), 'UTF-8');
     $nombreNorm    = normalizar($p['nombre']);
+
 
     $sql = "
         SELECT id_producto, codigo_articulo_retail, codigo_barras, nombre, estado
@@ -636,6 +763,7 @@ function verificarDuplicados(array $p, int $excluirId, bool $confirmado): void
         LIMIT 10
     ";
 
+
     $st = db()->prepare($sql);
     $st->execute([
         ':excluir' => $excluirId,
@@ -646,17 +774,22 @@ function verificarDuplicados(array $p, int $excluirId, bool $confirmado): void
         ':nom'     => $nombreNorm,
     ]);
 
+
     $filas = $st->fetchAll();
+
 
     if (!$filas) {
         return;
     }
 
+
     $bloqueante = false;
     $duplicados = [];
 
+
     foreach ($filas as $f) {
         $motivos = [];
+
 
         if ($codigoInterno !== '' &&
             mb_strtolower(trim((string)$f['codigo_articulo_retail']), 'UTF-8') === $codigoInterno) {
@@ -664,15 +797,18 @@ function verificarDuplicados(array $p, int $excluirId, bool $confirmado): void
             $bloqueante = true;
         }
 
+
         if ($codigoBarras !== '' &&
             mb_strtolower(trim((string)$f['codigo_barras']), 'UTF-8') === $codigoBarras) {
             $motivos[] = 'mismo código de barras';
             $bloqueante = true;
         }
 
+
         if (normalizar($f['nombre']) === $nombreNorm) {
             $motivos[] = 'nombre equivalente';
         }
+
 
         $duplicados[] = [
             'id_producto'            => (int)$f['id_producto'],
@@ -684,13 +820,16 @@ function verificarDuplicados(array $p, int $excluirId, bool $confirmado): void
         ];
     }
 
+
     if (!$bloqueante && $confirmado) {
         return;
     }
 
+
     $mensaje = $bloqueante
         ? 'Ya existe un producto con el mismo código. Revise el producto existente (puede estar inactivo).'
         : 'Se encontró un posible producto duplicado por nombre. Revíselo antes de continuar.';
+
 
     respuesta(false, [
         'duplicados'      => $duplicados,
@@ -698,10 +837,12 @@ function verificarDuplicados(array $p, int $excluirId, bool $confirmado): void
     ], $mensaje, 409);
 }
 
+
 /** Sincroniza producto_proveedor: inserta o actualiza los elegidos y desactiva (no borra) el resto. */
 function guardarProveedoresProducto(int $idProducto, array $proveedores): void
 {
     $pdo = db();
+
 
     $upsert = $pdo->prepare("
         INSERT INTO producto_proveedor (id_producto, id_proveedor, costo, estado, fecha_actualizacion)
@@ -709,6 +850,7 @@ function guardarProveedoresProducto(int $idProducto, array $proveedores): void
         ON CONFLICT (id_producto, id_proveedor)
         DO UPDATE SET costo = EXCLUDED.costo, estado = TRUE, fecha_actualizacion = NOW()
     ");
+
 
     foreach ($proveedores as $p) {
         $upsert->execute([
@@ -718,7 +860,9 @@ function guardarProveedoresProducto(int $idProducto, array $proveedores): void
         ]);
     }
 
+
     $ids = array_map(fn($p) => (int)$p['id_proveedor'], $proveedores);
+
 
     if ($ids) {
         $marcas = implode(',', array_fill(0, count($ids), '?'));
@@ -738,27 +882,38 @@ function guardarProveedoresProducto(int $idProducto, array $proveedores): void
     }
 }
 
+
 /** Foto del producto (con proveedores) para guardar en la bitácora. */
 function fotoProducto(int $id): array
 {
     $producto = obtenerProducto($id) ?? [];
     $producto['proveedores'] = proveedoresDeProducto($id);
 
+
     return $producto;
 }
+
 
 function accionCrearProducto(array $in): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $p           = leerProducto($in, null);
     $proveedores = leerProveedoresProducto($in);
+
 
     validarProveedoresProducto($proveedores, null);
     verificarDuplicados($p, 0, !empty($in['confirmar_duplicado']));
 
+
     $nuevo = enTransaccion(function () use ($p, $proveedores) {
+        // Sin código interno: se asigna el siguiente CR (CR600, CR601...).
+        if ($p['codigo_articulo_retail'] === null) {
+            $p['codigo_articulo_retail'] = libGenerarCodigoCR(db());
+        }
+
         $st = db()->prepare("
             INSERT INTO producto
                 (id_categoria, id_impuesto, codigo_articulo_retail, codigo_barras, nombre, descripcion, estado)
@@ -775,48 +930,65 @@ function accionCrearProducto(array $in): void
             ':descripcion'    => $p['descripcion'],
         ]);
 
+
         $id = (int)$st->fetchColumn();
 
+
         guardarProveedoresProducto($id, $proveedores);
+
 
         $foto = fotoProducto($id);
         auditar('PRODUCTO', 'CREAR', null, $foto);
 
+
         return $foto;
     }, 'No se pudo registrar el producto.');
 
-    respuesta(true, $nuevo, 'Producto registrado correctamente.', 201);
+
+    respuesta(
+        true,
+        $nuevo,
+        'Producto registrado correctamente. Código interno: ' . ($nuevo['codigo_articulo_retail'] ?? '—') . '.',
+        201
+    );
 }
+
 
 function accionEditarProducto(array $in): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $id = (int)($in['id_producto'] ?? 0);
     if ($id <= 0) {
         respuesta(false, null, 'Producto inválido.', 400);
     }
+
 
     $actual = obtenerProducto($id);
     if (!$actual) {
         respuesta(false, null, 'Producto no encontrado.', 404);
     }
 
+
     $p           = leerProducto($in, $actual);
     $proveedores = leerProveedoresProducto($in);
+
 
     validarProveedoresProducto($proveedores, $actual);
     verificarDuplicados($p, $id, !empty($in['confirmar_duplicado']));
 
+
     $nuevo = enTransaccion(function () use ($id, $p, $proveedores) {
         $antes = fotoProducto($id);
+
 
         $st = db()->prepare("
             UPDATE producto SET
                 id_categoria           = :id_categoria,
                 id_impuesto            = :id_impuesto,
-                codigo_articulo_retail = :codigo_interno,
+                codigo_articulo_retail = COALESCE(:codigo_interno, codigo_articulo_retail),
                 codigo_barras          = :codigo_barras,
                 nombre                 = :nombre,
                 descripcion            = :descripcion
@@ -832,71 +1004,89 @@ function accionEditarProducto(array $in): void
             ':id'             => $id,
         ]);
 
+
         guardarProveedoresProducto($id, $proveedores);
+
 
         $despues = fotoProducto($id);
         auditar('PRODUCTO', 'EDITAR', $antes, $despues);
 
+
         return $despues;
     }, 'No se pudo actualizar el producto.');
 
+
     respuesta(true, $nuevo, 'Producto actualizado correctamente.');
 }
+
 
 function cambiarEstadoProducto(array $in, bool $activar): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $id = (int)($in['id_producto'] ?? 0);
     if ($id <= 0) {
         respuesta(false, null, 'Producto inválido.', 400);
     }
+
 
     $actual = obtenerProducto($id);
     if (!$actual) {
         respuesta(false, null, 'Producto no encontrado.', 404);
     }
 
+
     if ($actual['estado'] === $activar) {
         respuesta(false, null, $activar ? 'El producto ya está activo.' : 'El producto ya está inactivo.', 409);
     }
 
+
     $nuevo = enTransaccion(function () use ($id, $activar) {
         $antes = fotoProducto($id);
+
 
         $st = db()->prepare('UPDATE producto SET estado = :estado WHERE id_producto = :id');
         $st->bindValue(':estado', $activar, PDO::PARAM_BOOL);
         $st->bindValue(':id', $id, PDO::PARAM_INT);
         $st->execute();
 
+
         $despues = fotoProducto($id);
         auditar('PRODUCTO', $activar ? 'ACTIVAR' : 'INACTIVAR', $antes, $despues);
+
 
         return $despues;
     }, 'No se pudo cambiar el estado del producto.');
 
+
     respuesta(true, $nuevo, $activar ? 'Producto activado correctamente.' : 'Producto inactivado correctamente.');
 }
+
 
 function accionInactivarProducto(array $in): void
 {
     cambiarEstadoProducto($in, false);
 }
 
+
 function accionActivarProducto(array $in): void
 {
     cambiarEstadoProducto($in, true);
 }
 
+
 function accionHistorialProducto(array $in): void
 {
     exigirSesion();
+
 
     $id = (int)($_GET['id'] ?? $in['id'] ?? 0);
     if ($id <= 0) {
         respuesta(false, null, 'Producto inválido.', 400);
     }
+
 
     $st = db()->prepare("
         SELECT b.id_evento, b.accion, b.valor_anterior, b.valor_nuevo, b.fecha,
@@ -910,6 +1100,7 @@ function accionHistorialProducto(array $in): void
     ");
     $st->execute([':id' => (string)$id]);
 
+
     $filas = array_map(function (array $f): array {
         return [
             'id_evento' => (int)$f['id_evento'],
@@ -921,25 +1112,32 @@ function accionHistorialProducto(array $in): void
         ];
     }, $st->fetchAll());
 
+
     respuesta(true, $filas);
 }
+
+
 
 
 /* ==========================================================
    CATEGORÍAS (HU-11)
 ========================================================== */
 
+
 function normalizarFilaCategoria(array $f): array
 {
     $f['id_categoria'] = (int)$f['id_categoria'];
     $f['estado']       = aBool($f['estado']);
 
+
     if (isset($f['total_productos'])) {
         $f['total_productos'] = (int)$f['total_productos'];
     }
 
+
     return $f;
 }
+
 
 function obtenerCategoria(int $id): ?array
 {
@@ -947,12 +1145,15 @@ function obtenerCategoria(int $id): ?array
     $st->execute([':id' => $id]);
     $fila = $st->fetch();
 
+
     return $fila ? normalizarFilaCategoria($fila) : null;
 }
+
 
 function accionListarCategorias(array $in): void
 {
     exigirSesion();
+
 
     $st = db()->query("
         SELECT c.id_categoria, c.nombre, c.descripcion, c.estado,
@@ -961,28 +1162,35 @@ function accionListarCategorias(array $in): void
         ORDER BY LOWER(c.nombre)
     ");
 
+
     respuesta(true, array_map('normalizarFilaCategoria', $st->fetchAll()));
 }
+
 
 function nombreCategoriaExiste(string $nombre, int $excluirId): bool
 {
     $st = db()->prepare('SELECT 1 FROM categoria WHERE LOWER(TRIM(nombre)) = LOWER(:n) AND id_categoria <> :id LIMIT 1');
     $st->execute([':n' => $nombre, ':id' => $excluirId]);
 
+
     return (bool)$st->fetchColumn();
 }
+
 
 function accionCrearCategoria(array $in): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $nombre      = campoTexto($in, 'nombre', 255, true, 'El nombre de la categoría');
     $descripcion = campoTexto($in, 'descripcion', 500, false, 'La descripción');
+
 
     if (nombreCategoriaExiste($nombre, 0)) {
         respuesta(false, null, 'Ya existe una categoría con ese nombre.', 409);
     }
+
 
     $fila = enTransaccion(function () use ($nombre, $descripcion) {
         $st = db()->prepare("
@@ -992,61 +1200,77 @@ function accionCrearCategoria(array $in): void
         ");
         $st->execute([':n' => $nombre, ':d' => $descripcion]);
 
+
         $nueva = obtenerCategoria((int)$st->fetchColumn());
         auditar('CATEGORIA', 'CREAR', null, $nueva);
+
 
         return $nueva;
     }, 'No se pudo crear la categoría.');
 
+
     respuesta(true, $fila, 'Categoría creada correctamente.', 201);
 }
+
 
 function accionEditarCategoria(array $in): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $id = (int)($in['id_categoria'] ?? 0);
     if ($id <= 0) {
         respuesta(false, null, 'Categoría inválida.', 400);
     }
+
 
     $antes = obtenerCategoria($id);
     if (!$antes) {
         respuesta(false, null, 'Categoría no encontrada.', 404);
     }
 
+
     $nombre      = campoTexto($in, 'nombre', 255, true, 'El nombre de la categoría');
     $descripcion = campoTexto($in, 'descripcion', 500, false, 'La descripción');
+
 
     if (nombreCategoriaExiste($nombre, $id)) {
         respuesta(false, null, 'Ya existe otra categoría con ese nombre.', 409);
     }
 
+
     $fila = enTransaccion(function () use ($id, $nombre, $descripcion, $antes) {
         $st = db()->prepare('UPDATE categoria SET nombre = :n, descripcion = :d WHERE id_categoria = :id');
         $st->execute([':n' => $nombre, ':d' => $descripcion, ':id' => $id]);
 
+
         $despues = obtenerCategoria($id);
         auditar('CATEGORIA', 'EDITAR', $antes, $despues);
+
 
         return $despues;
     }, 'No se pudo actualizar la categoría.');
 
+
     respuesta(true, $fila, 'Categoría actualizada correctamente.');
 }
+
 
 function cambiarEstadoCategoria(array $in, bool $activar): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $id = (int)($in['id_categoria'] ?? 0);
     $antes = $id > 0 ? obtenerCategoria($id) : null;
+
 
     if (!$antes) {
         respuesta(false, null, 'Categoría no encontrada.', 404);
     }
+
 
     $fila = enTransaccion(function () use ($id, $activar, $antes) {
         $st = db()->prepare('UPDATE categoria SET estado = :e WHERE id_categoria = :id');
@@ -1054,19 +1278,24 @@ function cambiarEstadoCategoria(array $in, bool $activar): void
         $st->bindValue(':id', $id, PDO::PARAM_INT);
         $st->execute();
 
+
         $despues = obtenerCategoria($id);
         auditar('CATEGORIA', $activar ? 'ACTIVAR' : 'INACTIVAR', $antes, $despues);
+
 
         return $despues;
     }, 'No se pudo cambiar el estado de la categoría.');
 
+
     respuesta(true, $fila, $activar ? 'Categoría activada correctamente.' : 'Categoría desactivada correctamente.');
 }
+
 
 function accionInactivarCategoria(array $in): void
 {
     cambiarEstadoCategoria($in, false);
 }
+
 
 function accionActivarCategoria(array $in): void
 {
@@ -1074,21 +1303,27 @@ function accionActivarCategoria(array $in): void
 }
 
 
+
+
 /* ==========================================================
    PROVEEDORES (HU-12)
 ========================================================== */
+
 
 function normalizarFilaProveedor(array $f): array
 {
     $f['id_proveedor'] = (int)$f['id_proveedor'];
     $f['estado']       = aBool($f['estado']);
 
+
     if (isset($f['total_productos'])) {
         $f['total_productos'] = (int)$f['total_productos'];
     }
 
+
     return $f;
 }
+
 
 function obtenerProveedor(int $id): ?array
 {
@@ -1099,12 +1334,15 @@ function obtenerProveedor(int $id): ?array
     $st->execute([':id' => $id]);
     $fila = $st->fetch();
 
+
     return $fila ? normalizarFilaProveedor($fila) : null;
 }
+
 
 function accionListarProveedores(array $in): void
 {
     exigirSesion();
+
 
     $st = db()->query("
         SELECT pr.id_proveedor, pr.nombre, pr.contacto, pr.telefono, pr.correo, pr.direccion, pr.estado,
@@ -1114,8 +1352,10 @@ function accionListarProveedores(array $in): void
         ORDER BY LOWER(pr.nombre)
     ");
 
+
     respuesta(true, array_map('normalizarFilaProveedor', $st->fetchAll()));
 }
+
 
 function leerProveedor(array $in): array
 {
@@ -1127,35 +1367,44 @@ function leerProveedor(array $in): array
         'direccion' => campoTexto($in, 'direccion', 500, false, 'La dirección'),
     ];
 
+
     if ($proveedor['correo'] !== null && !filter_var($proveedor['correo'], FILTER_VALIDATE_EMAIL)) {
         respuesta(false, null, 'El correo electrónico no es válido.', 400);
     }
+
 
     if ($proveedor['telefono'] !== null && !preg_match('/^[0-9+\-\s()]{7,50}$/', $proveedor['telefono'])) {
         respuesta(false, null, 'El teléfono no es válido. Use solo números, espacios, + - ( ).', 400);
     }
 
+
     return $proveedor;
 }
+
 
 function nombreProveedorExiste(string $nombre, int $excluirId): bool
 {
     $st = db()->prepare('SELECT 1 FROM proveedor WHERE LOWER(TRIM(nombre)) = LOWER(:n) AND id_proveedor <> :id LIMIT 1');
     $st->execute([':n' => $nombre, ':id' => $excluirId]);
 
+
     return (bool)$st->fetchColumn();
 }
+
 
 function accionCrearProveedor(array $in): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $p = leerProveedor($in);
+
 
     if (nombreProveedorExiste($p['nombre'], 0)) {
         respuesta(false, null, 'Ya existe un proveedor con ese nombre.', 409);
     }
+
 
     $fila = enTransaccion(function () use ($p) {
         $st = db()->prepare("
@@ -1171,35 +1420,44 @@ function accionCrearProveedor(array $in): void
             ':direccion' => $p['direccion'],
         ]);
 
+
         $nuevo = obtenerProveedor((int)$st->fetchColumn());
         auditar('PROVEEDOR', 'CREAR', null, $nuevo);
+
 
         return $nuevo;
     }, 'No se pudo crear el proveedor.');
 
+
     respuesta(true, $fila, 'Proveedor creado correctamente.', 201);
 }
+
 
 function accionEditarProveedor(array $in): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $id = (int)($in['id_proveedor'] ?? 0);
     if ($id <= 0) {
         respuesta(false, null, 'Proveedor inválido.', 400);
     }
+
 
     $antes = obtenerProveedor($id);
     if (!$antes) {
         respuesta(false, null, 'Proveedor no encontrado.', 404);
     }
 
+
     $p = leerProveedor($in);
+
 
     if (nombreProveedorExiste($p['nombre'], $id)) {
         respuesta(false, null, 'Ya existe otro proveedor con ese nombre.', 409);
     }
+
 
     $fila = enTransaccion(function () use ($id, $p, $antes) {
         $st = db()->prepare("
@@ -1217,26 +1475,33 @@ function accionEditarProveedor(array $in): void
             ':id'        => $id,
         ]);
 
+
         $despues = obtenerProveedor($id);
         auditar('PROVEEDOR', 'EDITAR', $antes, $despues);
+
 
         return $despues;
     }, 'No se pudo actualizar el proveedor.');
 
+
     respuesta(true, $fila, 'Proveedor actualizado correctamente.');
 }
+
 
 function cambiarEstadoProveedor(array $in, bool $activar): void
 {
     exigirAdministrador();
     exigirPost();
 
+
     $id = (int)($in['id_proveedor'] ?? 0);
     $antes = $id > 0 ? obtenerProveedor($id) : null;
+
 
     if (!$antes) {
         respuesta(false, null, 'Proveedor no encontrado.', 404);
     }
+
 
     $fila = enTransaccion(function () use ($id, $activar, $antes) {
         $st = db()->prepare('UPDATE proveedor SET estado = :e WHERE id_proveedor = :id');
@@ -1244,19 +1509,24 @@ function cambiarEstadoProveedor(array $in, bool $activar): void
         $st->bindValue(':id', $id, PDO::PARAM_INT);
         $st->execute();
 
+
         $despues = obtenerProveedor($id);
         auditar('PROVEEDOR', $activar ? 'ACTIVAR' : 'INACTIVAR', $antes, $despues);
+
 
         return $despues;
     }, 'No se pudo cambiar el estado del proveedor.');
 
+
     respuesta(true, $fila, $activar ? 'Proveedor activado correctamente.' : 'Proveedor desactivado correctamente.');
 }
+
 
 function accionInactivarProveedor(array $in): void
 {
     cambiarEstadoProveedor($in, false);
 }
+
 
 function accionActivarProveedor(array $in): void
 {
@@ -1264,13 +1534,26 @@ function accionActivarProveedor(array $in): void
 }
 
 
+
+
+/** Código interno que recibirá el próximo producto (solo se muestra; no se reserva). */
+function accionSiguienteCodigo(array $in): void
+{
+    exigirAdministrador();
+
+    respuesta(true, ['codigo' => libSiguienteCodigoCR(db())]);
+}
+
+
 /* ==========================================================
    SESIÓN ACTUAL (mostrar usuario y ocultar acciones)
 ========================================================== */
 
+
 function accionSesion(array $in): void
 {
     $u = exigirSesion();
+
 
     respuesta(true, [
         'nombre'   => trim(($u['nombre'] ?? '') . ' ' . ($u['apellido'] ?? '')),
@@ -1281,15 +1564,20 @@ function accionSesion(array $in): void
 }
 
 
+
+
 /* ==========================================================
    ENRUTADOR
 ========================================================== */
 
+
 $entrada = leerEntrada();
 $accion  = (string)($_GET['accion'] ?? $entrada['accion'] ?? '');
 
+
 $acciones = [
     'sesion'                => 'accionSesion',
+
 
     'listar_productos'      => 'accionListarProductos',
     'obtener_producto'      => 'accionObtenerProducto',
@@ -1301,14 +1589,18 @@ $acciones = [
     'inactivar_producto'    => 'accionInactivarProducto',
     'activar_producto'      => 'accionActivarProducto',
     'historial_producto'    => 'accionHistorialProducto',
+    'siguiente_codigo'      => 'accionSiguienteCodigo',
+
 
     'listar_impuestos'      => 'accionListarImpuestos',
+
 
     'listar_categorias'     => 'accionListarCategorias',
     'crear_categoria'       => 'accionCrearCategoria',
     'editar_categoria'      => 'accionEditarCategoria',
     'inactivar_categoria'   => 'accionInactivarCategoria',
     'activar_categoria'     => 'accionActivarCategoria',
+
 
     'listar_proveedores'    => 'accionListarProveedores',
     'crear_proveedor'       => 'accionCrearProveedor',
@@ -1317,10 +1609,12 @@ $acciones = [
     'activar_proveedor'     => 'accionActivarProveedor',
 ];
 
+
 try {
     if (!isset($acciones[$accion])) {
         respuesta(false, null, 'Acción no reconocida.', 404);
     }
+
 
     $acciones[$accion]($entrada);
 } catch (Throwable $e) {
