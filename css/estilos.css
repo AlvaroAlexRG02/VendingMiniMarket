@@ -2251,6 +2251,16 @@ body.pagina-app {
     color: #b45309;
 }
 
+.badge-azul {
+    background: var(--azul-claro);
+    color: var(--azul);
+}
+
+.badge-morado {
+    background: var(--morado-claro);
+    color: var(--morado);
+}
+
 /* ==========================================================
    PRODUCTOS EN LAS TABLAS
 ========================================================== */

@@ -743,15 +743,13 @@
                             Proveedor
                         </label>
 
-                        <input
-                            type="text"
+                        <select
                             id="proveedorFactura"
                             name="proveedorFactura"
-                            placeholder="Ingrese el proveedor"
-                            maxlength="100"
-                            autocomplete="off"
                             required
                         >
+                            <option value="">Seleccione un proveedor</option>
+                        </select>
 
                     </div>
 
@@ -1104,6 +1102,32 @@
     </div>
 
     <script src="../js/app.js"></script>
+
+    <script>
+        // Carga los proveedores reales (tabla proveedor) en el select de "Nueva factura".
+        // No reemplaza la lógica de guardado existente: el select sigue entregando
+        // el nombre del proveedor en .value, igual que el campo de texto anterior.
+        (async () => {
+            const select = document.getElementById("proveedorFactura");
+            if (!select) return;
+
+            try {
+                const respuesta = await fetch("../api/compras/pedidos.php?accion=listar_proveedores", {
+                    credentials: "same-origin"
+                });
+                const resultado = await respuesta.json();
+
+                if (resultado.success) {
+                    const opciones = resultado.data
+                        .map((p) => `<option value="${p.nombre}">${p.nombre}</option>`)
+                        .join("");
+                    select.innerHTML = '<option value="">Seleccione un proveedor</option>' + opciones;
+                }
+            } catch (error) {
+                console.error("No fue posible cargar los proveedores:", error);
+            }
+        })();
+    </script>
 
 </body>
 </html>
