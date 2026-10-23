@@ -1055,34 +1055,62 @@ header("Expires: 0");
                 console.error("No fue posible cargar los proveedores:", error);
             }
 
-            // Al elegir un proveedor, carga sus productos (tabla producto_proveedor)
-            // para que la fila "Producto" del formulario sea un select, no texto libre.
-            select.addEventListener("change", async () => {
-                const idProveedor = select.selectedOptions[0]?.dataset.id || "";
+            // Carga los productos del proveedor (tabla producto_proveedor) en
+            // window._productosProveedorVending. Expuesta para que prepararCompraVending
+            // (js/app.js) también la use al editar una compra existente.
+            window.cargarProductosProveedorCompra = async (idProveedor) => {
                 window._productosProveedorVending = [];
 
+                if (!idProveedor) return;
+
+                try {
+                    const respuesta = await fetch(
+                        `../api/compras/pedidos.php?accion=listar_productos_proveedor&id_proveedor=${idProveedor}`,
+                        { credentials: "same-origin" }
+                    );
+                    const resultado = await respuesta.json();
+                    if (resultado.success) {
+                        window._productosProveedorVending = resultado.data;
+                    }
+                } catch (error) {
+                    console.error("No fue posible cargar los productos del proveedor:", error);
+                }
+            };
+
+            // Al elegir un proveedor manualmente, carga sus productos y arranca
+            // con una sola fila en blanco (flujo de "Nueva compra").
+            select.addEventListener("change", async () => {
+                const idProveedor = select.selectedOptions[0]?.dataset.id || "";
                 const lista = document.getElementById("listaProductosCompra");
                 if (lista) lista.innerHTML = "";
 
-                if (idProveedor) {
-                    try {
-                        const respuesta = await fetch(
-                            `../api/compras/pedidos.php?accion=listar_productos_proveedor&id_proveedor=${idProveedor}`,
-                            { credentials: "same-origin" }
-                        );
-                        const resultado = await respuesta.json();
-                        if (resultado.success) {
-                            window._productosProveedorVending = resultado.data;
-                        }
-                    } catch (error) {
-                        console.error("No fue posible cargar los productos del proveedor:", error);
-                    }
-                }
+                await window.cargarProductosProveedorCompra(idProveedor);
 
                 if (typeof agregarFilaProductoVending === "function" && lista) {
                     agregarFilaProductoVending("listaProductosCompra", "mensajeSinProductosCompra");
                 }
             });
+        })();
+    </script>
+
+    <script>
+        // Determina si el usuario actual puede editar compras (Administrador o
+        // Gerente General), reutilizando el endpoint "sesion" de catalogo.php.
+        (async () => {
+            try {
+                const respuesta = await fetch("../api/catalogo/catalogo.php?accion=sesion", {
+                    credentials: "same-origin"
+                });
+                const resultado = await respuesta.json();
+
+                if (resultado.success) {
+                    const rol = (resultado.data.rol || "").trim().toLowerCase();
+                    window._puedeEditarCompra = rol === "administrador" || rol === "gerente general";
+                    renderComprasVending();
+                }
+            } catch (error) {
+                console.error("No fue posible determinar el rol del usuario:", error);
+            }
         })();
     </script>
 

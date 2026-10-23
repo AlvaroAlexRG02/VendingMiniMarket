@@ -2,13 +2,15 @@
   VENDING MINI MARKET — Pedidos a proveedor (compras/pedido.php)
   HU-30 · crear pedidos a proveedor
   HU-31 · consultar y actualizar estado
-  Requiere: pedido-api.js cargado antes.
+  HU-32 · recibir pedidos (parcial o total)
+  Requiere: pedido-api.js y recepcion-api.js cargados antes.
 =========================================================*/
 
 (() => {
     'use strict';
 
     const { api } = window.PedidosApi;
+    const { api: apiRecepciones } = window.RecepcionesApi;
     const $ = (id) => document.getElementById(id);
 
     const ETIQUETAS_ESTADO = {
@@ -47,6 +49,10 @@
         try {
             await Promise.all([cargarProveedores(), cargarUbicaciones()]);
             await cargarPedidos();
+
+            if (puedeActualizarEstado) {
+                await cargarRecepcionesPendientes();
+            }
         } catch (error) {
             mostrarMensaje(error.message, 'error');
         }
@@ -58,6 +64,12 @@
         $('botonCerrarModalPedido')?.addEventListener('click', cerrarModal);
         $('botonCancelarPedido')?.addEventListener('click', cerrarModal);
         document.querySelector('[data-cerrar-modal-pedido]')?.addEventListener('click', cerrarModal);
+
+        $('botonCerrarModalRecepcion')?.addEventListener('click', cerrarModalRecepcion);
+        $('botonCancelarRecepcion')?.addEventListener('click', cerrarModalRecepcion);
+        document.querySelector('[data-cerrar-modal-recepcion]')?.addEventListener('click', cerrarModalRecepcion);
+        $('formularioRecepcion')?.addEventListener('submit', guardarRecepcion);
+        $('cuerpoTablaRecepcionesPendientes')?.addEventListener('click', manejarClicConfirmarRecepcion);
 
         $('formularioPedido')?.addEventListener('submit', guardarPedido);
         $('proveedorPedido')?.addEventListener('change', cargarProductosDelProveedor);
@@ -182,7 +194,7 @@
             </div>
             <div class="grupo-formulario">
                 <label>Cantidad</label>
-                <input class="item-cantidad" type="number" min="1" value="1" required>
+                <input class="item-cantidad" type="number" min="1" value="1" autocomplete="off" required>
             </div>
             <div class="grupo-formulario">
                 <label>Costo unitario</label>
@@ -206,6 +218,8 @@
         });
 
         lista.appendChild(fila);
+        fila.querySelector('.item-producto').value = '';
+        fila.querySelector('.item-cantidad').value = 1;
         mostrarElemento('mensajeSinProductosPedido', false);
         actualizarFila(fila);
     }
@@ -349,7 +363,19 @@
     }
 
     function celdaAcciones(pedido) {
-        if (!puedeActualizarEstado || ['RECIBIDO', 'CANCELADO'].includes(pedido.estado)) {
+        const cerrado = ['RECIBIDO', 'CANCELADO'].includes(pedido.estado);
+
+        const botonRecibir = cerrado
+            ? ''
+            : `<button type="button" class="boton-tabla boton-recibir-pedido" data-pedido="${pedido.id_pedido}" title="Recibir pedido">
+                   <i class="fa-solid fa-truck-ramp-box"></i>
+               </button>`;
+
+        if (!puedeActualizarEstado) {
+            return botonRecibir || '-';
+        }
+
+        if (cerrado) {
             return '-';
         }
 
@@ -358,15 +384,20 @@
             .join('');
 
         return `
-            <select class="selector-estado-pedido" data-pedido="${pedido.id_pedido}">
-                ${opciones}
-            </select>
+            <div class="acciones-tabla">
+                ${botonRecibir}
+                <select class="selector-estado-pedido" data-pedido="${pedido.id_pedido}">
+                    ${opciones}
+                </select>
+            </div>
         `;
     }
 
     async function manejarClicTabla(evento) {
-        const select = evento.target.closest('select.selector-estado-pedido');
-        if (!select) return;
+        const boton = evento.target.closest('button.boton-recibir-pedido');
+        if (!boton) return;
+
+        await abrirModalRecepcion(Number(boton.dataset.pedido));
     }
 
     document.addEventListener('change', async (evento) => {
@@ -386,6 +417,167 @@
             await cargarPedidos();
         }
     });
+
+
+    /*-----------------------------------------------------
+      HU-32 — RECIBIR PEDIDO
+    -----------------------------------------------------*/
+
+    async function abrirModalRecepcion(idPedido) {
+        try {
+            const resultado = await api('obtener_pedido', null, { id_pedido: idPedido });
+            const pedido = resultado.data;
+
+            $('idPedidoRecepcion').value = pedido.id_pedido;
+            $('observacionesRecepcion').value = '';
+            $('mensajeFormularioRecepcion').textContent = '';
+
+            const lista = $('listaProductosRecepcion');
+            const pendientes = pedido.detalle.filter((d) => d.cantidad_recibida < d.cantidad_solicitada);
+
+            if (!pendientes.length) {
+                lista.innerHTML = '<p>Este pedido ya no tiene cantidades pendientes de recibir.</p>';
+            } else {
+                lista.innerHTML = pendientes.map((d) => {
+                    const pendiente = d.cantidad_solicitada - d.cantidad_recibida;
+                    return `
+                        <div class="fila-producto-compra" data-producto="${d.id_producto}">
+                            <div class="grupo-formulario">
+                                <label>Producto</label>
+                                <input type="text" value="${escaparHTML(d.nombre)}" readonly>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label>Solicitado</label>
+                                <input type="text" value="${d.cantidad_solicitada}" readonly>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label>Ya recibido</label>
+                                <input type="text" value="${d.cantidad_recibida}" readonly>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label>Recibido ahora (máx. ${pendiente})</label>
+                                <input
+                                    class="item-cantidad-recepcion"
+                                    type="number"
+                                    min="0"
+                                    max="${pendiente}"
+                                    value="0"
+                                >
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                lista.querySelectorAll('.item-cantidad-recepcion').forEach((campo) => {
+                    const maximo = Number(campo.max);
+
+                    const validar = () => {
+                        const valor = Number(campo.value);
+
+                        if (campo.value !== '' && valor > maximo) {
+                            campo.setCustomValidity(`El valor debe ser menor o igual a ${maximo}.`);
+                        } else if (campo.value !== '' && valor < 0) {
+                            campo.setCustomValidity('El valor debe ser mayor o igual a 0.');
+                        } else if (campo.validity.stepMismatch) {
+                            campo.setCustomValidity('Ingresa un número entero válido.');
+                        } else {
+                            campo.setCustomValidity('');
+                        }
+                    };
+
+                    campo.addEventListener('input', validar);
+                    campo.addEventListener('invalid', validar);
+                });
+            }
+
+            $('modalRecepcion').hidden = false;
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+    }
+
+    function cerrarModalRecepcion() {
+        $('modalRecepcion').hidden = true;
+    }
+
+    async function guardarRecepcion(evento) {
+        evento.preventDefault();
+
+        const items = [...document.querySelectorAll('#listaProductosRecepcion .fila-producto-compra')]
+            .map((fila) => ({
+                id_producto: Number(fila.dataset.producto),
+                cantidad: Number(fila.querySelector('.item-cantidad-recepcion').value) || 0
+            }))
+            .filter((item) => item.cantidad > 0);
+
+        if (!items.length) {
+            $('mensajeFormularioRecepcion').textContent = 'Indica al menos una cantidad recibida mayor a cero.';
+            return;
+        }
+
+        try {
+            const resultado = await apiRecepciones('registrar_recepcion', {
+                id_pedido: Number($('idPedidoRecepcion').value),
+                items,
+                observaciones: $('observacionesRecepcion').value.trim()
+            });
+
+            cerrarModalRecepcion();
+            mostrarMensaje(resultado.message, 'exito');
+            await cargarPedidos();
+
+            if (puedeActualizarEstado) {
+                await cargarRecepcionesPendientes();
+            }
+        } catch (error) {
+            $('mensajeFormularioRecepcion').textContent = error.message;
+        }
+    }
+
+
+    /*-----------------------------------------------------
+      HU-32 — CONFIRMAR RECEPCIÓN (Encargado/Administrador)
+    -----------------------------------------------------*/
+
+    async function cargarRecepcionesPendientes() {
+        try {
+            const resultado = await apiRecepciones('listar_recepciones_pendientes');
+            const pendientes = resultado.data || [];
+
+            mostrarElemento('panelRecepcionesPendientes', pendientes.length > 0);
+
+            $('cuerpoTablaRecepcionesPendientes').innerHTML = pendientes.map((r) => `
+                <tr>
+                    <td>${new Date(r.fecha_movimiento).toLocaleString('es-CR')}</td>
+                    <td>${escaparHTML(r.proveedor_nombre)}</td>
+                    <td>${escaparHTML(r.ubicacion_nombre)}</td>
+                    <td>${escaparHTML(`${r.registrado_por_nombre} ${r.registrado_por_apellido || ''}`.trim())}</td>
+                    <td>
+                        <button type="button" class="boton boton-azul boton-confirmar-recepcion" data-movimiento="${r.id_movimiento}">
+                            Confirmar
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+    }
+
+    async function manejarClicConfirmarRecepcion(evento) {
+        const boton = evento.target.closest('button.boton-confirmar-recepcion');
+        if (!boton) return;
+
+        try {
+            await apiRecepciones('confirmar_recepcion', { id_movimiento: Number(boton.dataset.movimiento) });
+
+            mostrarMensaje('Recepción confirmada correctamente.', 'exito');
+            await cargarPedidos();
+            await cargarRecepcionesPendientes();
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+    }
 
 
     /*-----------------------------------------------------
