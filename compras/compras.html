@@ -252,7 +252,7 @@
                 <div class="acciones-encabezado-compras">
 
                     <a
-                        href="pedido.html"
+                        href="pedido.php"
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-file-circle-plus"></i>
@@ -769,15 +769,13 @@
                             Proveedor
                         </label>
 
-                        <input
-                            type="text"
+                        <select
                             id="proveedorCompra"
                             name="proveedorCompra"
-                            placeholder="Ingrese el proveedor"
-                            maxlength="100"
-                            autocomplete="off"
                             required
                         >
+                            <option value="">Seleccione un proveedor</option>
+                        </select>
 
                     </div>
 
@@ -1001,6 +999,75 @@
     </div>
 
     <script src="../js/app.js"></script>
+
+    <script>
+        // Carga los proveedores reales (tabla proveedor) y los impuestos reales
+        // (tabla impuesto) usados en "Nueva compra".
+        // No reemplaza la lógica de guardado existente: los campos siguen
+        // entregando el mismo tipo de valor que antes (nombre / número).
+        (async () => {
+            try {
+                const respuesta = await fetch("../api/catalogo/catalogo.php?accion=listar_impuestos", {
+                    credentials: "same-origin"
+                });
+                const resultado = await respuesta.json();
+
+                if (resultado.success) {
+                    window._impuestosVending = resultado.data.filter((i) => i.estado);
+                }
+            } catch (error) {
+                console.error("No fue posible cargar los impuestos:", error);
+            }
+
+            const select = document.getElementById("proveedorCompra");
+            if (!select) return;
+
+            try {
+                const respuesta = await fetch("../api/compras/pedidos.php?accion=listar_proveedores", {
+                    credentials: "same-origin"
+                });
+                const resultado = await respuesta.json();
+
+                if (resultado.success) {
+                    const opciones = resultado.data
+                        .map((p) => `<option value="${p.nombre}" data-id="${p.id_proveedor}">${p.nombre}</option>`)
+                        .join("");
+                    select.innerHTML = '<option value="">Seleccione un proveedor</option>' + opciones;
+                }
+            } catch (error) {
+                console.error("No fue posible cargar los proveedores:", error);
+            }
+
+            // Al elegir un proveedor, carga sus productos (tabla producto_proveedor)
+            // para que la fila "Producto" del formulario sea un select, no texto libre.
+            select.addEventListener("change", async () => {
+                const idProveedor = select.selectedOptions[0]?.dataset.id || "";
+                window._productosProveedorVending = [];
+
+                const lista = document.getElementById("listaProductosCompra");
+                if (lista) lista.innerHTML = "";
+
+                if (idProveedor) {
+                    try {
+                        const respuesta = await fetch(
+                            `../api/compras/pedidos.php?accion=listar_productos_proveedor&id_proveedor=${idProveedor}`,
+                            { credentials: "same-origin" }
+                        );
+                        const resultado = await respuesta.json();
+                        if (resultado.success) {
+                            window._productosProveedorVending = resultado.data;
+                        }
+                    } catch (error) {
+                        console.error("No fue posible cargar los productos del proveedor:", error);
+                    }
+                }
+
+                if (typeof agregarFilaProductoVending === "function" && lista) {
+                    agregarFilaProductoVending("listaProductosCompra", "mensajeSinProductosCompra");
+                }
+            });
+        })();
+    </script>
 
 </body>
 </html>

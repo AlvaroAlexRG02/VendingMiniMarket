@@ -154,6 +154,17 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
                 Respaldos
             </a>
 
+            <a href="../compras/compras.html">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a href="../ventas/ventas.html">
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+            </a>
+
         <?php endif; ?>
 
         <?php if (esAdministrador()): ?>
