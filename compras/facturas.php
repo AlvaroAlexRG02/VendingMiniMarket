@@ -17,7 +17,9 @@ $nombreUsuario = trim(
     ($_SESSION["usuario"]["apellido"] ?? "")
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
+$idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
 $puedeRevisarFactura = esAdministrador() || esEncargado();
+$puedeValidarFactura = esAdministrador();
 
 ?>
 
@@ -46,7 +48,7 @@ $puedeRevisarFactura = esAdministrador() || esEncargado();
     >
 </head>
 
-<body class="pagina-app" data-puede-revisar-factura="<?= $puedeRevisarFactura ? '1' : '0' ?>">
+<body class="pagina-app" data-puede-revisar-factura="<?= $puedeRevisarFactura ? '1' : '0' ?>" data-puede-validar-factura="<?= $puedeValidarFactura ? '1' : '0' ?>" data-id-usuario-actual="<?= $idUsuarioActual ?>">
 
     <!-- ==========================================
          BARRA LATERAL
@@ -583,8 +585,8 @@ $puedeRevisarFactura = esAdministrador() || esEncargado();
                 <div class="acciones-modal-producto">
                     <button type="button" id="botonCancelarFactura" class="boton boton-borde">Cancelar</button>
                     <button type="submit" class="boton boton-azul">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        Guardar factura
+                        <i class="fa-solid fa-paper-plane"></i>
+                        Enviar a validación
                     </button>
                 </div>
 
@@ -697,6 +699,11 @@ $puedeRevisarFactura = esAdministrador() || esEncargado();
                 <textarea id="observacionesFacturaDetalle" rows="3" maxlength="500"></textarea>
             </div>
 
+            <div class="grupo-formulario" id="grupoMotivoRechazoFactura" hidden>
+                <label for="motivoRechazoFactura">Motivo de rechazo (obligatorio para rechazar)</label>
+                <textarea id="motivoRechazoFactura" rows="2" maxlength="300"></textarea>
+            </div>
+
             <div class="resumen-compra-formulario">
                 <div>
                     <span>Subtotal</span>
@@ -721,8 +728,16 @@ $puedeRevisarFactura = esAdministrador() || esEncargado();
                     Guardar cambios
                 </button>
                 <button type="button" id="botonEnviarRevisionDetalle" class="boton boton-azul" hidden>
-                    <i class="fa-solid fa-paper-plane"></i>
-                    Enviar a revisión
+                    <i class="fa-solid fa-check-double"></i>
+                    Validar factura
+                </button>
+                <button type="button" id="botonRechazarFacturaDetalle" class="boton boton-peligro" hidden>
+                    <i class="fa-solid fa-xmark"></i>
+                    Rechazar
+                </button>
+                <button type="button" id="botonAprobarFacturaDetalle" class="boton boton-azul" hidden>
+                    <i class="fa-solid fa-check"></i>
+                    Aprobar
                 </button>
             </div>
 

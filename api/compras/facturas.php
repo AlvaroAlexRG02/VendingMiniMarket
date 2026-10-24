@@ -81,6 +81,18 @@ function exigirPuedeRevisarFactura(): array
     return $usuario;
 }
 
+/** HU-34: solo el Administrador aprueba o rechaza una factura en revisión. */
+function exigirPuedeValidarFactura(): array
+{
+    $usuario = exigirSesion();
+
+    if (!esAdministrador()) {
+        respuesta(false, null, 'No tiene permisos para validar facturas.', 403);
+    }
+
+    return $usuario;
+}
+
 function exigirPost(): void
 {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -392,7 +404,7 @@ function accionMarcarEnRevision(array $in): void
     }
 
     if ($factura['estado'] !== 'PENDIENTE') {
-        respuesta(false, null, 'Solo se pueden enviar a revisión las facturas pendientes.', 409);
+        respuesta(false, null, 'Solo se pueden validar las facturas pendientes.', 409);
     }
 
     exigirOperarEnUbicacion(db(), (int)$factura['id_tienda']);
@@ -410,7 +422,7 @@ function accionMarcarEnRevision(array $in): void
         return $foto;
     }, 'No se pudo enviar la factura a revisión.');
 
-    respuesta(true, $nuevo, 'Factura enviada a revisión del Administrador.');
+    respuesta(true, $nuevo, 'Factura validada correctamente. Queda pendiente de aprobación del Administrador.');
 }
 
 
@@ -418,13 +430,13 @@ function accionMarcarEnRevision(array $in): void
    HU-33 — EDITAR FACTURA (Encargado/Administrador)
 ========================================================== */
 
-const ESTADOS_FACTURA_EDITABLES = ['PENDIENTE', 'EN_REVISION'];
+const ESTADOS_FACTURA_EDITABLES = ['PENDIENTE', 'EN_REVISION', 'RECHAZADA'];
 
-/** Factura + su tienda, estado y evidencia actual, o responde 404 si no existe. */
+/** Factura + su tienda, estado, evidencia actual y creador, o responde 404 si no existe. */
 function obtenerFacturaParaEditar(int $idFactura): array
 {
     $st = db()->prepare("
-        SELECT f.id_factura, f.estado, f.id_proveedor, f.evidencia_url, ubi.id_tienda
+        SELECT f.id_factura, f.estado, f.id_proveedor, f.evidencia_url, f.id_usuario_registra, ubi.id_tienda
         FROM factura_proveedor f
         JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = f.id_ubicacion
         WHERE f.id_factura = :id
@@ -441,7 +453,7 @@ function obtenerFacturaParaEditar(int $idFactura): array
 
 function accionActualizarFactura(array $in): void
 {
-    exigirPuedeRevisarFactura();
+    $usuario = exigirSesion();
     exigirPost();
 
     $idFactura = (int)($_POST['id_factura'] ?? 0);
@@ -452,8 +464,19 @@ function accionActualizarFactura(array $in): void
 
     $factura = obtenerFacturaParaEditar($idFactura);
 
-    if (!in_array($factura['estado'], ESTADOS_FACTURA_EDITABLES, true)) {
-        respuesta(false, null, 'Solo se pueden editar facturas pendientes o en revisión.', 409);
+    $esRevisor = esAdministrador() || esEncargado();
+    $esCreador = (int)$usuario['id_usuario'] === (int)$factura['id_usuario_registra'];
+
+    if (!$esRevisor && !$esCreador) {
+        respuesta(false, null, 'No tiene permisos para editar esta factura.', 403);
+    }
+
+    if ($esRevisor) {
+        if (!in_array($factura['estado'], ESTADOS_FACTURA_EDITABLES, true)) {
+            respuesta(false, null, 'Solo se pueden editar facturas pendientes, en revisión o rechazadas.', 409);
+        }
+    } elseif (!in_array($factura['estado'], ['PENDIENTE', 'RECHAZADA'], true)) {
+        respuesta(false, null, 'Ya no puede editar esta factura porque está en revisión o fue aprobada.', 409);
     }
 
     exigirOperarEnUbicacion(db(), (int)$factura['id_tienda']);
@@ -512,7 +535,12 @@ function accionActualizarFactura(array $in): void
                 monto_impuesto = :monto_impuesto,
                 monto_total = :monto_total,
                 observaciones = :observaciones,
-                evidencia_url = COALESCE(:evidencia_url, evidencia_url)
+                evidencia_url = COALESCE(:evidencia_url, evidencia_url),
+                estado = CASE WHEN estado = 'RECHAZADA' THEN 'PENDIENTE' ELSE estado END,
+                id_usuario_revisa = CASE WHEN estado = 'RECHAZADA' THEN NULL ELSE id_usuario_revisa END,
+                fecha_revision = CASE WHEN estado = 'RECHAZADA' THEN NULL ELSE fecha_revision END,
+                id_usuario_valida = CASE WHEN estado = 'RECHAZADA' THEN NULL ELSE id_usuario_valida END,
+                fecha_validacion = CASE WHEN estado = 'RECHAZADA' THEN NULL ELSE fecha_validacion END
             WHERE id_factura = :id
         ")->execute([
             ':numero_factura'    => $numeroFactura,
@@ -555,6 +583,141 @@ function accionActualizarFactura(array $in): void
     }
 
     respuesta(true, $resultado, 'Factura actualizada correctamente.');
+}
+
+
+/* ==========================================================
+   HU-34 — VALIDACIÓN FINAL DEL ADMINISTRADOR
+========================================================== */
+
+/** Factura + su tienda, proveedor y estado actual, o responde 404 si no existe. */
+function obtenerFacturaParaValidar(int $idFactura): array
+{
+    $st = db()->prepare("
+        SELECT f.id_factura, f.estado, f.observaciones, f.id_proveedor, ubi.id_tienda
+        FROM factura_proveedor f
+        JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = f.id_ubicacion
+        WHERE f.id_factura = :id
+    ");
+    $st->execute([':id' => $idFactura]);
+    $factura = $st->fetch();
+
+    if (!$factura) {
+        respuesta(false, null, 'La factura no existe.', 404);
+    }
+
+    return $factura;
+}
+
+/** HU-34 criterio: al aprobar una factura, su costo_unitario real reemplaza el costo vigente del proveedor. */
+function actualizarCostosProveedorDesdeFactura(int $idFactura, int $idProveedor): void
+{
+    $detalle = db()->prepare("
+        SELECT id_producto, costo_unitario
+        FROM factura_proveedor_detalle
+        WHERE id_factura = :id
+    ");
+    $detalle->execute([':id' => $idFactura]);
+
+    $actualizar = db()->prepare("
+        UPDATE producto_proveedor
+        SET costo = :costo, fecha_actualizacion = NOW()
+        WHERE id_producto = :id_producto AND id_proveedor = :id_proveedor
+    ");
+
+    foreach ($detalle->fetchAll() as $item) {
+        $actualizar->execute([
+            ':costo'        => $item['costo_unitario'],
+            ':id_producto'  => $item['id_producto'],
+            ':id_proveedor' => $idProveedor,
+        ]);
+    }
+}
+
+function accionAprobarFactura(array $in): void
+{
+    $usuario = exigirPuedeValidarFactura();
+    exigirPost();
+
+    $idFactura = (int)($in['id_factura'] ?? 0);
+
+    if ($idFactura <= 0) {
+        respuesta(false, null, 'Factura inválida.', 400);
+    }
+
+    $factura = obtenerFacturaParaValidar($idFactura);
+
+    if ($factura['estado'] !== 'EN_REVISION') {
+        respuesta(false, null, 'Solo se pueden aprobar facturas en revisión.', 409);
+    }
+
+    exigirOperarEnUbicacion(db(), (int)$factura['id_tienda']);
+
+    $nuevo = enTransaccion(function () use ($idFactura, $usuario, $factura) {
+        db()->prepare("
+            UPDATE factura_proveedor
+            SET estado = 'APROBADA', id_usuario_valida = :usuario, fecha_validacion = NOW()
+            WHERE id_factura = :id
+        ")->execute([':usuario' => $usuario['id_usuario'], ':id' => $idFactura]);
+
+        actualizarCostosProveedorDesdeFactura($idFactura, (int)$factura['id_proveedor']);
+
+        $foto = fotoFactura($idFactura);
+        auditar('FACTURA', 'APROBAR', ['estado' => 'EN_REVISION'], ['estado' => 'APROBADA']);
+
+        return $foto;
+    }, 'No se pudo aprobar la factura.');
+
+    respuesta(true, $nuevo, 'Factura aprobada correctamente.');
+}
+
+function accionRechazarFactura(array $in): void
+{
+    $usuario = exigirPuedeRevisarFactura();
+    exigirPost();
+
+    $idFactura = (int)($in['id_factura'] ?? 0);
+    $motivo    = trim((string)($in['motivo'] ?? ''));
+
+    if ($idFactura <= 0) {
+        respuesta(false, null, 'Factura inválida.', 400);
+    }
+
+    if ($motivo === '') {
+        respuesta(false, null, 'Debe indicar el motivo del rechazo.', 400);
+    }
+
+    $factura = obtenerFacturaParaValidar($idFactura);
+
+    if (!in_array($factura['estado'], ['PENDIENTE', 'EN_REVISION'], true)) {
+        respuesta(false, null, 'Solo se pueden rechazar facturas pendientes o en revisión.', 409);
+    }
+
+    exigirOperarEnUbicacion(db(), (int)$factura['id_tienda']);
+
+    $observacionesNuevas = trim((string)$factura['observaciones']) !== ''
+        ? $factura['observaciones'] . "\n\nMotivo de rechazo: " . $motivo
+        : 'Motivo de rechazo: ' . $motivo;
+
+    $nuevo = enTransaccion(function () use ($idFactura, $usuario, $observacionesNuevas) {
+        db()->prepare("
+            UPDATE factura_proveedor
+            SET estado = 'RECHAZADA', id_usuario_valida = :usuario, fecha_validacion = NOW(),
+                observaciones = :observaciones
+            WHERE id_factura = :id
+        ")->execute([
+            ':usuario'       => $usuario['id_usuario'],
+            ':observaciones' => $observacionesNuevas,
+            ':id'            => $idFactura,
+        ]);
+
+        $foto = fotoFactura($idFactura);
+        auditar('FACTURA', 'RECHAZAR', ['estado' => 'EN_REVISION'], ['estado' => 'RECHAZADA']);
+
+        return $foto;
+    }, 'No se pudo rechazar la factura.');
+
+    respuesta(true, $nuevo, 'Factura rechazada correctamente.');
 }
 
 
@@ -615,7 +778,7 @@ const SQL_FACTURA_BASE = "
         f.id_factura, f.numero_factura, f.fecha_emision, f.fecha_vencimiento,
         f.subtotal, f.monto_impuesto, f.monto_total, f.estado,
         f.evidencia_url, f.observaciones, f.fecha_registro,
-        f.id_pedido, f.id_proveedor, f.id_ubicacion, f.id_impuesto,
+        f.id_pedido, f.id_proveedor, f.id_ubicacion, f.id_impuesto, f.id_usuario_registra,
         prov.nombre AS proveedor_nombre,
         ubi.nombre AS ubicacion_nombre,
         ubi.id_tienda,
@@ -748,6 +911,8 @@ $acciones = [
     'crear_factura'               => 'accionCrearFactura',
     'actualizar_factura'          => 'accionActualizarFactura',
     'marcar_en_revision'          => 'accionMarcarEnRevision',
+    'aprobar_factura'             => 'accionAprobarFactura',
+    'rechazar_factura'            => 'accionRechazarFactura',
     'listar_facturas'             => 'accionListarFacturas',
     'obtener_factura'             => 'accionObtenerFactura',
     'listar_pedidos_disponibles'  => 'accionListarPedidosDisponibles',

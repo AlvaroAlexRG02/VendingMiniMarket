@@ -31,6 +31,8 @@
     let productosProveedorDetalle = [];
     let facturaDetalleActual = null;
     let puedeRevisarFactura = false;
+    let puedeValidarFactura = false;
+    let idUsuarioActual = 0;
 
     document.addEventListener('DOMContentLoaded', iniciar);
 
@@ -40,6 +42,8 @@
         }
 
         puedeRevisarFactura = document.body.dataset.puedeRevisarFactura === '1';
+        puedeValidarFactura = document.body.dataset.puedeValidarFactura === '1';
+        idUsuarioActual = Number(document.body.dataset.idUsuarioActual || 0);
 
         registrarEventos();
 
@@ -69,6 +73,8 @@
         $('botonAgregarProductoDetalle')?.addEventListener('click', () => agregarFilaProductoDetalle());
         $('botonGuardarDetalleFactura')?.addEventListener('click', guardarCambiosDetalle);
         $('botonEnviarRevisionDetalle')?.addEventListener('click', enviarRevisionDesdeDetalle);
+        $('botonAprobarFacturaDetalle')?.addEventListener('click', aprobarFacturaDetalle);
+        $('botonRechazarFacturaDetalle')?.addEventListener('click', rechazarFacturaDetalle);
         $('impuestoFacturaDetalle')?.addEventListener('change', calcularTotalesDetalle);
 
         ['buscarFactura', 'filtroProveedorFactura', 'filtroTiendaFactura', 'filtroEstadoFactura', 'filtroFechaFactura']
@@ -596,6 +602,7 @@
             $('fechaVencimientoFacturaDetalle').value = factura.fecha_vencimiento ? factura.fecha_vencimiento.slice(0, 10) : '';
             $('impuestoFacturaDetalle').value = factura.id_impuesto;
             $('observacionesFacturaDetalle').value = factura.observaciones || '';
+            $('motivoRechazoFactura').value = '';
             $('archivoFacturaDetalle').value = '';
             $('evidenciaActualDetalle').innerHTML = factura.evidencia_url
                 ? `Archivo actual: <a href="${escaparHTML(factura.evidencia_url)}" target="_blank" rel="noopener">ver PDF</a>`
@@ -609,10 +616,17 @@
             (factura.detalle || []).forEach((item) => agregarFilaProductoDetalle(item));
             calcularTotalesDetalle();
 
-            const puedeEditar = puedeRevisarFactura && ['PENDIENTE', 'EN_REVISION'].includes(factura.estado);
+            const puedeEditar = (puedeRevisarFactura && ['PENDIENTE', 'EN_REVISION', 'RECHAZADA'].includes(factura.estado))
+                || (Number(factura.id_usuario_registra) === idUsuarioActual && ['PENDIENTE', 'RECHAZADA'].includes(factura.estado));
             bloquearCamposDetalle(!puedeEditar);
             mostrarElemento('botonGuardarDetalleFactura', puedeEditar);
-            mostrarElemento('botonEnviarRevisionDetalle', puedeEditar && factura.estado === 'PENDIENTE');
+            mostrarElemento('botonEnviarRevisionDetalle', puedeRevisarFactura && factura.estado === 'PENDIENTE');
+
+            const puedeAprobarEstaFactura = puedeValidarFactura && factura.estado === 'EN_REVISION';
+            const puedeRechazarEstaFactura = puedeRevisarFactura && ['PENDIENTE', 'EN_REVISION'].includes(factura.estado);
+            mostrarElemento('grupoMotivoRechazoFactura', puedeRechazarEstaFactura);
+            mostrarElemento('botonAprobarFacturaDetalle', puedeAprobarEstaFactura);
+            mostrarElemento('botonRechazarFacturaDetalle', puedeRechazarEstaFactura);
 
             $('modalDetalleFactura').hidden = false;
         } catch (error) {
@@ -664,7 +678,36 @@
     async function enviarRevisionDesdeDetalle() {
         try {
             await apiFacturas('marcar_en_revision', { id_factura: Number($('idFacturaDetalle').value) });
-            mostrarMensaje('Factura enviada a revisión.', 'exito');
+            mostrarMensaje('Factura validada correctamente.', 'exito');
+            cerrarModalDetalle();
+            await cargarFacturas();
+        } catch (error) {
+            $('mensajeDetalleFactura').textContent = error.message;
+        }
+    }
+
+    async function aprobarFacturaDetalle() {
+        try {
+            await apiFacturas('aprobar_factura', { id_factura: Number($('idFacturaDetalle').value) });
+            mostrarMensaje('Factura aprobada correctamente.', 'exito');
+            cerrarModalDetalle();
+            await cargarFacturas();
+        } catch (error) {
+            $('mensajeDetalleFactura').textContent = error.message;
+        }
+    }
+
+    async function rechazarFacturaDetalle() {
+        const motivo = $('motivoRechazoFactura').value.trim();
+
+        if (!motivo) {
+            $('mensajeDetalleFactura').textContent = 'Indica el motivo del rechazo.';
+            return;
+        }
+
+        try {
+            await apiFacturas('rechazar_factura', { id_factura: Number($('idFacturaDetalle').value), motivo });
+            mostrarMensaje('Factura rechazada.', 'exito');
             cerrarModalDetalle();
             await cargarFacturas();
         } catch (error) {
