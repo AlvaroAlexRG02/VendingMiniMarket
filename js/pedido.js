@@ -69,7 +69,12 @@
         $('botonCancelarRecepcion')?.addEventListener('click', cerrarModalRecepcion);
         document.querySelector('[data-cerrar-modal-recepcion]')?.addEventListener('click', cerrarModalRecepcion);
         $('formularioRecepcion')?.addEventListener('submit', guardarRecepcion);
-        $('cuerpoTablaRecepcionesPendientes')?.addEventListener('click', manejarClicConfirmarRecepcion);
+        $('cuerpoTablaRecepcionesPendientes')?.addEventListener('click', manejarClicRecepcionesPendientes);
+
+        $('botonCerrarModalVerRecepcion')?.addEventListener('click', cerrarModalVerRecepcion);
+        $('botonCerrarVerRecepcion')?.addEventListener('click', cerrarModalVerRecepcion);
+        document.querySelector('[data-cerrar-modal-ver-recepcion]')?.addEventListener('click', cerrarModalVerRecepcion);
+        $('botonConfirmarDesdeVerRecepcion')?.addEventListener('click', confirmarDesdeModalVerRecepcion);
 
         $('formularioPedido')?.addEventListener('submit', guardarPedido);
         $('proveedorPedido')?.addEventListener('change', cargarProductosDelProveedor);
@@ -335,6 +340,7 @@
 
         tabla.innerHTML = pedidos.map((p) => `
             <tr>
+                <td>${p.numero_pedido}</td>
                 <td>${new Date(p.fecha_pedido).toLocaleDateString('es-CR')}</td>
                 <td>${escaparHTML(p.proveedor_nombre)}</td>
                 <td>${escaparHTML(p.ubicacion_nombre)}</td>
@@ -548,14 +554,20 @@
 
             $('cuerpoTablaRecepcionesPendientes').innerHTML = pendientes.map((r) => `
                 <tr>
+                    <td>${r.numero_pedido}</td>
                     <td>${new Date(r.fecha_movimiento).toLocaleString('es-CR')}</td>
                     <td>${escaparHTML(r.proveedor_nombre)}</td>
                     <td>${escaparHTML(r.ubicacion_nombre)}</td>
                     <td>${escaparHTML(`${r.registrado_por_nombre} ${r.registrado_por_apellido || ''}`.trim())}</td>
                     <td>
-                        <button type="button" class="boton boton-azul boton-confirmar-recepcion" data-movimiento="${r.id_movimiento}">
-                            Confirmar
-                        </button>
+                        <div class="acciones-tabla">
+                            <button type="button" class="boton boton-borde boton-tabla boton-ver-recepcion" data-movimiento="${r.id_movimiento}">
+                                Ver
+                            </button>
+                            <button type="button" class="boton boton-azul boton-tabla boton-confirmar-recepcion" data-movimiento="${r.id_movimiento}">
+                                Confirmar
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -564,12 +576,22 @@
         }
     }
 
-    async function manejarClicConfirmarRecepcion(evento) {
-        const boton = evento.target.closest('button.boton-confirmar-recepcion');
-        if (!boton) return;
+    async function manejarClicRecepcionesPendientes(evento) {
+        const botonVer = evento.target.closest('button.boton-ver-recepcion');
+        if (botonVer) {
+            await abrirModalVerRecepcion(Number(botonVer.dataset.movimiento));
+            return;
+        }
 
+        const botonConfirmar = evento.target.closest('button.boton-confirmar-recepcion');
+        if (botonConfirmar) {
+            await confirmarRecepcion(Number(botonConfirmar.dataset.movimiento));
+        }
+    }
+
+    async function confirmarRecepcion(idMovimiento) {
         try {
-            await apiRecepciones('confirmar_recepcion', { id_movimiento: Number(boton.dataset.movimiento) });
+            await apiRecepciones('confirmar_recepcion', { id_movimiento: idMovimiento });
 
             mostrarMensaje('Recepción confirmada correctamente.', 'exito');
             await cargarPedidos();
@@ -577,6 +599,55 @@
         } catch (error) {
             mostrarMensaje(error.message, 'error');
         }
+    }
+
+
+    /*-----------------------------------------------------
+      HU-32 — VER RECEPCIÓN PENDIENTE (antes de confirmar)
+    -----------------------------------------------------*/
+
+    async function abrirModalVerRecepcion(idMovimiento) {
+        try {
+            const resultado = await apiRecepciones('obtener_recepcion', null, { id_movimiento: idMovimiento });
+            const recepcion = resultado.data;
+
+            $('idMovimientoVerRecepcion').value = recepcion.id_movimiento;
+            $('pedidoVerRecepcion').value = recepcion.numero_pedido;
+            $('proveedorVerRecepcion').value = recepcion.proveedor_nombre;
+            $('ubicacionVerRecepcion').value = recepcion.ubicacion_nombre;
+            $('registradoPorVerRecepcion').value = `${recepcion.registrado_por_nombre} ${recepcion.registrado_por_apellido || ''}`.trim();
+            $('fechaVerRecepcion').value = new Date(recepcion.fecha_movimiento).toLocaleString('es-CR');
+            $('observacionesVerRecepcion').value = recepcion.observaciones || 'Sin observaciones.';
+
+            $('listaProductosVerRecepcion').innerHTML = (recepcion.detalle || []).map((item) => `
+                <div class="fila-producto-compra">
+                    <div class="grupo-formulario">
+                        <label>Producto</label>
+                        <input type="text" value="${escaparHTML(item.nombre)}" disabled>
+                    </div>
+                    <div class="grupo-formulario">
+                        <label>Cantidad</label>
+                        <input type="text" value="${item.cantidad}" disabled>
+                    </div>
+                </div>
+            `).join('');
+
+            $('modalVerRecepcion').hidden = false;
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+    }
+
+    function cerrarModalVerRecepcion() {
+        $('modalVerRecepcion').hidden = true;
+    }
+
+    async function confirmarDesdeModalVerRecepcion() {
+        const idMovimiento = Number($('idMovimientoVerRecepcion').value);
+        if (!idMovimiento) return;
+
+        await confirmarRecepcion(idMovimiento);
+        cerrarModalVerRecepcion();
     }
 
 

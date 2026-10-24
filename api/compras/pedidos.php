@@ -423,6 +423,7 @@ function accionCrearPedido(array $in): void
 const SQL_PEDIDO_BASE = "
     SELECT
         ped.id_pedido,
+        'PED-' || LPAD(ped.id_pedido::text, 6, '0') AS numero_pedido,
         ped.id_proveedor,
         prov.nombre AS proveedor_nombre,
         ped.id_ubicacion,
@@ -618,7 +619,8 @@ function accionActualizarEstadoPedido(array $in): void
     $nuevo = enTransaccion(function () use ($idPedido, $nuevoEstado, $usuario, $actual) {
         $st = db()->prepare("
             UPDATE pedido
-            SET estado = :estado, id_usuario_actualiza = :id_usuario, fecha_actualizacion = NOW()
+            SET estado = :estado, id_usuario_actualiza = :id_usuario, fecha_actualizacion = NOW(),
+                requiere_aprobacion = FALSE
             WHERE id_pedido = :id
         ");
         $st->execute([

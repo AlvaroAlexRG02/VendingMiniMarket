@@ -439,6 +439,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
 
                         <thead>
                             <tr>
+                                <th scope="col">No. Pedido</th>
                                 <th scope="col">Fecha</th>
                                 <th scope="col">Proveedor</th>
                                 <th scope="col">Tienda</th>
@@ -589,6 +590,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                         <thead>
 
                             <tr>
+                                <th scope="col">No. Pedido</th>
                                 <th scope="col">Fecha</th>
                                 <th scope="col">Proveedor</th>
                                 <th scope="col">Tienda</th>
@@ -991,6 +993,123 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                 </div>
 
             </form>
+
+        </section>
+
+    </div>
+
+    <!-- ==========================================
+         MODAL: VER RECEPCIÓN PENDIENTE (HU-32)
+    =========================================== -->
+
+    <div
+        id="modalVerRecepcion"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-ver-recepcion
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-pedido-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalVerRecepcion"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+
+                    <h2 id="tituloModalVerRecepcion">
+                        Recepción pendiente
+                    </h2>
+
+                    <p>
+                        Revisa lo registrado antes de confirmarlo.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalVerRecepcion"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <input type="hidden" id="idMovimientoVerRecepcion">
+
+            <div class="cuadricula-formulario">
+
+                <div class="grupo-formulario">
+                    <label for="pedidoVerRecepcion">Pedido</label>
+                    <input type="text" id="pedidoVerRecepcion" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="proveedorVerRecepcion">Proveedor</label>
+                    <input type="text" id="proveedorVerRecepcion" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="ubicacionVerRecepcion">Tienda</label>
+                    <input type="text" id="ubicacionVerRecepcion" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="registradoPorVerRecepcion">Registrado por</label>
+                    <input type="text" id="registradoPorVerRecepcion" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="fechaVerRecepcion">Fecha</label>
+                    <input type="text" id="fechaVerRecepcion" disabled>
+                </div>
+
+            </div>
+
+            <div class="seccion-productos-compra">
+                <div class="encabezado-productos-compra">
+                    <div>
+                        <h3>Productos recibidos</h3>
+                    </div>
+                </div>
+                <div id="listaProductosVerRecepcion" class="lista-productos-compra"></div>
+            </div>
+
+            <div class="grupo-formulario">
+                <label for="observacionesVerRecepcion">Observaciones</label>
+                <textarea id="observacionesVerRecepcion" rows="3" disabled></textarea>
+            </div>
+
+            <div class="acciones-modal-producto">
+
+                <button
+                    type="button"
+                    id="botonCerrarVerRecepcion"
+                    class="boton boton-borde"
+                >
+                    Cerrar
+                </button>
+
+                <button
+                    type="button"
+                    id="botonConfirmarDesdeVerRecepcion"
+                    class="boton boton-azul"
+                >
+                    <i class="fa-solid fa-check"></i>
+                    Confirmar recepción
+                </button>
+
+            </div>
 
         </section>
 

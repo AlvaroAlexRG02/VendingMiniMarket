@@ -420,7 +420,8 @@ function aplicarRecepcion(int $idMovimiento, int $idUsuarioAutoriza): void
 
     $pdo->prepare("
         UPDATE pedido
-        SET estado = :estado, id_usuario_actualiza = :usuario, fecha_actualizacion = NOW()
+        SET estado = :estado, id_usuario_actualiza = :usuario, fecha_actualizacion = NOW(),
+            requiere_aprobacion = FALSE
         WHERE id_pedido = :id
     ")->execute([':estado' => $nuevoEstado, ':usuario' => $idUsuarioAutoriza, ':id' => $idPedido]);
 
@@ -479,6 +480,52 @@ function accionConfirmarRecepcion(array $in): void
    CONSULTAS
 ========================================================== */
 
+/** Detalle de una recepción puntual (para revisarla antes de confirmarla). */
+function accionObtenerRecepcion(array $in): void
+{
+    exigirPuedeConfirmarRecepcion();
+
+    $idMovimiento = (int)($_GET['id_movimiento'] ?? $in['id_movimiento'] ?? 0);
+
+    if ($idMovimiento <= 0) {
+        respuesta(false, null, 'Recepción inválida.', 400);
+    }
+
+    $st = db()->prepare("
+        SELECT
+            m.id_movimiento, m.estado, m.fecha_movimiento, m.observaciones, m.id_pedido,
+            'PED-' || LPAD(m.id_pedido::text, 6, '0') AS numero_pedido,
+            u.nombre AS registrado_por_nombre, u.apellido AS registrado_por_apellido,
+            prov.nombre AS proveedor_nombre, ubi.nombre AS ubicacion_nombre, ubi.id_tienda
+        FROM movimiento_inventario m
+        JOIN usuario u ON u.id_usuario = m.id_usuario
+        JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = m.id_ubicacion_destino
+        JOIN pedido ped ON ped.id_pedido = m.id_pedido
+        JOIN proveedor prov ON prov.id_proveedor = ped.id_proveedor
+        WHERE m.id_movimiento = :id AND m.tipo_movimiento = 'ENTRADA'
+    ");
+    $st->execute([':id' => $idMovimiento]);
+    $movimiento = $st->fetch();
+
+    if (!$movimiento) {
+        respuesta(false, null, 'La recepción no existe.', 404);
+    }
+
+    exigirOperarEnUbicacion(db(), (int)$movimiento['id_tienda']);
+
+    $detalle = db()->prepare("
+        SELECT dm.id_producto, p.nombre, dm.cantidad
+        FROM detalle_movimiento dm
+        JOIN producto p ON p.id_producto = dm.id_producto
+        WHERE dm.id_movimiento = :id
+        ORDER BY p.nombre
+    ");
+    $detalle->execute([':id' => $idMovimiento]);
+    $movimiento['detalle'] = $detalle->fetchAll();
+
+    respuesta(true, $movimiento);
+}
+
 function accionListarRecepcionesPendientes(array $in): void
 {
     $usuario = exigirPuedeConfirmarRecepcion();
@@ -505,7 +552,9 @@ function accionListarRecepcionesPendientes(array $in): void
 
     $sql = "
         SELECT
-            m.id_movimiento, m.id_pedido, m.fecha_movimiento, m.observaciones,
+            m.id_movimiento, m.id_pedido,
+            'PED-' || LPAD(m.id_pedido::text, 6, '0') AS numero_pedido,
+            m.fecha_movimiento, m.observaciones,
             u.nombre AS registrado_por_nombre, u.apellido AS registrado_por_apellido,
             prov.nombre AS proveedor_nombre, ubi.nombre AS ubicacion_nombre
         FROM movimiento_inventario m
@@ -586,6 +635,7 @@ $acciones = [
     'confirmar_recepcion'            => 'accionConfirmarRecepcion',
     'listar_recepciones_pendientes'  => 'accionListarRecepcionesPendientes',
     'listar_recepciones_pedido'      => 'accionListarRecepcionesPedido',
+    'obtener_recepcion'              => 'accionObtenerRecepcion',
 ];
 
 try {
