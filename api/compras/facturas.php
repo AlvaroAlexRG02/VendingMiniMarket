@@ -25,7 +25,7 @@ require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
 require_once __DIR__ . '/../../config/ubicaciones.php';
 
-const ESTADOS_FACTURA = ['PENDIENTE', 'EN_REVISION', 'APROBADA', 'RECHAZADA'];
+const ESTADOS_FACTURA = ['PENDIENTE', 'EN_REVISION', 'APROBADA', 'RECHAZADA', 'ANULADA'];
 const CARPETA_EVIDENCIAS = __DIR__ . '/../../compras/facturas-adjuntas/';
 const TAMANO_MAXIMO_EVIDENCIA = 5 * 1024 * 1024; // 5 MB
 
@@ -88,6 +88,30 @@ function exigirPuedeValidarFactura(): array
 
     if (!esAdministrador()) {
         respuesta(false, null, 'No tiene permisos para validar facturas.', 403);
+    }
+
+    return $usuario;
+}
+
+/** HU-36: solo el Administrador anula una factura (cancelación definitiva, con trazabilidad). */
+function exigirPuedeAnularFactura(): array
+{
+    $usuario = exigirSesion();
+
+    if (!esAdministrador()) {
+        respuesta(false, null, 'No tiene permisos para anular facturas.', 403);
+    }
+
+    return $usuario;
+}
+
+/** HU-36: solo Administrador o Gerente General exportan el historial. */
+function exigirPuedeExportarHistorial(): array
+{
+    $usuario = exigirSesion();
+
+    if (!esAdministradorOGerente()) {
+        respuesta(false, null, 'No tiene permisos para exportar el historial.', 403);
     }
 
     return $usuario;
@@ -722,6 +746,60 @@ function accionRechazarFactura(array $in): void
 
 
 /* ==========================================================
+   HU-36 — ANULAR FACTURA (cancelación definitiva, con trazabilidad)
+========================================================== */
+
+function accionAnularFactura(array $in): void
+{
+    $usuario = exigirPuedeAnularFactura();
+    exigirPost();
+
+    $idFactura = (int)($in['id_factura'] ?? 0);
+    $motivo    = trim((string)($in['motivo'] ?? ''));
+
+    if ($idFactura <= 0) {
+        respuesta(false, null, 'Factura inválida.', 400);
+    }
+
+    if ($motivo === '') {
+        respuesta(false, null, 'Debe indicar el motivo de la anulación.', 400);
+    }
+
+    $factura = obtenerFacturaParaValidar($idFactura);
+
+    if ($factura['estado'] === 'ANULADA') {
+        respuesta(false, null, 'Esta factura ya está anulada.', 409);
+    }
+
+    exigirOperarEnUbicacion(db(), (int)$factura['id_tienda']);
+
+    $observacionesNuevas = trim((string)$factura['observaciones']) !== ''
+        ? $factura['observaciones'] . "\n\nMotivo de anulación: " . $motivo
+        : 'Motivo de anulación: ' . $motivo;
+
+    $nuevo = enTransaccion(function () use ($idFactura, $usuario, $observacionesNuevas, $factura) {
+        db()->prepare("
+            UPDATE factura_proveedor
+            SET estado = 'ANULADA', id_usuario_anula = :usuario, fecha_anulacion = NOW(),
+                observaciones = :observaciones
+            WHERE id_factura = :id
+        ")->execute([
+            ':usuario'       => $usuario['id_usuario'],
+            ':observaciones' => $observacionesNuevas,
+            ':id'            => $idFactura,
+        ]);
+
+        $foto = fotoFactura($idFactura);
+        auditar('FACTURA', 'ANULAR', ['estado' => $factura['estado']], ['estado' => 'ANULADA']);
+
+        return $foto;
+    }, 'No se pudo anular la factura.');
+
+    respuesta(true, $nuevo, 'Factura anulada correctamente.');
+}
+
+
+/* ==========================================================
    PEDIDOS DISPONIBLES PARA VINCULAR (sin factura todavía)
 ========================================================== */
 
@@ -788,6 +866,7 @@ const SQL_FACTURA_BASE = "
              THEN 'PED-' || LPAD(ped.id_pedido::text, 6, '0')
              ELSE NULL
         END AS numero_pedido,
+        (SELECT COUNT(*) FROM movimiento_inventario m WHERE m.id_pedido = f.id_pedido) AS movimientos_asociados,
         u1.nombre AS registra_nombre, u1.apellido AS registra_apellido
     FROM factura_proveedor f
     JOIN proveedor prov ON prov.id_proveedor = f.id_proveedor
@@ -834,6 +913,28 @@ function accionObtenerFactura(array $in): void
 }
 
 function accionListarFacturas(array $in): void
+{
+    [$where, $params] = filtrosHistorialFacturas();
+
+    $sql = SQL_FACTURA_BASE;
+    if ($where) {
+        $sql .= ' WHERE ' . implode(' AND ', $where);
+    }
+    $sql .= ' ORDER BY f.fecha_registro DESC';
+
+    $st = db()->prepare($sql);
+    $st->execute($params);
+
+    respuesta(true, $st->fetchAll());
+}
+
+
+/* ==========================================================
+   HU-36 — EXPORTAR HISTORIAL (CSV)
+========================================================== */
+
+/** Construye el WHERE/params de listar_facturas y exportar_historial a partir de la sesión y $_GET. */
+function filtrosHistorialFacturas(): array
 {
     $usuario = exigirSesion();
     $idRol   = (int)($usuario['id_rol'] ?? 0);
@@ -887,6 +988,15 @@ function accionListarFacturas(array $in): void
         $params[':fecha'] = $fecha;
     }
 
+    return [$where, $params];
+}
+
+function accionExportarHistorial(array $in): void
+{
+    exigirPuedeExportarHistorial();
+
+    [$where, $params] = filtrosHistorialFacturas();
+
     $sql = SQL_FACTURA_BASE;
     if ($where) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
@@ -895,8 +1005,37 @@ function accionListarFacturas(array $in): void
 
     $st = db()->prepare($sql);
     $st->execute($params);
+    $filas = $st->fetchAll();
 
-    respuesta(true, $st->fetchAll());
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="historial_compras_' . date('Y-m-d_His') . '.csv"');
+    header('Cache-Control: no-store');
+
+    $salida = fopen('php://output', 'w');
+    fputs($salida, "\xEF\xBB\xBF"); // BOM para que Excel reconozca UTF-8
+
+    fputcsv($salida, [
+        'Pedido', 'Factura', 'Proveedor', 'Tienda', 'Fecha emisión', 'Estado',
+        'Subtotal', 'Impuesto', 'Total', 'Movimientos asociados',
+    ]);
+
+    foreach ($filas as $f) {
+        fputcsv($salida, [
+            $f['numero_pedido'] ?? '-',
+            $f['numero_factura'],
+            $f['proveedor_nombre'],
+            $f['ubicacion_nombre'],
+            $f['fecha_emision'],
+            $f['estado'],
+            $f['subtotal'],
+            $f['monto_impuesto'],
+            $f['monto_total'],
+            $f['movimientos_asociados'],
+        ]);
+    }
+
+    fclose($salida);
+    exit;
 }
 
 
@@ -913,9 +1052,11 @@ $acciones = [
     'marcar_en_revision'          => 'accionMarcarEnRevision',
     'aprobar_factura'             => 'accionAprobarFactura',
     'rechazar_factura'            => 'accionRechazarFactura',
+    'anular_factura'              => 'accionAnularFactura',
     'listar_facturas'             => 'accionListarFacturas',
     'obtener_factura'             => 'accionObtenerFactura',
     'listar_pedidos_disponibles'  => 'accionListarPedidosDisponibles',
+    'exportar_historial'          => 'accionExportarHistorial',
 ];
 
 try {

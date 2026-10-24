@@ -2279,6 +2279,11 @@ body.pagina-app {
     color: var(--morado);
 }
 
+.badge-gris {
+    background: #eef0f4;
+    color: var(--texto-secundario);
+}
+
 /* ==========================================================
    PRODUCTOS EN LAS TABLAS
 ========================================================== */

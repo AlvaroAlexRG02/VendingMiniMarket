@@ -15,14 +15,16 @@
         PENDIENTE: 'Pendiente',
         EN_REVISION: 'En revisión',
         APROBADA: 'Aprobada',
-        RECHAZADA: 'Rechazada'
+        RECHAZADA: 'Rechazada',
+        ANULADA: 'Anulada'
     };
 
     const COLOR_ESTADO = {
         PENDIENTE: 'naranja',
         EN_REVISION: 'morado',
         APROBADA: 'verde',
-        RECHAZADA: 'rojo'
+        RECHAZADA: 'rojo',
+        ANULADA: 'gris'
     };
 
     let facturas = [];
@@ -32,6 +34,8 @@
     let facturaDetalleActual = null;
     let puedeRevisarFactura = false;
     let puedeValidarFactura = false;
+    let puedeAnularFactura = false;
+    let puedeExportarHistorial = false;
     let idUsuarioActual = 0;
 
     document.addEventListener('DOMContentLoaded', iniciar);
@@ -43,6 +47,8 @@
 
         puedeRevisarFactura = document.body.dataset.puedeRevisarFactura === '1';
         puedeValidarFactura = document.body.dataset.puedeValidarFactura === '1';
+        puedeAnularFactura = document.body.dataset.puedeAnularFactura === '1';
+        puedeExportarHistorial = document.body.dataset.puedeExportarHistorial === '1';
         idUsuarioActual = Number(document.body.dataset.idUsuarioActual || 0);
 
         registrarEventos();
@@ -75,6 +81,8 @@
         $('botonEnviarRevisionDetalle')?.addEventListener('click', enviarRevisionDesdeDetalle);
         $('botonAprobarFacturaDetalle')?.addEventListener('click', aprobarFacturaDetalle);
         $('botonRechazarFacturaDetalle')?.addEventListener('click', rechazarFacturaDetalle);
+        $('botonAnularFacturaDetalle')?.addEventListener('click', anularFacturaDetalle);
+        $('botonExportarHistorial')?.addEventListener('click', exportarHistorial);
         $('impuestoFacturaDetalle')?.addEventListener('change', calcularTotalesDetalle);
 
         ['buscarFactura', 'filtroProveedorFactura', 'filtroTiendaFactura', 'filtroEstadoFactura', 'filtroFechaFactura']
@@ -437,6 +445,7 @@
                 <td>${moneda(f.subtotal)}</td>
                 <td>${moneda(f.monto_impuesto)}</td>
                 <td>${moneda(f.monto_total)}</td>
+                <td>${Number(f.movimientos_asociados || 0)}</td>
                 <td>
                     <span class="badge badge-${COLOR_ESTADO[f.estado] || 'naranja'}">
                         ${ETIQUETAS_ESTADO[f.estado] || f.estado}
@@ -603,6 +612,7 @@
             $('impuestoFacturaDetalle').value = factura.id_impuesto;
             $('observacionesFacturaDetalle').value = factura.observaciones || '';
             $('motivoRechazoFactura').value = '';
+            $('motivoAnulacionFactura').value = '';
             $('archivoFacturaDetalle').value = '';
             $('evidenciaActualDetalle').innerHTML = factura.evidencia_url
                 ? `Archivo actual: <a href="${escaparHTML(factura.evidencia_url)}" target="_blank" rel="noopener">ver PDF</a>`
@@ -624,9 +634,12 @@
 
             const puedeAprobarEstaFactura = puedeValidarFactura && factura.estado === 'EN_REVISION';
             const puedeRechazarEstaFactura = puedeRevisarFactura && ['PENDIENTE', 'EN_REVISION'].includes(factura.estado);
+            const puedeAnularEstaFactura = puedeAnularFactura && factura.estado !== 'ANULADA';
             mostrarElemento('grupoMotivoRechazoFactura', puedeRechazarEstaFactura);
             mostrarElemento('botonAprobarFacturaDetalle', puedeAprobarEstaFactura);
             mostrarElemento('botonRechazarFacturaDetalle', puedeRechazarEstaFactura);
+            mostrarElemento('grupoMotivoAnulacionFactura', puedeAnularEstaFactura);
+            mostrarElemento('botonAnularFacturaDetalle', puedeAnularEstaFactura);
 
             $('modalDetalleFactura').hidden = false;
         } catch (error) {
@@ -713,5 +726,28 @@
         } catch (error) {
             $('mensajeDetalleFactura').textContent = error.message;
         }
+    }
+
+    async function anularFacturaDetalle() {
+        const motivo = $('motivoAnulacionFactura').value.trim();
+
+        if (!motivo) {
+            $('mensajeDetalleFactura').textContent = 'Indica el motivo de la anulación.';
+            return;
+        }
+
+        try {
+            await apiFacturas('anular_factura', { id_factura: Number($('idFacturaDetalle').value), motivo });
+            mostrarMensaje('Factura anulada.', 'exito');
+            cerrarModalDetalle();
+            await cargarFacturas();
+        } catch (error) {
+            $('mensajeDetalleFactura').textContent = error.message;
+        }
+    }
+
+    function exportarHistorial() {
+        const parametros = new URLSearchParams(leerFiltros());
+        window.open(`../api/compras/facturas.php?accion=exportar_historial&${parametros.toString()}`, '_blank');
     }
 })();

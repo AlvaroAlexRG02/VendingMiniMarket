@@ -20,6 +20,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
 $puedeRevisarFactura = esAdministrador() || esEncargado();
 $puedeValidarFactura = esAdministrador();
+$puedeAnularFactura = esAdministrador();
+$puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
 ?>
 
@@ -48,7 +50,7 @@ $puedeValidarFactura = esAdministrador();
     >
 </head>
 
-<body class="pagina-app" data-puede-revisar-factura="<?= $puedeRevisarFactura ? '1' : '0' ?>" data-puede-validar-factura="<?= $puedeValidarFactura ? '1' : '0' ?>" data-id-usuario-actual="<?= $idUsuarioActual ?>">
+<body class="pagina-app" data-puede-revisar-factura="<?= $puedeRevisarFactura ? '1' : '0' ?>" data-puede-validar-factura="<?= $puedeValidarFactura ? '1' : '0' ?>" data-puede-anular-factura="<?= $puedeAnularFactura ? '1' : '0' ?>" data-puede-exportar-historial="<?= $puedeExportarHistorial ? '1' : '0' ?>" data-id-usuario-actual="<?= $idUsuarioActual ?>">
 
     <!-- ==========================================
          BARRA LATERAL
@@ -242,6 +244,17 @@ $puedeValidarFactura = esAdministrador();
                         Volver a compras
                     </a>
 
+                    <?php if ($puedeExportarHistorial): ?>
+                    <button
+                        type="button"
+                        id="botonExportarHistorial"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-file-export"></i>
+                        Exportar
+                    </button>
+                    <?php endif; ?>
+
                     <button
                         type="button"
                         id="botonNuevaFactura"
@@ -375,6 +388,7 @@ $puedeValidarFactura = esAdministrador();
                             <option value="EN_REVISION">En revisión</option>
                             <option value="APROBADA">Aprobada</option>
                             <option value="RECHAZADA">Rechazada</option>
+                            <option value="ANULADA">Anulada</option>
                         </select>
                     </div>
 
@@ -408,6 +422,7 @@ $puedeValidarFactura = esAdministrador();
                                 <th scope="col">Subtotal</th>
                                 <th scope="col">Impuesto</th>
                                 <th scope="col">Total</th>
+                                <th scope="col">Movimientos</th>
                                 <th scope="col">Estado</th>
                                 <th scope="col">Acciones</th>
                             </tr>
@@ -704,6 +719,11 @@ $puedeValidarFactura = esAdministrador();
                 <textarea id="motivoRechazoFactura" rows="2" maxlength="300"></textarea>
             </div>
 
+            <div class="grupo-formulario" id="grupoMotivoAnulacionFactura" hidden>
+                <label for="motivoAnulacionFactura">Motivo de anulación (obligatorio, cancelación definitiva)</label>
+                <textarea id="motivoAnulacionFactura" rows="2" maxlength="300"></textarea>
+            </div>
+
             <div class="resumen-compra-formulario">
                 <div>
                     <span>Subtotal</span>
@@ -734,6 +754,10 @@ $puedeValidarFactura = esAdministrador();
                 <button type="button" id="botonRechazarFacturaDetalle" class="boton boton-peligro" hidden>
                     <i class="fa-solid fa-xmark"></i>
                     Rechazar
+                </button>
+                <button type="button" id="botonAnularFacturaDetalle" class="boton boton-peligro" hidden>
+                    <i class="fa-solid fa-ban"></i>
+                    Anular
                 </button>
                 <button type="button" id="botonAprobarFacturaDetalle" class="boton boton-azul" hidden>
                     <i class="fa-solid fa-check"></i>

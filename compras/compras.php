@@ -14,6 +14,17 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
 
+$nombreUsuario = trim(
+    ($_SESSION["usuario"]["nombre"] ?? "") . " " .
+    ($_SESSION["usuario"]["apellido"] ?? "")
+);
+$correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
+$idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
+$puedeRevisarFactura = esAdministrador() || esEncargado();
+$puedeValidarFactura = esAdministrador();
+$puedeAnularFactura = esAdministrador();
+$puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -27,10 +38,10 @@ header("Expires: 0");
 
     <meta
         name="description"
-        content="Gestión de compras del sistema Vending Mini Market"
+        content="Historial de compras y facturas del sistema Vending Mini Market"
     >
 
-    <title>Compras | Vending Mini Market</title>
+    <title>Historial de compras | Vending Mini Market</title>
 
     <link rel="stylesheet" href="../css/estilos.css?v=20261007-1">
 
@@ -40,7 +51,7 @@ header("Expires: 0");
     >
 </head>
 
-<body class="pagina-app">
+<body class="pagina-app" data-puede-revisar-factura="<?= $puedeRevisarFactura ? '1' : '0' ?>" data-puede-validar-factura="<?= $puedeValidarFactura ? '1' : '0' ?>" data-puede-anular-factura="<?= $puedeAnularFactura ? '1' : '0' ?>" data-puede-exportar-historial="<?= $puedeExportarHistorial ? '1' : '0' ?>" data-id-usuario-actual="<?= $idUsuarioActual ?>">
 
     <!-- ==========================================
          BARRA LATERAL
@@ -228,11 +239,11 @@ header("Expires: 0");
                     <div class="perfil-superior-texto">
 
                         <strong id="nombreUsuarioSuperior">
-                            Administrador
+                            <?= htmlspecialchars($nombreUsuario) ?>
                         </strong>
 
                         <span id="correoUsuarioSuperior">
-                            admin@vending.com
+                            <?= htmlspecialchars($correoUsuario) ?>
                         </span>
 
                     </div>
@@ -244,7 +255,6 @@ header("Expires: 0");
             </div>
 
         </header>
-
         <!-- ==========================================
              CONTENIDO PRINCIPAL
         =========================================== -->
@@ -257,16 +267,16 @@ header("Expires: 0");
 
                 <div>
 
-                    <h1>Compras</h1>
+                    <h1>Historial de compras y facturas</h1>
 
                     <p>
-                        Administra las órdenes de compra,
-                        pedidos y facturas de proveedores.
+                        Consulta pedidos, recepciones y facturas de
+                        proveedores para dar seguimiento contable y operativo.
                     </p>
 
                 </div>
 
-                <div class="acciones-encabezado-compras">
+                <div class="acciones-encabezado-pedidos">
 
                     <a
                         href="pedido.php"
@@ -276,409 +286,210 @@ header("Expires: 0");
                         Nuevo pedido
                     </a>
 
-                    <a
-                        href="facturas.php"
-                        class="boton boton-borde"
-                    >
-                        <i class="fa-solid fa-file-invoice-dollar"></i>
-                        Ver facturas
-                    </a>
-
+                    <?php if ($puedeExportarHistorial): ?>
                     <button
                         type="button"
-                        id="botonNuevaCompra"
+                        id="botonExportarHistorial"
+                        class="boton boton-borde"
+                    >
+                        <i class="fa-solid fa-file-export"></i>
+                        Exportar
+                    </button>
+                    <?php endif; ?>
+
+                    <a
+                        href="facturas.php"
                         class="boton boton-azul"
                     >
-                        <i class="fa-solid fa-cart-plus"></i>
-                        Nueva compra
-                    </button>
+                        <i class="fa-solid fa-file-invoice"></i>
+                        Nueva factura
+                    </a>
 
                 </div>
 
             </div>
 
-            <!-- Mensaje general -->
-
             <div
-                id="mensajeCompras"
+                id="mensajeFacturas"
                 class="mensaje-producto"
                 aria-live="polite"
                 hidden
             ></div>
 
             <!-- ==========================================
-                 RESUMEN DE COMPRAS
+                 RESUMEN
             =========================================== -->
 
             <section
                 class="grilla-estadisticas"
-                aria-label="Resumen de compras"
+                aria-label="Resumen del historial"
             >
 
                 <article class="tarjeta-estadistica">
-
                     <div class="tarjeta-estadistica-encabezado">
-
                         <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-cart-shopping"></i>
+                            <i class="fa-solid fa-file-invoice"></i>
                         </div>
-
                         <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Total de compras
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="totalCompras"
-                            >
-                                0
-                            </div>
-
+                            <div class="tarjeta-estadistica-titulo">Total de facturas</div>
+                            <div class="tarjeta-estadistica-valor" id="totalFacturas">0</div>
                         </div>
-
                     </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        Órdenes registradas
-                    </div>
-
+                    <div class="tarjeta-estadistica-cambio">Documentos registrados</div>
                 </article>
 
                 <article class="tarjeta-estadistica borde-naranja">
-
                     <div class="tarjeta-estadistica-encabezado">
-
                         <div class="tarjeta-estadistica-icono">
                             <i class="fa-solid fa-clock"></i>
                         </div>
-
                         <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Compras pendientes
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="comprasPendientes"
-                            >
-                                0
-                            </div>
-
+                            <div class="tarjeta-estadistica-titulo">Pendientes</div>
+                            <div class="tarjeta-estadistica-valor" id="facturasPendientes">0</div>
                         </div>
-
                     </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        En espera de recepción
-                    </div>
-
-                </article>
-
-                <article class="tarjeta-estadistica borde-verde">
-
-                    <div class="tarjeta-estadistica-encabezado">
-
-                        <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </div>
-
-                        <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Compras recibidas
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="comprasRecibidas"
-                            >
-                                0
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        Entregas completadas
-                    </div>
-
+                    <div class="tarjeta-estadistica-cambio">Esperan validación</div>
                 </article>
 
                 <article class="tarjeta-estadistica borde-morado">
-
                     <div class="tarjeta-estadistica-encabezado">
-
                         <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-coins"></i>
+                            <i class="fa-solid fa-magnifying-glass"></i>
                         </div>
-
                         <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Monto comprado
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="montoTotalCompras"
-                            >
-                                ₡0
-                            </div>
-
+                            <div class="tarjeta-estadistica-titulo">En revisión</div>
+                            <div class="tarjeta-estadistica-valor" id="facturasEnRevision">0</div>
                         </div>
-
                     </div>
+                    <div class="tarjeta-estadistica-cambio">Esperan al Administrador</div>
+                </article>
 
-                    <div class="tarjeta-estadistica-cambio">
-                        Total acumulado
+                <article class="tarjeta-estadistica borde-verde">
+                    <div class="tarjeta-estadistica-encabezado">
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </div>
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">Monto facturado</div>
+                            <div class="tarjeta-estadistica-valor" id="montoTotalFacturas">₡0</div>
+                        </div>
                     </div>
-
+                    <div class="tarjeta-estadistica-cambio">Total acumulado</div>
                 </article>
 
             </section>
 
             <!-- ==========================================
-                 LISTADO DE COMPRAS
+                 LISTADO (HU-36)
             =========================================== -->
 
             <section class="panel">
 
                 <div class="panel-encabezado">
-
                     <div>
-
-                        <h2>Órdenes de compra</h2>
-
+                        <h2>Historial de facturas</h2>
                         <p class="descripcion-panel">
-                            Consulta las compras registradas
-                            y el estado de cada entrega.
+                            Filtra por proveedor, tienda, estado o fecha para
+                            dar seguimiento contable y operativo.
                         </p>
-
                     </div>
-
                 </div>
-
-                <!-- Filtros -->
 
                 <div class="barra-filtros">
 
                     <div class="campo-busqueda-filtro">
-
                         <i class="fa-solid fa-magnifying-glass"></i>
-
-                        <label
-                            for="buscarCompra"
-                            class="texto-solo-lectores"
-                        >
-                            Buscar compra
-                        </label>
-
+                        <label for="buscarFactura" class="texto-solo-lectores">Buscar factura</label>
                         <input
                             type="search"
-                            id="buscarCompra"
-                            placeholder="Buscar por número, proveedor o referencia..."
+                            id="buscarFactura"
+                            placeholder="Buscar por número o proveedor..."
                             autocomplete="off"
                         >
-
                     </div>
 
                     <div class="selector-filtro">
-
-                        <label for="filtroProveedorCompra">
-                            Proveedor
-                        </label>
-
-                        <select id="filtroProveedorCompra">
-
-                            <option value="">
-                                Todos los proveedores
-                            </option>
-
+                        <label for="filtroProveedorFactura">Proveedor</label>
+                        <select id="filtroProveedorFactura">
+                            <option value="">Todos los proveedores</option>
                         </select>
-
                     </div>
 
                     <div class="selector-filtro">
-
-                        <label for="filtroTiendaCompra">
-                            Tienda
-                        </label>
-
-                        <select id="filtroTiendaCompra">
-
-                            <option value="">
-                                Todas las tiendas
-                            </option>
-
-                            <option value="Ultrapark 1">
-                                Ultrapark 1
-                            </option>
-
-                            <option value="Ultrapark 2">
-                                Ultrapark 2
-                            </option>
-
-                            <option value="Ultralag">
-                                Ultralag
-                            </option>
-
+                        <label for="filtroTiendaFactura">Tienda</label>
+                        <select id="filtroTiendaFactura">
+                            <option value="">Todas las tiendas</option>
                         </select>
-
                     </div>
 
                     <div class="selector-filtro">
-
-                        <label for="filtroEstadoCompra">
-                            Estado
-                        </label>
-
-                        <select id="filtroEstadoCompra">
-
-                            <option value="">
-                                Todos los estados
-                            </option>
-
-                            <option value="Pendiente">
-                                Pendiente
-                            </option>
-
-                            <option value="Aprobada">
-                                Aprobada
-                            </option>
-
-                            <option value="Recibida">
-                                Recibida
-                            </option>
-
-                            <option value="Cancelada">
-                                Cancelada
-                            </option>
-
+                        <label for="filtroEstadoFactura">Estado</label>
+                        <select id="filtroEstadoFactura">
+                            <option value="">Todos los estados</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="EN_REVISION">En revisión</option>
+                            <option value="APROBADA">Aprobada</option>
+                            <option value="RECHAZADA">Rechazada</option>
+                            <option value="ANULADA">Anulada</option>
                         </select>
-
                     </div>
 
                     <div class="selector-filtro">
-
-                        <label for="filtroFechaCompra">
-                            Fecha
-                        </label>
-
-                        <input
-                            type="date"
-                            id="filtroFechaCompra"
-                        >
-
+                        <label for="filtroFechaFactura">Fecha</label>
+                        <input type="date" id="filtroFechaFactura">
                     </div>
 
-                    <button
-                        type="button"
-                        id="botonLimpiarFiltrosCompras"
-                        class="boton boton-borde"
-                    >
+                    <button type="button" id="botonLimpiarFiltrosFacturas" class="boton boton-borde">
                         <i class="fa-solid fa-filter-circle-xmark"></i>
                         Limpiar filtros
                     </button>
 
                 </div>
 
-                <p
-                    id="resultadoBusquedaCompras"
-                    class="resultado-busqueda-productos"
-                    aria-live="polite"
-                ></p>
+                <p id="resultadoBusquedaFacturas" class="resultado-busqueda-productos" aria-live="polite"></p>
 
-                <!-- Tabla -->
+                <div id="contenedorTablaFacturas" class="contenedor-tabla" hidden>
 
-                <div
-                    id="contenedorTablaCompras"
-                    class="contenedor-tabla"
-                    hidden
-                >
+                    <table class="tabla-datos">
 
-                    <table class="tabla-datos tabla-compras">
-
-                        <caption class="texto-solo-lectores">
-                            Órdenes de compra registradas
-                        </caption>
+                        <caption class="texto-solo-lectores">Historial de facturas</caption>
 
                         <thead>
-
                             <tr>
-                                <th scope="col">Número</th>
+                                <th scope="col">Factura</th>
                                 <th scope="col">Fecha</th>
+                                <th scope="col">Vencimiento</th>
                                 <th scope="col">Proveedor</th>
                                 <th scope="col">Tienda</th>
-                                <th scope="col">Productos</th>
                                 <th scope="col">Subtotal</th>
                                 <th scope="col">Impuesto</th>
                                 <th scope="col">Total</th>
+                                <th scope="col">Movimientos</th>
                                 <th scope="col">Estado</th>
                                 <th scope="col">Acciones</th>
                             </tr>
-
                         </thead>
 
-                        <tbody id="cuerpoTablaCompras">
-                            <!-- JavaScript agregará las compras -->
-                        </tbody>
+                        <tbody id="cuerpoTablaFacturas"></tbody>
 
                     </table>
 
                 </div>
 
-                <!-- Sin compras -->
-
-                <div
-                    id="mensajeSinCompras"
-                    class="estado-vacio-productos"
-                    hidden
-                >
-
-                    <i class="fa-solid fa-cart-arrow-down"></i>
-
-                    <h3>
-                        No hay compras registradas
-                    </h3>
-
-                    <p>
-                        Registra una compra para comenzar
-                        a controlar los pedidos a proveedores.
-                    </p>
-
-                    <button
-                        type="button"
-                        id="botonPrimeraCompra"
-                        class="boton boton-azul"
-                    >
-                        <i class="fa-solid fa-cart-plus"></i>
-                        Registrar compra
-                    </button>
-
+                <div id="mensajeSinFacturas" class="estado-vacio-productos" hidden>
+                    <i class="fa-solid fa-file-circle-xmark"></i>
+                    <h3>No hay facturas registradas</h3>
+                    <p>Registra una factura desde la sección de Facturas.</p>
+                    <a href="facturas.php" id="botonPrimeraFactura" class="boton boton-azul">
+                        <i class="fa-solid fa-file-invoice"></i>
+                        Registrar factura
+                    </a>
                 </div>
 
-                <!-- Sin resultados -->
-
-                <div
-                    id="mensajeSinResultadosCompras"
-                    class="estado-vacio-productos"
-                    hidden
-                >
-
+                <div id="mensajeSinResultadosFacturas" class="estado-vacio-productos" hidden>
                     <i class="fa-solid fa-magnifying-glass"></i>
-
-                    <h3>
-                        No se encontraron compras
-                    </h3>
-
-                    <p>
-                        Cambia los filtros o el texto de búsqueda.
-                    </p>
-
+                    <h3>No se encontraron facturas</h3>
+                    <p>Cambia los filtros o el texto de búsqueda.</p>
                 </div>
 
             </section>
@@ -688,431 +499,167 @@ header("Expires: 0");
     </div>
 
     <!-- ==========================================
-         MODAL: NUEVA COMPRA
+         MODAL: VER / EDITAR FACTURA
     =========================================== -->
 
-    <div
-        id="modalCompra"
-        class="modal-producto"
-        hidden
-    >
+    <div id="modalDetalleFactura" class="modal-producto" hidden>
 
-        <div
-            class="modal-producto-fondo"
-            data-cerrar-modal-compra
-        ></div>
+        <div class="modal-producto-fondo" data-cerrar-modal-detalle-factura></div>
 
         <section
-            class="modal-producto-contenido modal-compra-contenido"
+            class="modal-producto-contenido modal-factura-contenido"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="tituloModalCompra"
+            aria-labelledby="tituloModalDetalleFactura"
         >
 
             <div class="encabezado-modal-venta">
-
                 <div>
-
-                    <h2 id="tituloModalCompra">
-                        Nueva compra
-                    </h2>
-
-                    <p>
-                        Registra una compra realizada a un proveedor.
-                    </p>
-
+                    <h2 id="tituloModalDetalleFactura">Factura</h2>
+                    <p>Consulta o actualiza los datos del documento registrado.</p>
                 </div>
-
-                <button
-                    type="button"
-                    id="botonCerrarModalCompra"
-                    class="boton-cerrar-modal"
-                    aria-label="Cerrar formulario"
-                >
+                <button type="button" id="botonCerrarModalDetalleFactura" class="boton-cerrar-modal" aria-label="Cerrar">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
+            </div>
+
+            <input type="hidden" id="idFacturaDetalle">
+
+            <div class="grupo-formulario">
+                <label>Estado</label>
+                <div>
+                    <span id="badgeEstadoDetalleFactura" class="badge badge-naranja">Pendiente</span>
+                </div>
+            </div>
+
+            <div class="grupo-formulario">
+                <label for="pedidoRelacionadoDetalle">Pedido relacionado</label>
+                <input type="text" id="pedidoRelacionadoDetalle" disabled>
+            </div>
+
+            <div class="cuadricula-formulario">
+
+                <div class="grupo-formulario">
+                    <label for="proveedorDetalle">Proveedor</label>
+                    <input type="text" id="proveedorDetalle" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="ubicacionDetalle">Tienda</label>
+                    <input type="text" id="ubicacionDetalle" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="numeroFacturaDetalle">Número de factura</label>
+                    <input type="text" id="numeroFacturaDetalle" maxlength="50" autocomplete="off">
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="fechaFacturaDetalle">Fecha de emisión</label>
+                    <input type="date" id="fechaFacturaDetalle">
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="fechaVencimientoFacturaDetalle">Fecha de vencimiento</label>
+                    <input type="date" id="fechaVencimientoFacturaDetalle">
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="impuestoFacturaDetalle">Impuesto</label>
+                    <select id="impuestoFacturaDetalle">
+                        <option value="">Seleccione un impuesto</option>
+                    </select>
+                </div>
 
             </div>
 
-            <form id="formularioCompra">
+            <div class="seccion-productos-compra">
 
-                <input
-                    type="hidden"
-                    id="idCompra"
-                >
-
-                <div class="cuadricula-formulario">
-
-                    <!-- Número -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="numeroCompra">
-                            Número de compra
-                        </label>
-
-                        <input
-                            type="text"
-                            id="numeroCompra"
-                            name="numeroCompra"
-                            placeholder="Generado automáticamente"
-                            readonly
-                        >
-
-                    </div>
-
-                    <!-- Fecha -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="fechaCompra">
-                            Fecha de compra
-                        </label>
-
-                        <input
-                            type="date"
-                            id="fechaCompra"
-                            name="fechaCompra"
-                            required
-                        >
-
-                    </div>
-
-                    <!-- Proveedor -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="proveedorCompra">
-                            Proveedor
-                        </label>
-
-                        <select
-                            id="proveedorCompra"
-                            name="proveedorCompra"
-                            required
-                        >
-                            <option value="">Seleccione un proveedor</option>
-                        </select>
-
-                    </div>
-
-                    <!-- Tienda -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="tiendaCompra">
-                            Tienda de destino
-                        </label>
-
-                        <select
-                            id="tiendaCompra"
-                            name="tiendaCompra"
-                            required
-                        >
-
-                            <option value="">
-                                Seleccione una tienda
-                            </option>
-
-                            <option value="Ultrapark 1">
-                                Ultrapark 1
-                            </option>
-
-                            <option value="Ultrapark 2">
-                                Ultrapark 2
-                            </option>
-
-                            <option value="Ultralag">
-                                Ultralag
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <!-- Referencia -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="referenciaCompra">
-                            Referencia
-                        </label>
-
-                        <input
-                            type="text"
-                            id="referenciaCompra"
-                            name="referenciaCompra"
-                            placeholder="Factura, cotización u orden"
-                            maxlength="80"
-                            autocomplete="off"
-                        >
-
-                    </div>
-
-                    <!-- Estado -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="estadoCompra">
-                            Estado
-                        </label>
-
-                        <select
-                            id="estadoCompra"
-                            name="estadoCompra"
-                            required
-                        >
-
-                            <option value="Pendiente">
-                                Pendiente
-                            </option>
-
-                            <option value="Aprobada">
-                                Aprobada
-                            </option>
-
-                            <option value="Recibida">
-                                Recibida
-                            </option>
-
-                            <option value="Cancelada">
-                                Cancelada
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                </div>
-
-                <!-- Productos -->
-
-                <div class="seccion-productos-compra">
-
-                    <div class="encabezado-productos-compra">
-
-                        <div>
-
-                            <h3>Productos de la compra</h3>
-
-                            <p>
-                                Agrega los productos incluidos
-                                en la orden.
-                            </p>
-
-                        </div>
-
-                        <button
-                            type="button"
-                            id="botonAgregarProductoCompra"
-                            class="boton boton-borde"
-                        >
-                            <i class="fa-solid fa-plus"></i>
-                            Agregar producto
-                        </button>
-
-                    </div>
-
-                    <div
-                        id="listaProductosCompra"
-                        class="lista-productos-compra"
-                    >
-                        <!-- JavaScript agregará las filas -->
-                    </div>
-
-                    <div
-                        id="mensajeSinProductosCompra"
-                        class="mensaje-productos-compra"
-                    >
-                        Todavía no se han agregado productos.
-                    </div>
-
-                </div>
-
-                <!-- Observaciones -->
-
-                <div class="grupo-formulario">
-
-                    <label for="observacionesCompra">
-                        Observaciones
-                    </label>
-
-                    <textarea
-                        id="observacionesCompra"
-                        name="observacionesCompra"
-                        rows="3"
-                        maxlength="500"
-                        placeholder="Agrega observaciones adicionales"
-                    ></textarea>
-
-                </div>
-
-                <!-- Totales -->
-
-                <div class="resumen-compra-formulario">
-
+                <div class="encabezado-productos-compra">
                     <div>
-
-                        <span>Subtotal</span>
-
-                        <strong id="subtotalCompra">
-                            ₡0
-                        </strong>
-
+                        <h3>Productos facturados</h3>
                     </div>
-
-                    <div>
-
-                        <span>Impuesto</span>
-
-                        <strong id="impuestoCompra">
-                            ₡0
-                        </strong>
-
-                    </div>
-
-                    <div class="total-compra-formulario">
-
-                        <span>Total</span>
-
-                        <strong id="totalCompra">
-                            ₡0
-                        </strong>
-
-                    </div>
-
+                    <button type="button" id="botonAgregarProductoDetalle" class="boton boton-borde">
+                        <i class="fa-solid fa-plus"></i>
+                        Agregar producto
+                    </button>
                 </div>
 
-                <p
-                    id="mensajeFormularioCompra"
-                    class="mensaje-login"
-                    aria-live="polite"
-                ></p>
+                <div id="listaProductosDetalle" class="lista-productos-compra"></div>
 
-                <div class="acciones-modal-producto">
+            </div>
 
-                    <button
-                        type="button"
-                        id="botonCancelarCompra"
-                        class="boton boton-borde"
-                    >
-                        Cancelar
-                    </button>
+            <div class="grupo-formulario">
+                <label for="archivoFacturaDetalle">Evidencia (PDF)</label>
+                <p id="evidenciaActualDetalle" class="texto-ayuda"></p>
+                <input type="file" id="archivoFacturaDetalle" accept="application/pdf">
+                <small class="texto-ayuda">Sube un archivo solo si deseas reemplazar el actual (máx. 5 MB).</small>
+            </div>
 
-                    <button
-                        type="submit"
-                        class="boton boton-azul"
-                    >
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        Guardar compra
-                    </button>
+            <div class="grupo-formulario">
+                <label for="observacionesFacturaDetalle">Observaciones</label>
+                <textarea id="observacionesFacturaDetalle" rows="3" maxlength="500"></textarea>
+            </div>
 
+            <div class="grupo-formulario" id="grupoMotivoRechazoFactura" hidden>
+                <label for="motivoRechazoFactura">Motivo de rechazo (obligatorio para rechazar)</label>
+                <textarea id="motivoRechazoFactura" rows="2" maxlength="300"></textarea>
+            </div>
+
+            <div class="grupo-formulario" id="grupoMotivoAnulacionFactura" hidden>
+                <label for="motivoAnulacionFactura">Motivo de anulación (obligatorio, cancelación definitiva)</label>
+                <textarea id="motivoAnulacionFactura" rows="2" maxlength="300"></textarea>
+            </div>
+
+            <div class="resumen-compra-formulario">
+                <div>
+                    <span>Subtotal</span>
+                    <strong id="subtotalDetalleResumen">₡0</strong>
                 </div>
+                <div>
+                    <span>Impuesto</span>
+                    <strong id="impuestoDetalleResumen">₡0</strong>
+                </div>
+                <div class="total-compra-formulario">
+                    <span>Total</span>
+                    <strong id="totalDetalleResumen">₡0</strong>
+                </div>
+            </div>
 
-            </form>
+            <p id="mensajeDetalleFactura" class="mensaje-login" aria-live="polite"></p>
+
+            <div class="acciones-modal-producto">
+                <button type="button" id="botonCerrarDetalleFactura" class="boton boton-borde">Cerrar</button>
+                <button type="button" id="botonGuardarDetalleFactura" class="boton boton-azul" hidden>
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Guardar cambios
+                </button>
+                <button type="button" id="botonEnviarRevisionDetalle" class="boton boton-azul" hidden>
+                    <i class="fa-solid fa-check-double"></i>
+                    Validar factura
+                </button>
+                <button type="button" id="botonRechazarFacturaDetalle" class="boton boton-peligro" hidden>
+                    <i class="fa-solid fa-xmark"></i>
+                    Rechazar
+                </button>
+                <button type="button" id="botonAnularFacturaDetalle" class="boton boton-peligro" hidden>
+                    <i class="fa-solid fa-ban"></i>
+                    Anular
+                </button>
+                <button type="button" id="botonAprobarFacturaDetalle" class="boton boton-azul" hidden>
+                    <i class="fa-solid fa-check"></i>
+                    Aprobar
+                </button>
+            </div>
 
         </section>
 
     </div>
 
     <script src="../js/app.js"></script>
-
-    <script>
-        // Carga los proveedores reales (tabla proveedor) y los impuestos reales
-        // (tabla impuesto) usados en "Nueva compra".
-        // No reemplaza la lógica de guardado existente: los campos siguen
-        // entregando el mismo tipo de valor que antes (nombre / número).
-        (async () => {
-            try {
-                const respuesta = await fetch("../api/catalogo/catalogo.php?accion=listar_impuestos", {
-                    credentials: "same-origin"
-                });
-                const resultado = await respuesta.json();
-
-                if (resultado.success) {
-                    window._impuestosVending = resultado.data.filter((i) => i.estado);
-                }
-            } catch (error) {
-                console.error("No fue posible cargar los impuestos:", error);
-            }
-
-            const select = document.getElementById("proveedorCompra");
-            if (!select) return;
-
-            try {
-                const respuesta = await fetch("../api/compras/pedidos.php?accion=listar_proveedores", {
-                    credentials: "same-origin"
-                });
-                const resultado = await respuesta.json();
-
-                if (resultado.success) {
-                    const opciones = resultado.data
-                        .map((p) => `<option value="${p.nombre}" data-id="${p.id_proveedor}">${p.nombre}</option>`)
-                        .join("");
-                    select.innerHTML = '<option value="">Seleccione un proveedor</option>' + opciones;
-                }
-            } catch (error) {
-                console.error("No fue posible cargar los proveedores:", error);
-            }
-
-            // Carga los productos del proveedor (tabla producto_proveedor) en
-            // window._productosProveedorVending. Expuesta para que prepararCompraVending
-            // (js/app.js) también la use al editar una compra existente.
-            window.cargarProductosProveedorCompra = async (idProveedor) => {
-                window._productosProveedorVending = [];
-
-                if (!idProveedor) return;
-
-                try {
-                    const respuesta = await fetch(
-                        `../api/compras/pedidos.php?accion=listar_productos_proveedor&id_proveedor=${idProveedor}`,
-                        { credentials: "same-origin" }
-                    );
-                    const resultado = await respuesta.json();
-                    if (resultado.success) {
-                        window._productosProveedorVending = resultado.data;
-                    }
-                } catch (error) {
-                    console.error("No fue posible cargar los productos del proveedor:", error);
-                }
-            };
-
-            // Al elegir un proveedor manualmente, carga sus productos y arranca
-            // con una sola fila en blanco (flujo de "Nueva compra").
-            select.addEventListener("change", async () => {
-                const idProveedor = select.selectedOptions[0]?.dataset.id || "";
-                const lista = document.getElementById("listaProductosCompra");
-                if (lista) lista.innerHTML = "";
-
-                await window.cargarProductosProveedorCompra(idProveedor);
-
-                if (typeof agregarFilaProductoVending === "function" && lista) {
-                    agregarFilaProductoVending("listaProductosCompra", "mensajeSinProductosCompra");
-                }
-            });
-        })();
-    </script>
-
-    <script>
-        // Determina si el usuario actual puede editar compras (Administrador o
-        // Gerente General), reutilizando el endpoint "sesion" de catalogo.php.
-        (async () => {
-            try {
-                const respuesta = await fetch("../api/catalogo/catalogo.php?accion=sesion", {
-                    credentials: "same-origin"
-                });
-                const resultado = await respuesta.json();
-
-                if (resultado.success) {
-                    const rol = (resultado.data.rol || "").trim().toLowerCase();
-                    window._puedeEditarCompra = rol === "administrador" || rol === "gerente general";
-                    renderComprasVending();
-                }
-            } catch (error) {
-                console.error("No fue posible determinar el rol del usuario:", error);
-            }
-        })();
-    </script>
+    <script src="../js/pedido-api.js"></script>
+    <script src="../js/factura-api.js"></script>
+    <script src="../js/factura.js"></script>
 
 </body>
 </html>
