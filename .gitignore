@@ -3,3 +3,4 @@ config/database.php
 /vendor/
 respaldo_hu06.sql
 /respaldo/archivos/
+/compras/facturas-adjuntas/*.pdf

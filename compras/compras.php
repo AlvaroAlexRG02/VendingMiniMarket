@@ -277,7 +277,7 @@ header("Expires: 0");
                     </a>
 
                     <a
-                        href="facturas.html"
+                        href="facturas.php"
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-file-invoice-dollar"></i>
