@@ -893,6 +893,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <!-- JavaScript general -->
     <script src="../js/app.js"></script>
+<script src="../js/inventario.js"></script>
 
 </body>
 </html>
