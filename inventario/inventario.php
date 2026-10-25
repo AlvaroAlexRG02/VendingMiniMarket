@@ -26,6 +26,15 @@ if (!isset($_SESSION["usuario"])) {
 
 $ubicacionUsuario = resumenUbicacionUsuario($pdo);
 
+/*
+|--------------------------------------------------------------------------
+| Página actual
+|--------------------------------------------------------------------------
+| Permite marcar correctamente la opción activa del menú.
+*/
+
+$paginaActual = basename($_SERVER["PHP_SELF"]);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -60,11 +69,13 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0">
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <meta
         name="description"
-        content="Gestión de inventario del sistema Vending Mini Market">
+        content="Gestión de inventario del sistema Vending Mini Market"
+    >
 
     <title>Inventario | Vending Mini Market</title>
 
@@ -74,132 +85,154 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
     <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
 </head>
 
 <body class="pagina-app">
 
     <!-- ==========================================
-     BARRA LATERAL
-=========================================== -->
+         BARRA LATERAL
+    =========================================== -->
 
     <aside class="barra-lateral">
 
-        <!-- Logo -->
+        <!-- Logo del sistema -->
         <div class="logo-sistema">
-
             <a
                 href="../dashboard/dashboard.php"
-                aria-label="Ir al Dashboard">
+                aria-label="Ir al Dashboard"
+            >
                 <img
                     src="../img/logo/logo-vending.jpeg"
                     alt="Logo de Vending Mini Market"
-                    class="imagen-logo-sistema">
+                    class="imagen-logo-sistema"
+                >
             </a>
-
         </div>
 
+        <!-- Navegación principal -->
+        <nav class="nav-lateral" aria-label="Navegación principal">
 
-        <!-- ==========================================
-         NAVEGACIÓN PRINCIPAL
-    =========================================== -->
-
-        <nav
-            class="nav-lateral"
-            aria-label="Navegación principal">
-
-            <!-- Dashboard -->
-            <a href="../dashboard/dashboard.php">
+            <a
+                href="../dashboard/dashboard.php"
+                class="<?= $paginaActual === 'dashboard.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'dashboard.php' ? 'aria-current="page"' : '' ?>
+            >
                 <i class="fa-solid fa-chart-pie"></i>
                 Dashboard
             </a>
 
-
-            <!-- Productos -->
-            <a href="../productos/productos.php">
-                <i class="fa-solid fa-box"></i>
-                Productos
-            </a>
-
-
-            <!-- Tiendas -->
-            <a href="../tienda/tienda.php">
-                <i class="fa-solid fa-shop"></i>
-                Tienda
-            </a>
-
-
-            <!-- Máquinas -->
-            <a href="../maquinas/maquinas.php">
-                <i class="fa-solid fa-cash-register"></i>
-                Máquinas
-            </a>
-
-
-            <!-- Inventario
-             Esta es la página actual -->
             <a
-                href="inventario.php"
-                class="activo"
-                aria-current="page">
-                <i class="fa-solid fa-clipboard-list"></i>
-                Inventario
-            </a>
-
-
-            <!-- Ventas -->
-            <a href="../ventas/ventas.html">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas
-            </a>
-
-
-            <!-- Alertas -->
-            <a href="../alertas/alertas.html">
-                <i class="fa-solid fa-bell"></i>
-                Alertas
-            </a>
-
-
-            <!-- Reportes -->
-            <a href="../reportes/reportes.html">
-                <i class="fa-solid fa-chart-line"></i>
-                Reportes
-            </a>
-
-
-            <!-- Usuarios -->
-            <a href="../usuarios/usuarios.php">
+                href="../usuarios/usuarios.php"
+                class="<?= $paginaActual === 'usuarios.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'usuarios.php' ? 'aria-current="page"' : '' ?>
+            >
                 <i class="fa-solid fa-users"></i>
                 Usuarios
             </a>
 
+            <a
+                href="../catalogo/catalogo.php"
+                class="<?= $paginaActual === 'catalogo.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'catalogo.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-box"></i>
+                Catálogo
+            </a>
 
-            <!-- ==========================================
-             OPCIONES SEGÚN ROL
-        =========================================== -->
+            <a
+                href="../tienda/tienda.php"
+                class="<?= $paginaActual === 'tienda.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'tienda.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-shop"></i>
+                Tiendas
+            </a>
 
+            <a
+                href="../maquinas/maquinas.php"
+                class="<?= $paginaActual === 'maquinas.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'maquinas.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
+            </a>
 
-            <!-- Administrador y Gerente General -->
+            <a
+                href="../inventario/inventario.php"
+                class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-clipboard-list"></i>
+                Inventario
+            </a>
+
+            <a
+                href="../compras/compras.php"
+                class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
+            </a>
+
+            <a
+                href="../ventas/ventas.php"
+                class="<?= $paginaActual === 'ventas.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'ventas.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
+            </a>
+
+            <a
+                href="../alertas/alertas.php"
+                class="<?= $paginaActual === 'alertas.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'alertas.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
+
+            <a
+                href="../reportes/reportes.php"
+                class="<?= $paginaActual === 'reportes.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'reportes.php' ? 'aria-current="page"' : '' ?>
+            >
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
+
             <?php if (esAdministradorOGerente()): ?>
 
-                <a href="../bitacora/bitacora.php">
+                <a
+                    href="../bitacora/bitacora.php"
+                    class="<?= $paginaActual === 'bitacora.php' ? 'activo' : '' ?>"
+                    <?= $paginaActual === 'bitacora.php' ? 'aria-current="page"' : '' ?>
+                >
                     <i class="fa-solid fa-clipboard-list"></i>
                     Bitácora
                 </a>
 
-                <a href="../respaldo/respaldo.php">
+                <a
+                    href="../respaldo/respaldo.php"
+                    class="<?= $paginaActual === 'respaldo.php' ? 'activo' : '' ?>"
+                    <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>
+                >
                     <i class="fa-solid fa-database"></i>
                     Respaldos
                 </a>
 
             <?php endif; ?>
 
-
-            <!-- Solo Administrador -->
             <?php if (esAdministrador()): ?>
 
-                <a href="../incidencias/incidencias.php">
+                <a
+                    href="../incidencias/incidencias.php"
+                    class="<?= $paginaActual === 'incidencias.php' ? 'activo' : '' ?>"
+                    <?= $paginaActual === 'incidencias.php' ? 'aria-current="page"' : '' ?>
+                >
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     Incidencias
                 </a>
@@ -209,16 +242,14 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
         </nav>
 
         <!-- Cerrar sesión -->
-
         <div class="pie-barra-lateral">
-
             <a
                 href="../index/index.html"
-                id="botonCerrarSesion">
+                id="botonCerrarSesion"
+            >
                 <i class="fa-solid fa-right-from-bracket"></i>
                 Cerrar sesión
             </a>
-
         </div>
 
     </aside>
@@ -238,7 +269,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
             <button
                 type="button"
                 class="boton-menu"
-                aria-label="Abrir o cerrar el menú lateral">
+                aria-label="Abrir o cerrar el menú lateral"
+            >
                 <i class="fa-solid fa-bars"></i>
             </button>
 
@@ -253,7 +285,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     id="buscadorGeneralInventario"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
-                    autocomplete="off">
+                    autocomplete="off"
+                >
 
             </div>
 
@@ -264,13 +297,15 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <button
                     type="button"
                     class="boton-notificacion"
-                    aria-label="Consultar notificaciones">
+                    aria-label="Consultar notificaciones"
+                >
                     <i class="fa-regular fa-bell"></i>
 
                     <span
                         class="contador"
                         id="contadorNotificacionesInventario"
-                        aria-label="0 notificaciones">
+                        aria-label="0 notificaciones"
+                    >
                         0
                     </span>
 
@@ -324,8 +359,9 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 </div>
 
                 <a
-                    href="movimientos.html"
-                    class="boton boton-azul">
+                    href="movimientos.php"
+                    class="boton boton-azul"
+                >
                     <i class="fa-solid fa-plus"></i>
                     Registrar movimiento
                 </a>
@@ -338,7 +374,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
             <section
                 class="grilla-estadisticas"
-                aria-label="Resumen del inventario">
+                aria-label="Resumen del inventario"
+            >
 
                 <!-- Stock total -->
 
@@ -529,7 +566,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                         <label
                             for="buscarInventario"
-                            class="texto-solo-lectores">
+                            class="texto-solo-lectores"
+                        >
                             Buscar producto
                         </label>
 
@@ -537,7 +575,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                             type="search"
                             id="buscarInventario"
                             placeholder="Buscar por producto, código o proveedor..."
-                            autocomplete="off">
+                            autocomplete="off"
+                        >
 
                     </div>
 
@@ -652,7 +691,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     <button
                         type="button"
                         id="botonLimpiarFiltrosInventario"
-                        class="boton boton-borde">
+                        class="boton boton-borde"
+                    >
                         <i class="fa-solid fa-filter-circle-xmark"></i>
                         Limpiar filtros
                     </button>
@@ -664,7 +704,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <p
                     id="resultadoBusquedaInventario"
                     class="resultado-busqueda-productos"
-                    aria-live="polite"></p>
+                    aria-live="polite"
+                ></p>
 
                 <!-- ==========================================
                      ACCIONES
@@ -673,36 +714,41 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <div class="acciones-inventario">
 
                     <a
-                        href="movimientos.html?tipo=entrada"
-                        class="boton boton-azul">
+                        href="movimientos.php?tipo=entrada"
+                        class="boton boton-azul"
+                    >
                         <i class="fa-solid fa-arrow-down"></i>
                         Entrada
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=salida"
-                        class="boton boton-borde">
+                        href="movimientos.php?tipo=salida"
+                        class="boton boton-borde"
+                    >
                         <i class="fa-solid fa-arrow-up"></i>
                         Salida
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=ajuste"
-                        class="boton boton-borde">
+                        href="movimientos.php?tipo=ajuste"
+                        class="boton boton-borde"
+                    >
                         <i class="fa-solid fa-sliders"></i>
                         Ajuste
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=merma"
-                        class="boton boton-borde">
+                        href="movimientos.php?tipo=merma"
+                        class="boton boton-borde"
+                    >
                         <i class="fa-solid fa-trash-can"></i>
                         Merma
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=traslado"
-                        class="boton boton-borde">
+                        href="movimientos.php?tipo=traslado"
+                        class="boton boton-borde"
+                    >
                         <i class="fa-solid fa-right-left"></i>
                         Traslado
                     </a>
@@ -715,7 +761,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <div
                     id="contenedorTablaInventario"
-                    class="contenedor-tabla">
+                    class="contenedor-tabla"
+                >
 
                     <table class="tabla-datos">
 
@@ -758,7 +805,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <div
                     id="mensajeSinInventario"
                     class="estado-vacio-productos"
-                    hidden>
+                    hidden
+                >
 
                     <i class="fa-solid fa-box-open"></i>
 
@@ -772,8 +820,9 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                     </p>
 
                     <a
-                        href="../productos/producto-nuevo.html"
-                        class="boton boton-azul">
+                        href="../productos/producto-nuevo.php"
+                        class="boton boton-azul"
+                    >
                         <i class="fa-solid fa-plus"></i>
                         Registrar producto
                     </a>
@@ -787,7 +836,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <div
                     id="mensajeSinResultadosInventario"
                     class="estado-vacio-productos"
-                    hidden>
+                    hidden
+                >
 
                     <i class="fa-solid fa-magnifying-glass"></i>
 
@@ -817,7 +867,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                             type="button"
                             id="botonPaginaAnteriorInventario"
                             disabled
-                            aria-label="Página anterior">
+                            aria-label="Página anterior"
+                        >
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
 
@@ -825,7 +876,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                             type="button"
                             id="botonPaginaSiguienteInventario"
                             disabled
-                            aria-label="Página siguiente">
+                            aria-label="Página siguiente"
+                        >
                             <i class="fa-solid fa-chevron-right"></i>
                         </button>
 
@@ -843,5 +895,4 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
     <script src="../js/app.js"></script>
 
 </body>
-
 </html>

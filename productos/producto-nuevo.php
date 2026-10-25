@@ -88,9 +88,14 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 Máquinas
             </a>
 
-            <a href="../inventario/inventario.html">
+            <a href="../inventario/inventario.php">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
+            </a>
+
+            <a href="../compras/compras.php">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
             </a>
 
             <a href="../ventas/ventas.html">
@@ -214,9 +219,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                         <div class="grupo-formulario">
                             <label for="codigoInternoProducto">Código interno</label>
-                            <input type="text" id="codigoInternoProducto" maxlength="100"
-                                   placeholder="Código de artículo. Ejemplo: COCA-600"
-                                   autocomplete="off">
+                               <input type="text" id="codigoInternoProducto" maxlength="100"
+                                    placeholder="Cargando siguiente código..."
+                                    autocomplete="off" readonly>
+                                <small id="ayudaCodigoInterno">Se asigna automáticamente (CR600, CR601...).</small>
                         </div>
 
                         <div class="grupo-formulario">

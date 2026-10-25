@@ -3,6 +3,7 @@
 =========================================================*/
 
 document.addEventListener("DOMContentLoaded", () => {
+    inicializarNavegacionLateral();
     inicializarMostrarContrasena();
     inicializarMenuLateral();
     inicializarSesionVending();
@@ -10,15 +11,151 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaMovimientosVending();
     inicializarPaginaVentas();
     inicializarDashboardVending();
-    actualizarPerfilSuperiorVending();
     actualizarContadoresNotificacionVending();
     inicializarPaginaUsuariosVending();
     inicializarPaginaAlertasVending();
     inicializarPaginaReportesVending();
-    inicializarPaginaComprasVending();
-    inicializarPaginaPedidosVending();
-    inicializarPaginaFacturasVending();
 });
+
+function inicializarNavegacionLateral() {
+    const navegaciones = document.querySelectorAll(".nav-lateral");
+
+    if (navegaciones.length === 0) {
+        return;
+    }
+
+    const scriptAplicacion = Array.from(document.scripts).find((script) => {
+        return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+    });
+
+    if (!scriptAplicacion) {
+        return;
+    }
+
+    const raizAplicacion = new URL("../", scriptAplicacion.src);
+    const rutaRaiz = raizAplicacion.pathname;
+    const rutaActual = window.location.pathname.startsWith(rutaRaiz)
+        ? window.location.pathname.slice(rutaRaiz.length)
+        : window.location.pathname.replace(/^\/+/, "");
+
+    const paginas = [
+        {
+            nombre: "Dashboard",
+            ruta: "dashboard/dashboard.php",
+            icono: "fa-chart-pie",
+            rutasActivas: ["dashboard/dashboard.php"]
+        },
+        {
+            nombre: "Usuarios",
+            ruta: "usuarios/usuarios.php",
+            icono: "fa-users",
+            rutasActivas: ["usuarios/usuarios.php"]
+        },
+        {
+            nombre: "Productos",
+            ruta: "productos/productos.php",
+            icono: "fa-box",
+            rutasActivas: [
+                "productos/productos.php",
+                "productos/productos.html",
+                "productos/producto-nuevo.php",
+                "productos/producto-nuevo.html",
+                "productos/categorias.php",
+                "productos/proveedores.php"
+            ]
+        },
+        {
+            nombre: "Tiendas",
+            ruta: "tienda/tienda.php",
+            icono: "fa-shop",
+            rutasActivas: [
+                "tienda/tienda.php",
+                "tienda/relaciones.php",
+                "tienda/ubicacion-nueva.php"
+            ]
+        },
+        {
+            nombre: "Máquinas",
+            ruta: "maquinas/maquinas.php",
+            icono: "fa-cash-register",
+            rutasActivas: ["maquinas/maquinas.php", "maquinas/maquina-nueva.php"]
+        },
+        {
+            nombre: "Inventario",
+            ruta: "inventario/inventario.php",
+            icono: "fa-clipboard-list",
+            rutasActivas: ["inventario/inventario.php", "inventario/movimientos.html"]
+        },
+        {
+            nombre: "Compras",
+            ruta: "compras/compras.php",
+            icono: "fa-cart-shopping",
+            rutasActivas: [
+                "compras/compras.php",
+                "compras/facturas.php",
+                "compras/pedido.html",
+                "compras/pedido.php"
+            ]
+        },
+        {
+            nombre: "Ventas",
+            ruta: "ventas/ventas.html",
+            icono: "fa-chart-column",
+            rutasActivas: ["ventas/ventas.html"]
+        },
+        {
+            nombre: "Alertas",
+            ruta: "alertas/alertas.html",
+            icono: "fa-bell",
+            rutasActivas: ["alertas/alertas.html"]
+        },
+        {
+            nombre: "Reportes",
+            ruta: "reportes/reportes.php",
+            icono: "fa-chart-line",
+            rutasActivas: ["reportes/reportes.php"]
+        },
+        {
+            nombre: "Bitácora",
+            ruta: "bitacora/bitacora.php",
+            icono: "fa-clipboard-list",
+            rutasActivas: ["bitacora/bitacora.php"]
+        },
+        {
+            nombre: "Respaldos",
+            ruta: "respaldo/respaldo.php",
+            icono: "fa-database",
+            rutasActivas: ["respaldo/respaldo.php"]
+        },
+        {
+            nombre: "Incidencias",
+            ruta: "incidencias/incidencias.php",
+            icono: "fa-triangle-exclamation",
+            rutasActivas: ["incidencias/incidencias.php"]
+        }
+    ];
+
+    navegaciones.forEach((navegacion) => {
+        navegacion.replaceChildren();
+        navegacion.setAttribute("aria-label", "Navegación principal");
+
+        paginas.forEach((pagina) => {
+            const enlace = document.createElement("a");
+            const icono = document.createElement("i");
+            const activa = pagina.rutasActivas.includes(rutaActual);
+
+            enlace.href = new URL(pagina.ruta, raizAplicacion).href;
+            enlace.classList.toggle("activo", activa);
+            if (activa) {
+                enlace.setAttribute("aria-current", "page");
+            }
+
+            icono.className = `fa-solid ${pagina.icono}`;
+            enlace.append(icono, document.createTextNode(pagina.nombre));
+            navegacion.appendChild(enlace);
+        });
+    });
+}
 
 /*=========================================================
   INICIO DE SESIÓN
@@ -2856,11 +2993,96 @@ async function procesarInicioSesionVending(evento) {
 }
 
 
+function mostrarModalConfirmarCerrarSesionVending() {
+
+    return new Promise((resolve) => {
+
+        let modal = document.getElementById("modalConfirmarCerrarSesion");
+
+        if (!modal) {
+
+            modal = document.createElement("div");
+            modal.id = "modalConfirmarCerrarSesion";
+            modal.className = "modal-producto";
+            modal.hidden = true;
+
+            modal.innerHTML = `
+                <div class="modal-producto-fondo" data-cerrar-modal-cerrar-sesion></div>
+
+                <section
+                    class="modal-producto-contenido"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="tituloModalCerrarSesion"
+                >
+
+                    <div class="modal-producto-icono">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </div>
+
+                    <h2 id="tituloModalCerrarSesion">
+                        Cerrar sesión
+                    </h2>
+
+                    <p>
+                        ¿Deseas cerrar sesión?
+                    </p>
+
+                    <div class="acciones-modal-producto">
+
+                        <button
+                            type="button"
+                            id="botonCancelarCerrarSesion"
+                            class="boton boton-borde"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="button"
+                            id="botonConfirmarCerrarSesion"
+                            class="boton boton-azul"
+                        >
+                            Cerrar sesión
+                        </button>
+
+                    </div>
+
+                </section>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        const cerrar = (resultado) => {
+            modal.hidden = true;
+            resolve(resultado);
+        };
+
+        modal.querySelector("[data-cerrar-modal-cerrar-sesion]").onclick = () => cerrar(false);
+        modal.querySelector("#botonCancelarCerrarSesion").onclick = () => cerrar(false);
+        modal.querySelector("#botonConfirmarCerrarSesion").onclick = () => cerrar(true);
+
+        modal.hidden = false;
+    });
+}
+
 async function cerrarSesionVending(evento) {
 
     if (evento) {
         evento.preventDefault();
     }
+
+    const confirmado = await mostrarModalConfirmarCerrarSesionVending();
+
+    if (!confirmado) {
+        return;
+    }
+
+    // Limpia cualquier dato de sesion viejo que haya quedado en
+    // localStorage (de versiones anteriores que si lo guardaban ahi),
+    // para que nunca vuelva a pisar los datos reales que renderiza PHP.
+    localStorage.removeItem(CLAVE_SESION_VENDING);
 
     try {
 
@@ -4668,23 +4890,10 @@ function configurarModuloListadoVending(config){
     document.getElementById(config.botonLimpiar)?.addEventListener("click",()=>{config.filtros.forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});config.render();});
     config.render();
 }
-function inicializarPaginaComprasVending(){configurarModuloListadoVending({cuerpo:"cuerpoTablaCompras",botonNuevo:"botonNuevaCompra",botonPrimero:"botonPrimeraCompra",botonCerrar:"botonCerrarModalCompra",botonCancelar:"botonCancelarCompra",modal:"modalCompra",selectorFondo:"[data-cerrar-modal-compra]",formulario:"formularioCompra",botonLimpiar:"botonLimpiarFiltrosCompras",filtros:["buscarCompra","filtroProveedorCompra","filtroTiendaCompra","filtroEstadoCompra","filtroFechaCompra"],preparar:prepararCompraVending,guardar:guardarCompraVending,render:renderComprasVending,inicializar:()=>document.getElementById("botonAgregarProductoCompra")?.addEventListener("click",()=>agregarFilaProductoVending("listaProductosCompra","mensajeSinProductosCompra"))});}
-function prepararCompraVending(){document.getElementById("formularioCompra").reset();document.getElementById("numeroCompra").value=`COM-${Date.now().toString().slice(-6)}`;document.getElementById("fechaCompra").value=fechaHoyVending();document.getElementById("listaProductosCompra").innerHTML="";agregarFilaProductoVending("listaProductosCompra","mensajeSinProductosCompra");abrirModalVending("modalCompra");}
-function agregarFilaProductoVending(listaId,mensajeId){const lista=document.getElementById(listaId);const fila=document.createElement("div");fila.className="fila-producto-compra";fila.innerHTML=`<div class="grupo-formulario"><label>Producto</label><input class="item-nombre" required placeholder="Producto"></div><div class="grupo-formulario"><label>Cantidad</label><input class="item-cantidad" type="number" min="1" value="1" required></div><div class="grupo-formulario"><label>Precio</label><input class="item-precio" type="number" min="0" step="0.01" value="0" required></div><div class="grupo-formulario"><label>Impuesto %</label><input class="item-iva" type="number" min="0" step="0.01" value="13"></div><button type="button" class="boton-eliminar-producto-compra"><i class="fa-solid fa-trash"></i></button>`;fila.querySelector("button").addEventListener("click",()=>{fila.remove();calcularTotalesLineasVending(listaId);mostrarElementoVending(mensajeId,!lista.children.length)});fila.querySelectorAll("input").forEach(i=>i.addEventListener("input",()=>calcularTotalesLineasVending(listaId)));lista.appendChild(fila);mostrarElementoVending(mensajeId,false);calcularTotalesLineasVending(listaId);}
+function opcionesProductoProveedorVending(){const productos=window._productosProveedorVending||[];if(!productos.length)return '<option value="">Sin productos para este proveedor</option>';return '<option value="">Seleccione...</option>'+productos.map(p=>`<option value="${p.nombre}" data-costo="${p.costo||0}">${p.nombre}</option>`).join("");}
+function opcionesImpuestoVending(){const impuestos=window._impuestosVending||[];if(!impuestos.length)return '<option value="13">13%</option>';return impuestos.map((imp,i)=>`<option value="${imp.porcentaje}" ${i===0?"selected":""}>${imp.nombre} (${imp.porcentaje}%)</option>`).join("");}
+function agregarFilaProductoVending(listaId,mensajeId,preset=null){const lista=document.getElementById(listaId);const fila=document.createElement("div");fila.className="fila-producto-compra";const esCompra=listaId==="listaProductosCompra";const campoProducto=esCompra?`<select class="item-nombre" required>${opcionesProductoProveedorVending()}</select>`:`<input class="item-nombre" required placeholder="Producto">`;const campoIva=esCompra?`<select class="item-iva">${opcionesImpuestoVending()}</select>`:`<input class="item-iva" type="number" min="0" step="0.01" value="13">`;fila.innerHTML=`<div class="grupo-formulario"><label>Producto</label>${campoProducto}</div><div class="grupo-formulario"><label>Cantidad</label><input class="item-cantidad" type="number" min="1" value="1" autocomplete="off" required></div><div class="grupo-formulario"><label>Precio</label><input class="item-precio" type="number" min="0" step="0.01" value="0" autocomplete="off" required></div><div class="grupo-formulario"><label>Impuesto</label>${campoIva}</div><button type="button" class="boton-eliminar-producto-compra"><i class="fa-solid fa-trash"></i></button>`;fila.querySelector("button").addEventListener("click",()=>{fila.remove();calcularTotalesLineasVending(listaId);mostrarElementoVending(mensajeId,!lista.children.length)});if(esCompra){fila.querySelector(".item-nombre").addEventListener("change",(e)=>{const opcion=e.target.selectedOptions[0];fila.querySelector(".item-precio").value=opcion?Number(opcion.dataset.costo||0):0;calcularTotalesLineasVending(listaId);});fila.querySelector(".item-iva").addEventListener("change",()=>calcularTotalesLineasVending(listaId));}lista.appendChild(fila);if(preset){const campoNombre=fila.querySelector(".item-nombre");if(campoNombre.tagName==="SELECT"){if([...campoNombre.options].some(o=>o.value===preset.nombre))campoNombre.value=preset.nombre;}else{campoNombre.value=preset.nombre||"";}fila.querySelector(".item-cantidad").value=preset.cantidad??1;fila.querySelector(".item-precio").value=preset.precio??0;const campoIvaEl=fila.querySelector(".item-iva");if(campoIvaEl.tagName==="SELECT"){if([...campoIvaEl.options].some(o=>Number(o.value)===Number(preset.iva)))campoIvaEl.value=preset.iva;}else{campoIvaEl.value=preset.iva??13;}}else{fila.querySelector(".item-cantidad").value=1;fila.querySelector(".item-precio").value=0;}fila.querySelectorAll("input").forEach(i=>i.addEventListener("input",()=>calcularTotalesLineasVending(listaId)));mostrarElementoVending(mensajeId,false);calcularTotalesLineasVending(listaId);}
 function extraerLineasVending(listaId){return [...document.querySelectorAll(`#${listaId} .fila-producto-compra`)].map(f=>({nombre:f.querySelector(".item-nombre").value.trim(),cantidad:Number(f.querySelector(".item-cantidad").value)||0,precio:Number(f.querySelector(".item-precio").value)||0,iva:Number(f.querySelector(".item-iva")?.value)||0}));}
 function calcularTotalesLineasVending(listaId){const items=extraerLineasVending(listaId);const sub=items.reduce((s,i)=>s+i.cantidad*i.precio,0);const iva=items.reduce((s,i)=>s+i.cantidad*i.precio*i.iva/100,0);if(listaId.includes("Compra")){textoVending("subtotalCompra",monedaVending(sub));textoVending("impuestoCompra",monedaVending(iva));textoVending("totalCompra",monedaVending(sub+iva));}else{textoVending("cantidadTotalPedido",items.reduce((s,i)=>s+i.cantidad,0));textoVending("subtotalPedido",monedaVending(sub));textoVending("totalPedido",monedaVending(sub+iva));}return{sub,iva,total:sub+iva,items};}
-function guardarCompraVending(e){e.preventDefault();const t=calcularTotalesLineasVending("listaProductosCompra");if(!t.items.length||t.items.some(i=>!i.nombre||i.cantidad<=0)){textoVending("mensajeFormularioCompra","Agrega al menos un producto válido.");return;}const a=leerListaVending(CLAVE_COMPRAS_VENDING);a.push({id:generarIdVending("COM"),numero:document.getElementById("numeroCompra").value,fecha:document.getElementById("fechaCompra").value,proveedor:document.getElementById("proveedorCompra").value.trim(),tienda:document.getElementById("tiendaCompra").value,referencia:document.getElementById("referenciaCompra").value.trim(),estado:document.getElementById("estadoCompra").value,productos:t.items,subtotal:t.sub,impuesto:t.iva,total:t.total});guardarListaVending(CLAVE_COMPRAS_VENDING,a);cerrarModalVending("modalCompra");renderComprasVending();mostrarMensajeModuloVending("mensajeCompras","Compra registrada correctamente.");}
-function renderComprasVending(){renderTablaSimpleVending({clave:CLAVE_COMPRAS_VENDING,prefijo:"Compra",cuerpo:"cuerpoTablaCompras",contenedor:"contenedorTablaCompras",vacio:"mensajeSinCompras",sinResultados:"mensajeSinResultadosCompras",resultado:"resultadoBusquedaCompras",buscar:"buscarCompra",filtros:{proveedor:"filtroProveedorCompra",tienda:"filtroTiendaCompra",estado:"filtroEstadoCompra",fecha:"filtroFechaCompra"},resumen:[['totalCompras',a=>a.length],['comprasPendientes',a=>a.filter(x=>x.estado==='Pendiente').length],['comprasRecibidas',a=>a.filter(x=>x.estado==='Recibida').length],['montoTotalCompras',a=>monedaVending(a.reduce((s,x)=>s+Number(x.total||0),0))]],fila:x=>`<tr><td>${escaparHTMLVending(x.numero)}</td><td>${x.fecha}</td><td>${escaparHTMLVending(x.proveedor)}</td><td>${escaparHTMLVending(x.tienda)}</td><td>${x.productos?.length||0}</td><td>${monedaVending(x.subtotal)}</td><td>${monedaVending(x.impuesto)}</td><td>${monedaVending(x.total)}</td><td><span class="badge badge-${x.estado==='Recibida'?'verde':x.estado==='Cancelada'?'rojo':'naranja'}">${x.estado}</span></td><td>-</td></tr>`});}
 function renderTablaSimpleVending(c){const todos=leerListaVending(c.clave);const q=normalizarTexto(document.getElementById(c.buscar)?.value||"");const lista=todos.filter(x=>(!q||normalizarTexto(JSON.stringify(x)).includes(q))&&Object.entries(c.filtros).every(([k,id])=>{const v=document.getElementById(id)?.value||"";return !v||String(x[k]||"")===v}));document.getElementById(c.cuerpo).innerHTML=lista.map(c.fila).join("");c.resumen.forEach(([id,fn])=>textoVending(id,fn(todos)));mostrarElementoVending(c.contenedor,lista.length>0);mostrarElementoVending(c.vacio,todos.length===0);mostrarElementoVending(c.sinResultados,todos.length>0&&lista.length===0);textoVending(c.resultado,`${lista.length} resultado(s)`);}
 
-function inicializarPaginaPedidosVending(){configurarModuloListadoVending({cuerpo:"cuerpoTablaPedidos",botonNuevo:"botonNuevoPedido",botonPrimero:"botonPrimerPedido",botonCerrar:"botonCerrarModalPedido",botonCancelar:"botonCancelarPedido",modal:"modalPedido",selectorFondo:"[data-cerrar-modal-pedido]",formulario:"formularioPedido",botonLimpiar:"botonLimpiarFiltrosPedidos",filtros:["buscarPedido","filtroProveedorPedido","filtroTiendaPedido","filtroEstadoPedido","filtroFechaPedido"],preparar:prepararPedidoVending,guardar:guardarPedidoVending,render:renderPedidosVending,inicializar:()=>document.getElementById("botonAgregarProductoPedido")?.addEventListener("click",()=>agregarFilaProductoVending("listaProductosPedido","mensajeSinProductosPedido"))});}
-function prepararPedidoVending(){document.getElementById("formularioPedido").reset();document.getElementById("numeroPedido").value=`PED-${Date.now().toString().slice(-6)}`;document.getElementById("fechaPedido").value=fechaHoyVending();document.getElementById("responsablePedido").value=obtenerSesionVending()?.nombre||"";document.getElementById("listaProductosPedido").innerHTML="";agregarFilaProductoVending("listaProductosPedido","mensajeSinProductosPedido");abrirModalVending("modalPedido");}
-function guardarPedidoVending(e){e.preventDefault();const t=calcularTotalesLineasVending("listaProductosPedido");if(!t.items.length||t.items.some(i=>!i.nombre)){textoVending("mensajeFormularioPedido","Agrega productos válidos.");return;}const a=leerListaVending(CLAVE_PEDIDOS_VENDING);a.push({id:generarIdVending("PED"),numero:document.getElementById("numeroPedido").value,fecha:document.getElementById("fechaPedido").value,proveedor:document.getElementById("proveedorPedido").value.trim(),tienda:document.getElementById("tiendaPedido").value,responsable:document.getElementById("responsablePedido").value.trim(),estado:document.getElementById("estadoPedido").value,productos:t.items,total:t.total});guardarListaVending(CLAVE_PEDIDOS_VENDING,a);cerrarModalVending("modalPedido");renderPedidosVending();mostrarMensajeModuloVending("mensajePedidos","Pedido guardado correctamente.");}
-function renderPedidosVending(){renderTablaSimpleVending({clave:CLAVE_PEDIDOS_VENDING,cuerpo:"cuerpoTablaPedidos",contenedor:"contenedorTablaPedidos",vacio:"mensajeSinPedidos",sinResultados:"mensajeSinResultadosPedidos",resultado:"resultadoBusquedaPedidos",buscar:"buscarPedido",filtros:{proveedor:"filtroProveedorPedido",tienda:"filtroTiendaPedido",estado:"filtroEstadoPedido",fecha:"filtroFechaPedido"},resumen:[['totalPedidos',a=>a.length],['pedidosPendientes',a=>a.filter(x=>x.estado==='Pendiente').length],['pedidosAprobados',a=>a.filter(x=>x.estado==='Aprobado').length],['totalProductosPedidos',a=>a.reduce((s,x)=>s+(x.productos||[]).reduce((n,i)=>n+Number(i.cantidad||0),0),0)]],fila:x=>`<tr><td>${x.numero}</td><td>${x.fecha}</td><td>${escaparHTMLVending(x.proveedor)}</td><td>${x.tienda}</td><td>${escaparHTMLVending(x.responsable)}</td><td>${x.productos?.length||0}</td><td>${monedaVending(x.total)}</td><td><span class="badge badge-${x.estado==='Aprobado'?'verde':x.estado==='Rechazado'?'rojo':'naranja'}">${x.estado}</span></td><td>-</td></tr>`});}
-
-function inicializarPaginaFacturasVending(){configurarModuloListadoVending({cuerpo:"cuerpoTablaFacturas",botonNuevo:"botonNuevaFactura",botonPrimero:"botonPrimeraFactura",botonCerrar:"botonCerrarModalFactura",botonCancelar:"botonCancelarFactura",modal:"modalFactura",selectorFondo:"[data-cerrar-modal-factura]",formulario:"formularioFactura",botonLimpiar:"botonLimpiarFiltrosFacturas",filtros:["buscarFactura","filtroProveedorFactura","filtroTiendaFactura","filtroEstadoFactura","filtroFechaFactura"],preparar:prepararFacturaVending,guardar:guardarFacturaVending,render:renderFacturasVending,inicializar:()=>{["subtotalFactura","impuestoFactura"].forEach(id=>document.getElementById(id)?.addEventListener("input",calcularFacturaVending));document.getElementById("archivoFactura")?.addEventListener("change",mostrarArchivoFacturaVending);document.getElementById("botonQuitarArchivoFactura")?.addEventListener("click",()=>{document.getElementById("archivoFactura").value="";mostrarElementoVending("informacionArchivoFactura",false);});}});}
-function prepararFacturaVending(){document.getElementById("formularioFactura").reset();document.getElementById("fechaFactura").value=fechaHoyVending();document.getElementById("fechaVencimientoFactura").value=fechaHoyVending();const select=document.getElementById("compraRelacionadaFactura");select.innerHTML='<option value="">Sin compra relacionada</option>'+leerListaVending(CLAVE_COMPRAS_VENDING).map(c=>`<option value="${c.numero}">${c.numero} - ${escaparHTMLVending(c.proveedor)}</option>`).join('');calcularFacturaVending();abrirModalVending("modalFactura");}
-function calcularFacturaVending(){const s=Number(document.getElementById("subtotalFactura")?.value)||0,i=Number(document.getElementById("impuestoFactura")?.value)||0,t=s+i;const total=document.getElementById("totalFactura");if(total)total.value=t.toFixed(2);textoVending("resumenSubtotalFactura",monedaVending(s));textoVending("resumenImpuestoFactura",monedaVending(i));textoVending("resumenTotalFactura",monedaVending(t));}
-function mostrarArchivoFacturaVending(){const f=document.getElementById("archivoFactura")?.files?.[0];if(!f){mostrarElementoVending("informacionArchivoFactura",false);return;}textoVending("nombreArchivoFactura",f.name);textoVending("detalleArchivoFactura",`${(f.size/1024).toFixed(1)} KB`);mostrarElementoVending("informacionArchivoFactura",true);}
-function guardarFacturaVending(e){e.preventDefault();calcularFacturaVending();const a=leerListaVending(CLAVE_FACTURAS_VENDING);a.push({id:generarIdVending("FAC"),numero:document.getElementById("numeroFactura").value.trim(),fecha:document.getElementById("fechaFactura").value,vencimiento:document.getElementById("fechaVencimientoFactura").value,proveedor:document.getElementById("proveedorFactura").value.trim(),compra:document.getElementById("compraRelacionadaFactura").value,tienda:document.getElementById("tiendaFactura").value,subtotal:Number(document.getElementById("subtotalFactura").value)||0,impuesto:Number(document.getElementById("impuestoFactura").value)||0,total:Number(document.getElementById("totalFactura").value)||0,estado:document.getElementById("estadoFactura").value,metodoPago:document.getElementById("metodoPagoFactura").value,fechaPago:document.getElementById("fechaPagoFactura").value});guardarListaVending(CLAVE_FACTURAS_VENDING,a);cerrarModalVending("modalFactura");renderFacturasVending();mostrarMensajeModuloVending("mensajeFacturas","Factura guardada correctamente.");}
-function renderFacturasVending(){renderTablaSimpleVending({clave:CLAVE_FACTURAS_VENDING,cuerpo:"cuerpoTablaFacturas",contenedor:"contenedorTablaFacturas",vacio:"mensajeSinFacturas",sinResultados:"mensajeSinResultadosFacturas",resultado:"resultadoBusquedaFacturas",buscar:"buscarFactura",filtros:{proveedor:"filtroProveedorFactura",tienda:"filtroTiendaFactura",estado:"filtroEstadoFactura",fecha:"filtroFechaFactura"},resumen:[['totalFacturas',a=>a.length],['facturasPendientes',a=>a.filter(x=>x.estado==='Pendiente').length],['facturasPagadas',a=>a.filter(x=>x.estado==='Pagada').length],['montoTotalFacturas',a=>monedaVending(a.reduce((s,x)=>s+Number(x.total||0),0))]],fila:x=>`<tr><td>${escaparHTMLVending(x.numero)}</td><td>${x.fecha}</td><td>${x.vencimiento}</td><td>${escaparHTMLVending(x.proveedor)}</td><td>${escaparHTMLVending(x.compra||'-')}</td><td>${x.tienda}</td><td>${monedaVending(x.subtotal)}</td><td>${monedaVending(x.impuesto)}</td><td>${monedaVending(x.total)}</td><td><span class="badge badge-${x.estado==='Pagada'?'verde':x.estado==='Vencida'||x.estado==='Anulada'?'rojo':'naranja'}">${x.estado}</span></td><td>-</td></tr>`});}

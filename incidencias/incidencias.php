@@ -18,6 +18,7 @@ header("Pragma: no-cache");
 header("Expires: 0");
 
 $usuario = $_SESSION["usuario"];
+$paginaActual = basename($_SERVER["PHP_SELF"]);
 
 ?>
 
@@ -61,129 +62,129 @@ $usuario = $_SESSION["usuario"];
 
 <aside class="barra-lateral">
 
+    <!-- Logo del sistema -->
     <div class="logo-sistema">
-
         <a
-            href="../dashboard/dashboard.php"
+            href="/VendingMiniMarket/dashboard/dashboard.php"
             aria-label="Ir al Dashboard"
         >
-
             <img
-                src="../img/logo/logo-vending.jpeg"
+                src="/VendingMiniMarket/img/logo/logo-vending.jpeg"
                 alt="Logo de Vending Mini Market"
                 class="imagen-logo-sistema"
             >
-
         </a>
-
     </div>
 
+    <!-- Navegación principal -->
+    <nav class="nav-lateral" aria-label="Navegación principal">
 
-    <nav
-            class="nav-lateral"
-            aria-label="Navegación principal"
-        >
+        <a href="/VendingMiniMarket/dashboard/dashboard.php"
+           class="<?= $paginaActual === 'dashboard.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'dashboard.php' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-chart-pie"></i>
+            Dashboard
+        </a>
 
-            <a
-                href="dashboard.php"
-                class="activo"
-                aria-current="page"
-            >
-                <i class="fa-solid fa-chart-pie"></i>
-                Dashboard
-            </a>
+        <a href="/VendingMiniMarket/usuarios/usuarios.php"
+           class="<?= $paginaActual === 'usuarios.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'usuarios.php' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-users"></i>
+            Usuarios
+        </a>
 
-            <a href="../productos/productos.html">
-                <i class="fa-solid fa-box"></i>
-                Productos
-            </a>
+        <a href="/VendingMiniMarket/catalogo/catalogo.php"
+           class="<?= $paginaActual === 'catalogo.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'catalogo.php' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-box"></i>
+            Catálogo
+        </a>
 
-            <a href="../tienda/tienda.php">
-                <i class="fa-solid fa-shop"></i>
-                Tienda
-            </a>
+        <a href="/VendingMiniMarket/tienda/tienda.php"
+           class="<?= $paginaActual === 'tienda.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'tienda.php' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-shop"></i>
+            Tiendas
+        </a>
 
-            <a href="../maquinas/maquinas.php">
-                <i class="fa-solid fa-cash-register"></i>
-                Máquinas
-            </a>
+        <a href="/VendingMiniMarket/maquinas/maquinas.php"
+           class="<?= $paginaActual === 'maquinas.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'maquinas.php' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-cash-register"></i>
+            Máquinas
+        </a>
 
-            <a href="../inventario/inventario.html">
+        <a href="/VendingMiniMarket/inventario/inventario.php"
+           class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-clipboard-list"></i>
+            Inventario
+        </a>
+
+        <a href="/VendingMiniMarket/compras/compras.php"
+           class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-cart-shopping"></i>
+            Compras
+        </a>
+
+        <a href="/VendingMiniMarket/ventas/ventas.html"
+           class="<?= $paginaActual === 'ventas.html' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'ventas.html' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-chart-column"></i>
+            Ventas
+        </a>
+
+        <a href="/VendingMiniMarket/reportes/reportes.html"
+           class="<?= $paginaActual === 'reportes.html' ? 'activo' : '' ?>"
+           <?= $paginaActual === 'reportes.html' ? 'aria-current="page"' : '' ?>>
+            <i class="fa-solid fa-chart-line"></i>
+            Reportes
+        </a>
+
+        <?php if (esAdministradorOGerente()): ?>
+
+            <a href="/VendingMiniMarket/bitacora/bitacora.php"
+               class="<?= $paginaActual === 'bitacora.php' ? 'activo' : '' ?>"
+               <?= $paginaActual === 'bitacora.php' ? 'aria-current="page"' : '' ?>>
                 <i class="fa-solid fa-clipboard-list"></i>
-                Inventario
+                Bitácora
             </a>
 
-            <a href="../ventas/ventas.html">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas
+            <a href="/VendingMiniMarket/respaldo/respaldo.php"
+               class="<?= $paginaActual === 'respaldo.php' ? 'activo' : '' ?>"
+               <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-database"></i>
+                Respaldos
             </a>
 
-            <a href="../alertas/alertas.html">
-                <i class="fa-solid fa-bell"></i>
-                Alertas
+        <?php endif; ?>
+
+        <?php if (esAdministrador()): ?>
+
+            <a href="/VendingMiniMarket/incidencias/incidencias.php"
+               class="<?= $paginaActual === 'incidencias.php' ? 'activo' : '' ?>"
+               <?= $paginaActual === 'incidencias.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Incidencias
             </a>
 
-            <a href="../reportes/reportes.html">
-                <i class="fa-solid fa-chart-line"></i>
-                Reportes
-            </a>
+        <?php endif; ?>
 
-            <a href="../usuarios/usuarios.php">
-                <i class="fa-solid fa-users"></i>
-                Usuarios
-            </a>
+    </nav>
 
-            <?php if (esAdministradorOGerente()): ?>
-
-                <a href="../bitacora/bitacora.php">
-
-                    <i class="fa-solid fa-clipboard-list"></i>
-
-                    Bitácora
-
-                </a>
-
-            <?php endif; ?>
-
-
-            <?php if (esAdministradorOGerente()): ?>
-
-                <a href="../respaldo/respaldo.php">
-                    <i class="fa-solid fa-database"></i>
-                    Respaldos
-                </a>
-
-            <?php endif; ?>
-
-           <?php if (esAdministrador()): ?>
-
-                <a href="../incidencias/incidencias.php">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    Incidencias
-                </a>
-
-            <?php endif; ?>
-
-        </nav>
-
-
+    <!-- Cerrar sesión -->
     <div class="pie-barra-lateral">
 
-        <a
-            href="../index/index.html"
-            id="botonCerrarSesion"
-        >
-
+        <a href="/VendingMiniMarket/index/index.html"
+           id="botonCerrarSesion">
             <i class="fa-solid fa-right-from-bracket"></i>
-
             Cerrar sesión
-
         </a>
 
     </div>
 
 </aside>
-
 
 <!-- ==========================================
      COLUMNA PRINCIPAL

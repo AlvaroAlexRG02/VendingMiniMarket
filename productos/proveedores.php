@@ -88,9 +88,14 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 Máquinas
             </a>
 
-            <a href="../inventario/inventario.html">
+            <a href="../inventario/inventario.php">
                 <i class="fa-solid fa-clipboard-list"></i>
                 Inventario
+            </a>
+
+            <a href="../compras/compras.php">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
             </a>
 
             <a href="../ventas/ventas.html">

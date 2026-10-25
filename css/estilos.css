@@ -430,10 +430,12 @@ body.pagina-app {
 
 .nav-lateral {
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
     margin-top: 8px;
+    overflow-y: auto;
 }
 
 .nav-lateral a {
@@ -1256,6 +1258,22 @@ body.pagina-app {
     color: var(--rojo);
     background: var(--rojo-claro);
     border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+#mensajeFormularioFactura:not(:empty) {
+    padding: 10px 14px;
+    border-radius: var(--radio-sm);
+    background: var(--rojo-claro);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    font-weight: 600;
+}
+
+#mensajeDetalleFactura:not(:empty) {
+    padding: 10px 14px;
+    border-radius: var(--radio-sm);
+    background: var(--rojo-claro);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    font-weight: 600;
 }
 
 .contenedor-vista-previa {
@@ -2249,6 +2267,21 @@ body.pagina-app {
 .badge-naranja {
     background: var(--naranja-claro);
     color: #b45309;
+}
+
+.badge-azul {
+    background: var(--azul-claro);
+    color: var(--azul);
+}
+
+.badge-morado {
+    background: var(--morado-claro);
+    color: var(--morado);
+}
+
+.badge-gris {
+    background: #eef0f4;
+    color: var(--texto-secundario);
 }
 
 /* ==========================================================

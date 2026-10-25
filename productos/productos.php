@@ -64,7 +64,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <i class="fa-solid fa-house"></i>
 
-                Dashboards
+                Dashboard
 
             </a>
 
@@ -145,8 +145,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <a
                     href="bitacora.php"
-                    class="activo"
-                    aria-current="page"
+                    
                 >
 
                     <i class="fa-solid fa-clipboard-list"></i>
@@ -247,6 +246,19 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                         Exportar CSV
                     </button>
 
+                    <!-- NUEVO: precios e importación -->
+                    <?php if (esAdministrador()): ?>
+                    <a href="precios.php" class="boton boton-borde">
+                        <i class="fa-solid fa-calculator"></i>
+                        Precios
+                    </a>
+
+                    <a href="importar.php" class="boton boton-borde">
+                        <i class="fa-solid fa-file-import"></i>
+                        Importar catálogo
+                    </a>
+                    <?php endif; ?>
+                    
                     <?php if (esAdministrador()): ?>
                     <a href="categorias.php" class="boton boton-borde">
                         <i class="fa-solid fa-tags"></i>
