@@ -12,7 +12,9 @@ const estadoHU21 = {
     productoSeleccionadoId: "",
     conservarMensajeTrasReset: false,
     itemsMovimiento: [],
-    pedidoTablaActual: ""
+    pedidoTablaActual: "",
+    stockOrigenHU22: new Map(),
+    stockOrigenUbicacionHU22: 0
 };
 
 
@@ -102,8 +104,10 @@ function registrarEventosHU21() {
         "change",
         () => {
 
+            estadoHU21.itemsMovimiento = [];
+            estadoHU21.pedidoTablaActual = "";
+            renderizarTablaMovimientoHU21();
             actualizarTipoMovimientoHU21();
-
             actualizarResumenHU21();
 
         }
@@ -161,7 +165,14 @@ function registrarEventosHU21() {
 
     destino?.addEventListener("change", () => {
         cargarPedidosHU21(estadoHU21.pedidos);
+        renderizarTablaMovimientoHU21();
         actualizarResumenHU21();
+    });
+
+    document.getElementById("ubicacionOrigen")?.addEventListener("change", async () => {
+        estadoHU21.itemsMovimiento = [];
+        renderizarTablaMovimientoHU21();
+        await cargarStockOrigenHU22HU23();
     });
 
 
@@ -206,6 +217,20 @@ function registrarEventosHU21() {
     document.getElementById("tablaProductosMovimiento")?.addEventListener(
         "click", eliminarProductoTablaHU21
     );
+
+    // El aviso de error anterior ya no debe permanecer al corregir campos.
+    // No ocultamos mensajes de éxito ni mensajes informativos de carga.
+    const limpiarErrorAlEditar = () => {
+        const mensaje = document.getElementById('mensajeMovimiento');
+        if (mensaje && !mensaje.hidden && mensaje.dataset.tipo === 'error') {
+            ocultarMensajeHU21();
+        }
+    };
+    formulario?.addEventListener('input', limpiarErrorAlEditar);
+    formulario?.addEventListener('change', limpiarErrorAlEditar);
+    formulario?.addEventListener('click', (evento) => {
+        if (evento.target.closest('.quitar-item-movimiento')) limpiarErrorAlEditar();
+    });
 
     formulario?.addEventListener(
         "submit",
@@ -1277,50 +1302,74 @@ function cargarTablaPedidoHU21() {
 }
 
 function agregarProductoTablaHU21() {
-    if (document.getElementById("tipoMovimiento")?.value !== "entrada") return;
-    const origen = document.getElementById("origenMercaderia")?.value;
-    if (origen === "Pedido de compra") return;
-    if (!['Proveedor', 'Devolución'].includes(origen)) {
-        mostrarMensajeHU21("Seleccione primero el tipo de entrada.", "error");
-        return;
+    const tipo = document.getElementById('tipoMovimiento')?.value || '';
+    const esMovimientoSalida = tipo === 'salida' || tipo === 'traslado';
+    const origen = document.getElementById('origenMercaderia')?.value;
+    if (tipo === 'entrada' && origen === 'Pedido de compra') return;
+    if (tipo === 'entrada' && !['Proveedor','Devolución'].includes(origen)) {
+        mostrarMensajeHU21('Seleccione primero el tipo de entrada.', 'error'); return;
     }
-    const id = Number(document.getElementById("productoMovimiento")?.value || 0);
-    const cantidad = Number(document.getElementById("cantidadMovimiento")?.value || 0);
+    if (!esMovimientoSalida && tipo !== 'entrada') return;
+    const id = Number(document.getElementById('productoMovimiento')?.value || 0);
+    const cantidad = Number(document.getElementById('cantidadMovimiento')?.value || 0);
     const producto = estadoHU21.productos.find(p => Number(p.id_producto) === id);
     if (!producto || !Number.isSafeInteger(cantidad) || cantidad <= 0) {
-        mostrarMensajeHU21("Seleccione un producto y una cantidad entera mayor que cero.", "error");
-        return;
+        mostrarMensajeHU21('Seleccione un producto y una cantidad entera mayor que cero.', 'error'); return;
     }
-    if (origen === 'Proveedor') {
+    if (esMovimientoSalida) {
+        if (!estadoHU21.stockOrigenUbicacionHU22 ||
+            estadoHU21.stockOrigenUbicacionHU22 !== Number(document.getElementById('ubicacionOrigen')?.value)) {
+            mostrarMensajeHU21('Seleccione primero la ubicación de origen y cargue sus existencias.', 'error'); return;
+        }
+        const disponible = Number(estadoHU21.stockOrigenHU22.get(id) || 0);
+        const existente = estadoHU21.itemsMovimiento.find(p => p.id_producto === id);
+        if (cantidad + Number(existente?.cantidad || 0) > disponible) {
+            mostrarMensajeHU21(disponible <= 0
+                ? 'Este producto no tiene existencias disponibles en la ubicación de origen elegida. Seleccione otro producto u origen.'
+                : `Stock insuficiente para este producto: hay ${disponible} unidad(es) en origen. Reduzca la cantidad.`, 'error'); return;
+        }
+    } else if (origen === 'Proveedor') {
         const ids = [...estadoHU21.itemsMovimiento.map(p => p.id_producto), id];
         if (proveedoresComunesHU21(ids).length === 0) {
-            mostrarMensajeHU21(
-                'El producto no comparte un proveedor activo con los productos de la tabla. ' +
-                'Registre otra entrada por separado o elija un producto compatible.', 'error'
-            );
+            mostrarMensajeHU21('El producto no comparte un proveedor activo con los productos de la tabla.', 'error');
             return;
         }
     }
     const existente = estadoHU21.itemsMovimiento.find(p => p.id_producto === id);
     if (existente) existente.cantidad += cantidad;
-    else estadoHU21.itemsMovimiento.push({id_producto:id, nombre:producto.nombre, cantidad, pendiente:null});
-    document.getElementById("cantidadMovimiento").value = "";
-    cargarProveedoresHU21(estadoHU21.proveedores);
+    else estadoHU21.itemsMovimiento.push({
+        id_producto: id, nombre: producto.nombre, cantidad,
+        pendiente: null,
+        stockDisponible: esMovimientoSalida ? Number(estadoHU21.stockOrigenHU22.get(id) || 0) : null
+    });
+    document.getElementById('cantidadMovimiento').value = '';
+    if (!esMovimientoSalida) cargarProveedoresHU21(estadoHU21.proveedores);
     renderizarTablaMovimientoHU21();
 }
 
+
 function cambiarCantidadTablaHU21(evento) {
-    if (!evento.target.matches(".cantidad-item-movimiento")) return;
+    if (!evento.target.matches('.cantidad-item-movimiento')) return;
     const id = Number(evento.target.dataset.producto);
     const item = estadoHU21.itemsMovimiento.find(p => p.id_producto === id);
     if (!item) return;
     const valor = Number(evento.target.value);
-    item.cantidad = evento.target.value === "" ? 0 : valor;
+    item.cantidad = evento.target.value === '' ? 0 : valor;
+    const tipo = document.getElementById('tipoMovimiento')?.value;
+    const maximo = ['salida','traslado'].includes(tipo)
+        ? item.stockDisponible : item.pendiente;
     const invalida = !Number.isSafeInteger(valor) || valor < 0 ||
-        (item.pendiente !== null && valor > item.pendiente);
-    evento.target.setCustomValidity(invalida ? `Ingrese un entero entre 0 y ${item.pendiente ?? 'el límite permitido'}.` : "");
+        (maximo !== null && maximo !== undefined && valor > maximo);
+    evento.target.setCustomValidity(invalida
+        ? `Ingrese un entero entre 0 y ${maximo ?? 'el límite permitido'}.` : '');
+    if (['salida','traslado'].includes(tipo)) {
+        const saldo = evento.target.closest('tr')?.cells?.[2];
+        if (saldo) saldo.textContent = !invalida
+            ? String(Number(item.stockDisponible || 0) - valor) : '—';
+    }
     actualizarResumenHU21();
 }
+
 
 function eliminarProductoTablaHU21(evento) {
     const boton = evento.target.closest(".quitar-item-movimiento");
@@ -1333,76 +1382,85 @@ function eliminarProductoTablaHU21(evento) {
 }
 
 function renderizarTablaMovimientoHU21() {
-    const tbody = document.getElementById("tablaProductosMovimiento");
+    const tbody = document.getElementById('tablaProductosMovimiento');
     if (!tbody) return;
     tbody.replaceChildren();
-    const esPedido = document.getElementById("origenMercaderia")?.value === "Pedido de compra";
+    const tipo = document.getElementById('tipoMovimiento')?.value;
+    const esSalida = ['salida','traslado'].includes(tipo);
+    const esPedido = tipo === 'entrada' && document.getElementById('origenMercaderia')?.value === 'Pedido de compra';
+    const cabeceras = tbody.closest('table')?.querySelectorAll('thead th') || [];
+    const nuevas = esSalida
+        ? ['Producto','Stock origen','Saldo origen resultante','Destino','Cantidad a mover','Acción']
+        : ['Producto','Solicitado','Ya recibido','Pendiente','Recibir ahora','Acción'];
+    cabeceras.forEach((th, i) => { if (nuevas[i]) th.textContent = nuevas[i]; });
     if (!estadoHU21.itemsMovimiento.length) {
-        const tr = tbody.insertRow();
-        const td = tr.insertCell();
-        td.colSpan = 6;
-        td.textContent = esPedido
-            ? "Seleccione un pedido para cargar los productos solicitados."
-            : "Aún no hay productos agregados.";
+        const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 6;
+        td.textContent = esSalida ? 'Seleccione origen y agregue productos con stock disponible.' :
+            (esPedido ? 'Seleccione un pedido para cargar sus productos.' : 'Aún no hay productos agregados.');
     }
     for (const item of estadoHU21.itemsMovimiento) {
         const tr = tbody.insertRow();
-        const texto = valor => {const td=tr.insertCell();td.textContent=String(valor);return td;};
+        const texto = valor => { const td = tr.insertCell(); td.textContent = String(valor); return td; };
         texto(item.nombre);
-        texto(esPedido ? (item.solicitada ?? '—') : '—');
-        texto(esPedido ? (item.recibida ?? '—') : '—');
-        texto(esPedido ? (item.pendiente ?? '—') : '—');
-        const tdCantidad = tr.insertCell();
-        const input = document.createElement('input');
-        input.type='number'; input.min=esPedido ? '0':'1';input.step='1';
-        input.className='cantidad-item-movimiento';
-        input.dataset.producto=String(item.id_producto);
-        input.value=String(item.cantidad);
-        if (esPedido) input.max=String(item.pendiente);
-        input.style.width='110px';
-        input.setAttribute('aria-label',`Cantidad a registrar de ${item.nombre}`);
-        tdCantidad.appendChild(input);
-        const tdQuitar=tr.insertCell();
-        if (esPedido) {
-            tdQuitar.textContent = '—'; // No se altera el detalle del pedido, 0 = no recibido.
+        if (esSalida) {
+            texto(item.stockDisponible ?? 0);
+            texto(Number.isSafeInteger(item.cantidad)
+                ? Number(item.stockDisponible ?? 0) - item.cantidad : '—');
+            texto(tipo === 'traslado'
+                ? document.getElementById('ubicacionDestino')?.selectedOptions?.[0]?.textContent?.trim() || 'Seleccione destino'
+                : 'Salida sin destino');
         } else {
-            const button=document.createElement('button');
-            button.type='button';button.className='boton boton-borde quitar-item-movimiento';
-            button.dataset.producto=String(item.id_producto);
-            button.textContent='Quitar';
+            texto(esPedido ? (item.solicitada ?? '—') : '—');
+            texto(esPedido ? (item.recibida ?? '—') : '—');
+            texto(esPedido ? (item.pendiente ?? '—') : '—');
+        }
+        const tdCantidad = tr.insertCell(); const input = document.createElement('input');
+        input.type = 'number'; input.min = esPedido ? '0' : '1'; input.step = '1';
+        input.className = 'cantidad-item-movimiento'; input.dataset.producto = String(item.id_producto);
+        input.value = String(item.cantidad); input.style.width = '110px';
+        if (esPedido) input.max = String(item.pendiente);
+        if (esSalida) input.max = String(item.stockDisponible ?? 0);
+        input.setAttribute('aria-label', `Cantidad a registrar de ${item.nombre}`);
+        tdCantidad.appendChild(input);
+        const tdQuitar = tr.insertCell();
+        if (esPedido) tdQuitar.textContent = '—';
+        else {
+            const button = document.createElement('button'); button.type = 'button';
+            button.className = 'boton boton-borde quitar-item-movimiento';
+            button.dataset.producto = String(item.id_producto); button.textContent = 'Quitar';
             tdQuitar.appendChild(button);
         }
     }
     actualizarResumenHU21();
 }
 
+
 function prepararCamposTablaHU21() {
-    const entrada = document.getElementById("tipoMovimiento")?.value === "entrada";
-    const pedido = entrada && document.getElementById("origenMercaderia")?.value === "Pedido de compra";
-    const producto = document.getElementById("productoMovimiento");
-    const buscador = document.getElementById("buscarProductoMovimiento");
-    const cantidad = document.getElementById("cantidadMovimiento");
-    const destino = document.getElementById("ubicacionDestino");
-    for (const elemento of [producto, buscador, cantidad]) {
-        if (!elemento) continue;
-        const grupo = elemento.closest('.grupo-formulario');
-        if (grupo) grupo.style.display = pedido ? 'none' : '';
+    const tipo = document.getElementById('tipoMovimiento')?.value;
+    const esEntrada = tipo === 'entrada';
+    const esSalida = ['salida','traslado'].includes(tipo);
+    const pedido = esEntrada && document.getElementById('origenMercaderia')?.value === 'Pedido de compra';
+    for (const id of ['productoMovimiento','buscarProductoMovimiento','cantidadMovimiento']) {
+        const el = document.getElementById(id);
+        const grupo = el?.closest('.grupo-formulario');
+        if (grupo) grupo.style.display = pedido || (!esEntrada && !esSalida) ? 'none' : '';
     }
-    if (producto) producto.required = false; // Se valida al agregar a la tabla.
-    if (cantidad) cantidad.required = false; // El guardado utiliza la tabla.
-    if (destino) destino.disabled = pedido;
+    const prod = document.getElementById('productoMovimiento'); if (prod) prod.required = false;
+    const cantidad = document.getElementById('cantidadMovimiento'); if (cantidad) cantidad.required = false;
+    const destino = document.getElementById('ubicacionDestino'); if (destino) destino.disabled = pedido;
     const boton = document.getElementById('botonAgregarProductoMovimiento');
-    if (boton) boton.style.display = pedido || !entrada ? 'none' : '';
+    if (boton) boton.style.display = pedido || (!esEntrada && !esSalida) ? 'none' : '';
     const mensaje = document.getElementById('instruccionTablaMovimiento');
     if (mensaje) mensaje.textContent = pedido
-        ? 'Seleccione un pedido. Sus productos aparecerán aquí; indique cuánto recibió de cada uno (0 si no llegó).'
+        ? 'Seleccione un pedido. Aparecerán sus productos y las cantidades pendientes.'
+        : esSalida ? 'Seleccione la ubicación de origen, un producto con existencias y una cantidad. Puede agregar varios productos.'
         : 'Seleccione un producto, indique la cantidad y pulse «Agregar producto». Puede repetirlo.';
     const grupoPedido = document.getElementById('grupoPedidoMovimiento');
-    if (grupoPedido) {
-        // Forzar visibilidad aun si CSS utiliza display para los grupos.
-        grupoPedido.style.display = pedido ? '' : 'none';
-    }
+    if (grupoPedido) grupoPedido.style.display = pedido ? '' : 'none';
+    const seccion = document.getElementById('seccionProductosMovimiento');
+    if (seccion) seccion.style.display = esEntrada || esSalida ? '' : 'none';
 }
+
 
 /*=========================================================
   FORMATEAR FECHA DE PEDIDO
@@ -1444,117 +1502,50 @@ function formatearFechaPedidoHU21(
 =========================================================*/
 
 function actualizarTipoMovimientoHU21() {
-
-    const tipo =
-        document.getElementById(
-            "tipoMovimiento"
-        )?.value;
-
-
-    const esEntrada =
-        tipo === "entrada";
-
-
-    const grupoOrigenMercaderia =
-        document.getElementById(
-            "grupoOrigenMercaderia"
-        );
-
-
-    const grupoUbicacionOrigen =
-        document.getElementById(
-            "grupoUbicacionOrigen"
-        );
-
-
-    const origenMercaderia =
-        document.getElementById(
-            "origenMercaderia"
-        );
-
-
-    const destino =
-        document.getElementById(
-            "ubicacionDestino"
-        );
-
-
-    const boton =
-        document.getElementById(
-            "botonRegistrarMovimiento"
-        );
-
-
-    if (grupoOrigenMercaderia) {
-
-        grupoOrigenMercaderia.hidden =
-            !esEntrada;
-
+    const tipo = document.getElementById('tipoMovimiento')?.value || '';
+    const entrada = tipo === 'entrada';
+    const salida = tipo === 'salida';
+    const traslado = tipo === 'traslado';
+    const activo = entrada || salida || traslado;
+    const origenMercaderia = document.getElementById('grupoOrigenMercaderia');
+    const origen = document.getElementById('grupoUbicacionOrigen');
+    const destino = document.getElementById('grupoUbicacionDestino');
+    const selectorOrigen = document.getElementById('ubicacionOrigen');
+    const selectorDestino = document.getElementById('ubicacionDestino');
+    const boton = document.getElementById('botonRegistrarMovimiento');
+    for (const [grupo, visible] of [[origenMercaderia, entrada], [origen, salida || traslado],
+        [destino, entrada || traslado]]) {
+        if (grupo) { grupo.hidden = !visible; grupo.style.display = visible ? '' : 'none'; }
     }
-
-
-    if (grupoUbicacionOrigen) {
-
-        grupoUbicacionOrigen.hidden =
-            esEntrada || !tipo;
-
+    if (selectorOrigen) selectorOrigen.required = salida || traslado;
+    if (selectorDestino) selectorDestino.required = entrada || traslado;
+    const origenEntrada = document.getElementById('origenMercaderia');
+    if (origenEntrada) origenEntrada.required = entrada;
+    if (boton) boton.disabled = !activo;
+    const botonNuevo = document.getElementById('botonLimpiarMovimiento');
+    if (botonNuevo) {
+        botonNuevo.innerHTML = salida || traslado
+            ? '<i class="fa-solid fa-rotate-left"></i> Nuevo movimiento'
+            : '<i class="fa-solid fa-eraser"></i> Limpiar';
+        botonNuevo.title = salida || traslado
+            ? 'Limpiar el formulario y comenzar otro movimiento sin recargar la página'
+            : 'Limpiar el formulario';
     }
-
-
-    if (origenMercaderia) {
-
-        origenMercaderia.required =
-            esEntrada;
-
-    }
-
-
-    if (destino) {
-
-        destino.required =
-            esEntrada;
-
-    }
-
-
-    /*
-     * Ajusta los campos especiales de Entrada
-     * según el origen seleccionado.
-     */
     actualizarCamposOrigenEntradaHU21();
-
-
-    /*
-     * Por ahora solamente Entrada
-     * está conectada a la base de datos.
-     */
-    if (boton) {
-
-        boton.disabled =
-            !esEntrada;
-
-    }
-
-
-    const mensaje =
-        document.getElementById(
-            "mensajeMovimiento"
-        );
-
-    if (!esEntrada && tipo) {
-        mostrarMensajeHU21(
-            "Este tipo de movimiento aún no está disponible.",
-            "info",
-            "tipo-pendiente"
-        );
-        return;
-    }
-
-    // Sin tipo seleccionado no mostramos una alerta de funcionalidad pendiente.
-    // Mantener cualquier mensaje de éxito del registro anterior.
-    if (mensaje?.dataset.clave === "tipo-pendiente") {
-        ocultarMensajeHU21();
-    }
+    const grupoObs = document.getElementById('grupoObservacionesMovimiento');
+    if (grupoObs && !entrada) { grupoObs.hidden = !(salida || traslado); grupoObs.style.display = (salida || traslado) ? '' : 'none'; }
+    const obs = document.getElementById('observacionesMovimiento');
+    if (obs && !entrada) { obs.required = salida || traslado; obs.placeholder = 'Motivo obligatorio del movimiento (por ejemplo: reposición, entrega o abastecimiento)'; }
+    const grupoRef = document.getElementById('grupoReferenciaMovimiento');
+    if (grupoRef && !entrada) {grupoRef.hidden = true; grupoRef.style.display = 'none';}
+    const resumen = document.querySelector('#resumenEntradaMovimiento strong');
+    if (resumen) resumen.textContent = entrada ? 'Resumen de la entrada' : traslado ? 'Resumen del traslado' : 'Resumen del movimiento';
+    const mensaje = document.getElementById('mensajeMovimiento');
+    if (!activo && tipo) {
+        mostrarMensajeHU21('Este tipo de movimiento todavía no está disponible.', 'info', 'tipo-pendiente');
+    } else if (mensaje?.dataset.clave === 'tipo-pendiente') ocultarMensajeHU21();
+    prepararCamposTablaHU21();
+    renderizarTablaMovimientoHU21();
 }
 
 
@@ -1652,8 +1643,11 @@ function actualizarCamposOrigenEntradaHU21() {
         esProveedor || esPedido;
 
 
+    // Motivo obligatorio también en salidas y traslados (HU-22/HU-23).
+    // Esta función vuelve a ejecutarse al terminar de cargar los datos.
+    const esMovimientoSalida = tipo === "salida" || tipo === "traslado";
     const mostrarObservaciones =
-        esProveedor || esPedido || esDevolucion;
+        esProveedor || esPedido || esDevolucion || esMovimientoSalida;
 
 
     if (grupoProveedor) {
@@ -1720,12 +1714,12 @@ function actualizarCamposOrigenEntradaHU21() {
 
     if (observaciones) {
 
-        observaciones.required =
-            esDevolucion;
+        observaciones.required = esDevolucion || esMovimientoSalida;
 
-        observaciones.placeholder =
-            esDevolucion
-                ? "Indique el motivo de la devolución..."
+        observaciones.placeholder = esDevolucion
+            ? "Indique el motivo de la devolución..."
+            : esMovimientoSalida
+                ? "Indique el motivo obligatorio (reposición, entrega, abastecimiento...)"
                 : "Información adicional sobre el movimiento...";
 
         if (!mostrarObservaciones) {
@@ -1779,19 +1773,26 @@ function establecerFechaHU21() {
 =========================================================*/
 
 function actualizarResumenHU21() {
-    const unidades = estadoHU21.itemsMovimiento.reduce((s, p) => s +
+    const unidades = estadoHU21.itemsMovimiento.reduce((s,p)=>s+
         (Number.isSafeInteger(p.cantidad) && p.cantidad > 0 ? p.cantidad : 0), 0);
     const total = document.getElementById('totalUnidadesMovimiento');
     if (total) total.textContent = String(unidades);
     const resumen = document.getElementById('textoResumenEntrada');
-    const destino = document.getElementById('ubicacionDestino');
-    const origen = document.getElementById('origenMercaderia')?.value || 'Sin seleccionar';
-    const pedido = document.getElementById('pedidoMovimiento');
-    if (resumen) resumen.textContent = `${estadoHU21.itemsMovimiento.length} producto(s) en la tabla | ` +
-        `${unidades} unidad(es) a registrar | Destino: ` +
-        `${destino?.selectedOptions[0]?.textContent || 'Sin seleccionar'} | Tipo: ${origen}` +
-        (origen === 'Pedido de compra' && pedido?.value ? ` | Pedido #${pedido.value}` : '');
+    if (!resumen) return;
+    const tipo = document.getElementById('tipoMovimiento')?.value;
+    const nombre = id => document.getElementById(id)?.selectedOptions?.[0]?.textContent?.trim() || 'Sin seleccionar';
+    if (['salida','traslado'].includes(tipo)) {
+        resumen.textContent = `${estadoHU21.itemsMovimiento.length} producto(s) | ${unidades} unidad(es) | `+
+            `Origen: ${nombre('ubicacionOrigen')}` + (tipo === 'traslado' ? ` | Destino: ${nombre('ubicacionDestino')}` : ' | Salida de inventario');
+    } else {
+        const origen = document.getElementById('origenMercaderia')?.value || 'Sin seleccionar';
+        const pedido = document.getElementById('pedidoMovimiento');
+        resumen.textContent = `${estadoHU21.itemsMovimiento.length} producto(s) en la tabla | ` +
+            `${unidades} unidad(es) a registrar | Destino: ${nombre('ubicacionDestino')} | Tipo: ${origen}`+
+            (origen === 'Pedido de compra' && pedido?.value ? ` | Pedido #${pedido.value}` : '');
+    }
 }
+
 
 /*=========================================================
   REGISTRAR ENTRADA
@@ -1799,8 +1800,13 @@ function actualizarResumenHU21() {
 
 async function registrarEntradaHU21(evento) {
     evento.preventDefault();
-    if (document.getElementById('tipoMovimiento')?.value !== 'entrada') {
-        mostrarMensajeHU21('Este tipo de movimiento aún no está disponible.', 'info');
+    const tipoMovimientoActual = document.getElementById('tipoMovimiento')?.value;
+    if (tipoMovimientoActual === 'salida' || tipoMovimientoActual === 'traslado') {
+        await registrarSalidaTrasladoHU22HU23();
+        return;
+    }
+    if (tipoMovimientoActual !== 'entrada') {
+        mostrarMensajeHU21('Seleccione un tipo de movimiento disponible.', 'error');
         return;
     }
     const origen = document.getElementById('origenMercaderia')?.value || '';
@@ -1966,6 +1972,8 @@ function reiniciarControlesHU21(
     estadoHU21.productoSeleccionadoId = "";
     estadoHU21.itemsMovimiento = [];
     estadoHU21.pedidoTablaActual = "";
+    estadoHU21.stockOrigenUbicacionHU22 = 0;
+    estadoHU21.stockOrigenHU22 = new Map();
 
     if (tipo) {
 
@@ -2305,5 +2313,75 @@ function ocultarNotificacionCentralHU21() {
     if (temporizadorNotificacionCentralHU21 !== null) {
         clearTimeout(temporizadorNotificacionCentralHU21);
         temporizadorNotificacionCentralHU21 = null;
+    }
+}
+
+
+/*=========================================================
+  HU-22 / HU-23 — CONSULTAR STOCK DE ORIGEN
+=========================================================*/
+async function cargarStockOrigenHU22HU23() {
+    const idOrigen = Number(document.getElementById('ubicacionOrigen')?.value || 0);
+    estadoHU21.stockOrigenUbicacionHU22 = 0;
+    estadoHU21.stockOrigenHU22 = new Map();
+    if (!idOrigen) return;
+    try {
+        const url = `../api/inventario/salidas-traslados.php?id_ubicacion_origen=${encodeURIComponent(idOrigen)}`;
+        const resp = await fetch(url, {credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+        const res = await leerRespuestaJSONHU21(resp);
+        if (resp.status === 401) { window.location.href = '../index/index.html'; return; }
+        if (!resp.ok || !res.success) throw new Error(res.message || 'No se pudo consultar el stock.');
+        // Evita aplicar una respuesta obsoleta si se cambió rápidamente de origen.
+        if (idOrigen !== Number(document.getElementById('ubicacionOrigen')?.value)) return;
+        estadoHU21.stockOrigenUbicacionHU22 = idOrigen;
+        estadoHU21.stockOrigenHU22 = new Map((res.data?.stock || [])
+            .map(x => [Number(x.id_producto), Number(x.cantidad)]));
+    } catch (error) {
+        mostrarMensajeHU21(error.message || 'No fue posible cargar existencias del origen.', 'error');
+    }
+}
+
+/*=========================================================
+  HU-22 / HU-23 — REGISTRAR SALIDA O TRASLADO EN LOTE
+=========================================================*/
+async function registrarSalidaTrasladoHU22HU23() {
+    const tipo = document.getElementById('tipoMovimiento')?.value || '';
+    const idOrigen = Number(document.getElementById('ubicacionOrigen')?.value || 0);
+    const idDestino = tipo === 'traslado' ? Number(document.getElementById('ubicacionDestino')?.value || 0) : null;
+    const motivo = document.getElementById('observacionesMovimiento')?.value.trim() || '';
+    const items = estadoHU21.itemsMovimiento.filter(x => Number(x.cantidad) > 0);
+    if (!idOrigen || (tipo === 'traslado' && (!idDestino || idDestino === idOrigen))) {
+        mostrarMensajeHU21('Seleccione origen y un destino diferente cuando corresponda.', 'error'); return;
+    }
+    if (!motivo) { mostrarMensajeHU21('Indique el motivo del movimiento.', 'error'); return; }
+    if (!items.length) { mostrarMensajeHU21('Agregue productos con cantidades mayores que cero.', 'error'); return; }
+    if (estadoHU21.stockOrigenUbicacionHU22 !== idOrigen ||
+        items.some(x => !Number.isSafeInteger(x.cantidad) || x.cantidad < 0 ||
+            x.cantidad > Number(estadoHU21.stockOrigenHU22.get(x.id_producto) || 0)) ||
+        [...document.querySelectorAll('#tablaProductosMovimiento .cantidad-item-movimiento')]
+            .some(x=>!x.checkValidity())) {
+        mostrarMensajeHU21('Revise las cantidades: no se puede exceder el stock disponible en origen.', 'error');return;
+    }
+    const boton = document.getElementById('botonRegistrarMovimiento');
+    if (boton) { boton.disabled = true; boton.textContent = 'Registrando...'; }
+    mostrarMensajeHU21('Registrando movimiento...', 'info', 'registrando');
+    try {
+        const resp = await fetch('../api/inventario/salidas-traslados.php', {
+            method:'POST',credentials:'same-origin',cache:'no-store',
+            headers:{Accept:'application/json','Content-Type':'application/json'},
+            body:JSON.stringify({tipo,id_ubicacion_origen:idOrigen,id_ubicacion_destino:idDestino,
+                motivo,items:items.map(x=>({id_producto:x.id_producto,cantidad:x.cantidad}))})
+        });
+        const res = await leerRespuestaJSONHU21(resp);
+        if (resp.status === 401) {window.location.href='../index/index.html';return;}
+        if (!resp.ok || !res.success) throw new Error(res.message || 'No fue posible registrar el movimiento.');
+        ocultarMensajeHU21();
+        mostrarNotificacionCentralHU21(`Movimiento #${res.data?.id_movimiento ?? '—'} registrado: `+
+            `${res.data?.unidades ?? 0} unidades de ${res.data?.productos ?? 0} producto(s).`, 'exito');
+        limpiarFormularioDespuesEntradaHU21();
+    } catch (error) {
+        mostrarMensajeHU21(error.message || 'No fue posible guardar el movimiento.', 'error');
+    } finally {
+        if (boton) { boton.disabled = false; boton.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Registrar movimiento'; }
     }
 }
