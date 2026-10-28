@@ -1463,7 +1463,8 @@ function inicializarPaginaVentas() {
     inicializarCierreCaja();
     inicializarFiltrosVentas();
 
-    cargarProductosEnVenta();
+    cargarTiendasVenta();
+    cargarVentasServidor();
     mostrarVentas();
     establecerFechaCierreActual();
 }
@@ -1720,16 +1721,92 @@ function obtenerVentasGuardadas() {
             ) || "[]"
         );
 
-        return Array.isArray(datos)
-            ? datos
-            : [];
+        return [
+            ...ventasServidor,
+            ...(Array.isArray(datos) ? datos : [])
+        ];
     } catch (error) {
         console.error(
             "No se pudieron leer las ventas:",
             error
         );
 
-        return [];
+        return ventasServidor;
+    }
+}
+
+let ventasServidor = [];
+let productosVenta = [];
+let carritoVenta = [];
+
+async function solicitarApiVentas(accion, opciones = {}) {
+    const [nombreAccion, parametros] = accion.split("&", 2);
+    const query = `accion=${encodeURIComponent(nombreAccion)}` +
+        (parametros ? `&${parametros}` : "");
+    const respuesta = await fetch(
+        `../api/ventas/ventas.php?${query}`,
+        {
+            credentials: "same-origin",
+            cache: "no-store",
+            ...opciones
+        }
+    );
+    const resultado = await respuesta.json();
+
+    if (!respuesta.ok || !resultado.success) {
+        throw new Error(resultado.message || "No fue posible completar la operación.");
+    }
+
+    return resultado.data;
+}
+
+async function cargarTiendasVenta() {
+    try {
+        const tiendas = await solicitarApiVentas("tiendas");
+        const selectores = [
+            document.getElementById("tiendaVenta"),
+            document.getElementById("filtroTiendaVenta")
+        ];
+
+        selectores.forEach((selector) => {
+            if (!selector) {
+                return;
+            }
+
+            const opcionInicial = selector.options[0];
+            selector.replaceChildren(opcionInicial);
+
+            tiendas.forEach((tienda) => {
+                const opcion = document.createElement("option");
+                opcion.value = String(tienda.id_tienda);
+                opcion.textContent = tienda.nombre;
+                selector.appendChild(opcion);
+            });
+        });
+
+        const tiendasCierre = document.getElementById("tiendaCierreCaja");
+        if (tiendasCierre) {
+            const opcionInicial = tiendasCierre.options[0];
+            tiendasCierre.replaceChildren(opcionInicial);
+            tiendas.forEach((tienda) => {
+                const opcion = document.createElement("option");
+                opcion.value = tienda.nombre;
+                opcion.textContent = tienda.nombre;
+                tiendasCierre.appendChild(opcion);
+            });
+        }
+    } catch (error) {
+        mostrarMensajeVentas(error.message, "error");
+    }
+}
+
+async function cargarVentasServidor() {
+    try {
+        ventasServidor = await solicitarApiVentas("listar");
+        mostrarVentas();
+        actualizarCantidadImportacionesPendientes();
+    } catch (error) {
+        mostrarMensajeVentas(error.message, "error");
     }
 }
 
@@ -1805,11 +1882,14 @@ function inicializarRegistroVenta() {
         );
     });
 
-    document.getElementById(
-        "productoVenta"
-    )?.addEventListener(
-        "change",
-        actualizarProductoSeleccionadoVenta
+    document.getElementById("productoVenta")?.addEventListener(
+        "keydown",
+        (evento) => {
+            if (evento.key === "Enter") {
+                evento.preventDefault();
+                agregarProductoCarritoVenta();
+            }
+        }
     );
 
     document.getElementById(
@@ -1817,6 +1897,16 @@ function inicializarRegistroVenta() {
     )?.addEventListener(
         "input",
         calcularFormularioVenta
+    );
+
+    document.getElementById("botonAgregarProductoVenta")?.addEventListener(
+        "click",
+        agregarProductoCarritoVenta
+    );
+
+    document.getElementById("tiendaVenta")?.addEventListener(
+        "change",
+        cargarProductosEnVenta
     );
 
     document.getElementById(
@@ -1843,17 +1933,13 @@ function abrirModalVenta() {
         return;
     }
 
-    cargarProductosEnVenta();
-
     modal.hidden = false;
 
     document.body.classList.add(
         "modal-producto-abierto"
     );
 
-    document.getElementById(
-        "tiendaVenta"
-    )?.focus();
+    document.getElementById("tiendaVenta")?.focus();
 }
 
 function cerrarModalVenta() {
@@ -1875,6 +1961,14 @@ function cerrarModalVenta() {
         "formularioVenta"
     )?.reset();
 
+    carritoVenta = [];
+    renderizarCarritoVenta();
+    productosVenta = [];
+    const listado = document.getElementById("productosDisponiblesVenta");
+    if (listado) {
+        listado.replaceChildren();
+    }
+
     document.getElementById(
         "grupoReferenciaSinpe"
     ).hidden = true;
@@ -1887,133 +1981,165 @@ function cerrarModalVenta() {
     limpiarMensajeFormularioVenta();
 }
 
-function cargarProductosEnVenta() {
-    const selector = document.getElementById(
-        "productoVenta"
-    );
+async function cargarProductosEnVenta() {
+    const idTienda = document.getElementById("tiendaVenta")?.value;
+    const listado = document.getElementById("productosDisponiblesVenta");
+    const ubicacion = document.getElementById("ubicacionPredeterminadaVenta");
 
-    if (!selector) {
+    productosVenta = [];
+    carritoVenta = [];
+    renderizarCarritoVenta();
+    listado?.replaceChildren();
+
+    if (!idTienda) {
+        if (ubicacion) {
+            ubicacion.textContent = "";
+        }
         return;
     }
 
-    const productos = obtenerProductosGuardados().filter(
-        (producto) =>
-            producto.estado !== "Inactivo" &&
-            Number(producto.stock) > 0
-    );
+    try {
+        const resultado = await solicitarApiVentas(
+            `productos&id_tienda=${encodeURIComponent(idTienda)}`
+        );
+        productosVenta = resultado.productos;
 
-    selector.innerHTML = `
-        <option value="">
-            Seleccione un producto
-        </option>
-    `;
+        productosVenta.forEach((producto) => {
+            const opcion = document.createElement("option");
+            opcion.value = producto.nombre;
+            opcion.label = [
+                producto.codigo_barras,
+                producto.codigo_articulo_retail,
+                `Stock: ${producto.stock}`
+            ].filter(Boolean).join(" · ");
+            listado?.appendChild(opcion);
+        });
 
-    productos.forEach((producto) => {
-        const opcion = document.createElement("option");
-
-        opcion.value = producto.id;
-
-        opcion.textContent =
-            `${producto.nombre} - Stock: ${producto.stock}`;
-
-        selector.appendChild(opcion);
-    });
+        if (ubicacion) {
+            ubicacion.textContent =
+                `Inventario: ${resultado.ubicacion.nombre}`;
+        }
+    } catch (error) {
+        if (ubicacion) {
+            ubicacion.textContent = "";
+        }
+        mostrarMensajeFormularioVenta(error.message, "error");
+    }
 }
 
-function actualizarProductoSeleccionadoVenta() {
-    const selector = document.getElementById(
-        "productoVenta"
-    );
-
-    const precioCampo = document.getElementById(
-        "precioUnitarioVenta"
-    );
-
-    const impuestoCampo = document.getElementById(
-        "impuestoVenta"
-    );
-
-    if (
-        !selector ||
-        !precioCampo ||
-        !impuestoCampo
-    ) {
-        return;
+function buscarProductoVenta(valor) {
+    const busqueda = normalizarTexto(valor);
+    if (!busqueda) {
+        return null;
     }
 
-    const producto = obtenerProductosGuardados().find(
-        (elemento) =>
-            elemento.id === selector.value
+    const porCodigo = productosVenta.find((producto) =>
+        [producto.codigo_barras, producto.codigo_articulo_retail]
+            .some((codigo) => codigo && String(codigo).trim() === String(valor).trim())
     );
+
+    return porCodigo || productosVenta.find(
+        (producto) => normalizarTexto(producto.nombre) === busqueda
+    );
+}
+
+function agregarProductoCarritoVenta() {
+    const entrada = document.getElementById("productoVenta");
+    const cantidadCampo = document.getElementById("cantidadVenta");
+    const cantidad = Number(cantidadCampo?.value);
+    const producto = buscarProductoVenta(entrada?.value || "");
 
     if (!producto) {
-        precioCampo.value = "";
-        impuestoCampo.value = "";
-        limpiarTotalesFormularioVenta();
+        mostrarMensajeFormularioVenta(
+            "Busque un producto activo con precio configurado para esta tienda.",
+            "error"
+        );
         return;
     }
 
-    precioCampo.value =
-        Number(producto.precioVenta) || 0;
+    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+        mostrarMensajeFormularioVenta("La cantidad debe ser un entero mayor que cero.", "error");
+        return;
+    }
 
-    impuestoCampo.value =
-        Number(producto.impuesto) || 0;
+    const existente = carritoVenta.find(
+        (item) => item.id_producto === producto.id_producto
+    );
+    const cantidadNueva = cantidad + (existente?.cantidad || 0);
+
+    if (cantidadNueva > producto.stock) {
+        mostrarMensajeFormularioVenta(
+            `Existencias insuficientes para ${producto.nombre}. Disponible: ${producto.stock}.`,
+            "error"
+        );
+        return;
+    }
+
+    if (existente) {
+        existente.cantidad = cantidadNueva;
+    } else {
+        carritoVenta.push({ ...producto, cantidad });
+    }
+
+    entrada.value = "";
+    cantidadCampo.value = "1";
+    limpiarMensajeFormularioVenta();
+    renderizarCarritoVenta();
+}
+
+function renderizarCarritoVenta() {
+    const cuerpo = document.getElementById("cuerpoCarritoVenta");
+    if (!cuerpo) {
+        return;
+    }
+
+    cuerpo.replaceChildren();
+    carritoVenta.forEach((producto) => {
+        const fila = document.createElement("tr");
+        const subtotal = Number(producto.precio_venta) * producto.cantidad;
+        const total = subtotal * (1 + Number(producto.impuesto_porcentaje) / 100);
+        const valores = [
+            producto.nombre,
+            String(producto.cantidad),
+            formatearMonedaCRC(producto.precio_venta),
+            formatearMonedaCRC(total)
+        ];
+
+        valores.forEach((valor) => {
+            const celda = document.createElement("td");
+            celda.textContent = valor;
+            fila.appendChild(celda);
+        });
+
+        const celdaAccion = document.createElement("td");
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "boton-accion-producto";
+        boton.setAttribute("aria-label", `Quitar ${producto.nombre}`);
+        boton.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        boton.addEventListener("click", () => {
+            carritoVenta = carritoVenta.filter(
+                (item) => item.id_producto !== producto.id_producto
+            );
+            renderizarCarritoVenta();
+        });
+        celdaAccion.appendChild(boton);
+        fila.appendChild(celdaAccion);
+        cuerpo.appendChild(fila);
+    });
 
     calcularFormularioVenta();
 }
 
 function obtenerCalculoVenta() {
-    const productoId = document.getElementById(
-        "productoVenta"
-    )?.value;
-
-    const cantidad = Number(
-        document.getElementById(
-            "cantidadVenta"
-        )?.value
-    );
-
-    const producto = obtenerProductosGuardados().find(
-        (elemento) =>
-            elemento.id === productoId
-    );
-
-    if (
-        !producto ||
-        !Number.isInteger(cantidad) ||
-        cantidad <= 0
-    ) {
-        return {
-            producto: null,
-            cantidad: 0,
-            subtotal: 0,
-            impuestoMonto: 0,
-            total: 0
-        };
-    }
-
-    const precioUnitario =
-        Number(producto.precioVenta) || 0;
-
-    const porcentajeImpuesto =
-        Number(producto.impuesto) || 0;
-
-    const subtotal =
-        precioUnitario * cantidad;
-
-    const impuestoMonto =
-        subtotal *
-        (porcentajeImpuesto / 100);
-
-    return {
-        producto,
-        cantidad,
-        precioUnitario,
-        porcentajeImpuesto,
-        subtotal,
-        impuestoMonto,
-        total: subtotal + impuestoMonto
-    };
+    return carritoVenta.reduce((resumen, producto) => {
+        const subtotal = Number(producto.precio_venta) * producto.cantidad;
+        const total = subtotal * (1 + Number(producto.impuesto_porcentaje) / 100);
+        resumen.subtotal += subtotal;
+        resumen.total += total;
+        resumen.impuestoMonto += total - subtotal;
+        return resumen;
+    }, { subtotal: 0, impuestoMonto: 0, total: 0 });
 }
 
 function calcularFormularioVenta() {
@@ -2026,10 +2152,7 @@ function calcularFormularioVenta() {
 
     document.getElementById(
         "impuestoFormularioVenta"
-    ).textContent =
-        formatearMonedaCRC(
-            calculo.impuestoMonto
-        );
+    ).textContent = formatearMonedaCRC(calculo.impuestoMonto);
 
     document.getElementById(
         "totalFormularioVenta"
@@ -2086,10 +2209,10 @@ function actualizarCampoSinpe() {
     }
 }
 
-function registrarVentaManual(evento) {
+async function registrarVentaManual(evento) {
     evento.preventDefault();
 
-    const tienda = document.getElementById(
+    const idTienda = document.getElementById(
         "tiendaVenta"
     )?.value;
 
@@ -2105,27 +2228,13 @@ function registrarVentaManual(evento) {
         "observacionesVenta"
     )?.value.trim();
 
-    const calculo = obtenerCalculoVenta();
-
     if (
-        !tienda ||
+        !idTienda ||
         !metodoPago ||
-        !calculo.producto
+        carritoVenta.length === 0
     ) {
         mostrarMensajeFormularioVenta(
-            "Complete todos los campos obligatorios.",
-            "error"
-        );
-
-        return;
-    }
-
-    if (
-        calculo.cantidad >
-        Number(calculo.producto.stock)
-    ) {
-        mostrarMensajeFormularioVenta(
-            "La cantidad supera el stock disponible.",
+            "Seleccione una tienda, un método de pago y agregue productos.",
             "error"
         );
 
@@ -2144,51 +2253,45 @@ function registrarVentaManual(evento) {
         return;
     }
 
-    const venta = {
-        id: generarIdVenta(),
-        numero: generarNumeroVenta(),
-        fecha: new Date().toISOString(),
-        tienda,
-        origen: "Manual",
-        metodoPago,
-        referenciaSinpe:
-            metodoPago === "SINPE"
-                ? referenciaSinpe
-                : "",
-        productoId: calculo.producto.id,
-        productoNombre:
-            calculo.producto.nombre,
-        cantidad: calculo.cantidad,
-        precioUnitario:
-            calculo.precioUnitario,
-        subtotal: calculo.subtotal,
-        impuesto: calculo.impuestoMonto,
-        total: calculo.total,
-        estado: "Confirmada",
-        usuario: "Administrador",
-        observaciones: observaciones || ""
-    };
-
-    const ventas = obtenerVentasGuardadas();
-
-    ventas.push(venta);
-
-    if (!guardarVentas(ventas)) {
-        mostrarMensajeFormularioVenta(
-            "No fue posible guardar la venta.",
-            "error"
-        );
-
-        return;
+    const formulario = document.getElementById("formularioVenta");
+    const botonConfirmar = formulario?.querySelector('[type="submit"]');
+    if (botonConfirmar) {
+        botonConfirmar.disabled = true;
     }
 
-    cerrarModalVenta();
-    mostrarVentas();
+    try {
+        const venta = await solicitarApiVentas("registrar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id_tienda: Number(idTienda),
+                metodo_pago: metodoPago,
+                referencia_sinpe: metodoPago === "SINPE" ? referenciaSinpe : "",
+                observaciones: observaciones || "",
+                items: carritoVenta.map((item) => ({
+                    id_producto: item.id_producto,
+                    cantidad: item.cantidad
+                }))
+            })
+        });
 
-    mostrarMensajeVentas(
-        `La venta ${venta.numero} fue registrada correctamente.`,
-        "exito"
-    );
+        ventasServidor = [venta, ...ventasServidor];
+        cerrarModalVenta();
+        mostrarVentas();
+        mostrarMensajeVentas(
+            `La venta ${venta.numero} fue registrada correctamente.`,
+            "exito"
+        );
+    } catch (error) {
+        mostrarMensajeFormularioVenta(
+            error.message,
+            "error"
+        );
+    } finally {
+        if (botonConfirmar) {
+            botonConfirmar.disabled = false;
+        }
+    }
 }
 
 /*=========================================================
@@ -2328,11 +2431,16 @@ function crearFilaVenta(venta) {
         '<i class="fa-solid fa-eye"></i>';
 
     boton.addEventListener("click", () => {
+        const detalleProductos = Array.isArray(venta.productos)
+            ? venta.productos.map((producto) =>
+                `${producto.cantidad} x ${producto.nombre}`
+            ).join("\n")
+            : `${venta.cantidad || 0} x ${venta.productoNombre || "Producto"}`;
+
         window.alert(
             [
                 `Venta: ${venta.numero}`,
-                `Producto: ${venta.productoNombre}`,
-                `Cantidad: ${venta.cantidad}`,
+                `Productos:\n${detalleProductos}`,
                 `Tienda: ${venta.tienda}`,
                 `Método: ${venta.metodoPago}`,
                 `Total: ${formatearMonedaCRC(venta.total)}`
@@ -2419,12 +2527,15 @@ function filtrarVentas(ventas) {
     const estado = document.getElementById(
         "filtroEstadoVenta"
     )?.value;
+    const selectorTienda = document.getElementById("filtroTiendaVenta");
+    const nombreTienda = selectorTienda?.selectedOptions[0]?.textContent || "";
 
     return ventas.filter((venta) => {
         const texto = normalizarTexto(
             [
                 venta.numero,
-                venta.productoNombre,
+                venta.productoNombre ||
+                    (venta.productos || []).map((producto) => producto.nombre).join(" "),
                 venta.tienda,
                 venta.usuario
             ].join(" ")
@@ -2439,7 +2550,8 @@ function filtrarVentas(ventas) {
             (!desde || fecha >= desde) &&
             (!hasta || fecha <= hasta) &&
             (!tienda ||
-                venta.tienda === tienda) &&
+                String(venta.id_tienda || "") === tienda ||
+                (!venta.id_tienda && venta.tienda === nombreTienda)) &&
             (!origen ||
                 venta.origen === origen) &&
             (!metodo ||
@@ -4896,4 +5008,3 @@ function agregarFilaProductoVending(listaId,mensajeId,preset=null){const lista=d
 function extraerLineasVending(listaId){return [...document.querySelectorAll(`#${listaId} .fila-producto-compra`)].map(f=>({nombre:f.querySelector(".item-nombre").value.trim(),cantidad:Number(f.querySelector(".item-cantidad").value)||0,precio:Number(f.querySelector(".item-precio").value)||0,iva:Number(f.querySelector(".item-iva")?.value)||0}));}
 function calcularTotalesLineasVending(listaId){const items=extraerLineasVending(listaId);const sub=items.reduce((s,i)=>s+i.cantidad*i.precio,0);const iva=items.reduce((s,i)=>s+i.cantidad*i.precio*i.iva/100,0);if(listaId.includes("Compra")){textoVending("subtotalCompra",monedaVending(sub));textoVending("impuestoCompra",monedaVending(iva));textoVending("totalCompra",monedaVending(sub+iva));}else{textoVending("cantidadTotalPedido",items.reduce((s,i)=>s+i.cantidad,0));textoVending("subtotalPedido",monedaVending(sub));textoVending("totalPedido",monedaVending(sub+iva));}return{sub,iva,total:sub+iva,items};}
 function renderTablaSimpleVending(c){const todos=leerListaVending(c.clave);const q=normalizarTexto(document.getElementById(c.buscar)?.value||"");const lista=todos.filter(x=>(!q||normalizarTexto(JSON.stringify(x)).includes(q))&&Object.entries(c.filtros).every(([k,id])=>{const v=document.getElementById(id)?.value||"";return !v||String(x[k]||"")===v}));document.getElementById(c.cuerpo).innerHTML=lista.map(c.fila).join("");c.resumen.forEach(([id,fn])=>textoVending(id,fn(todos)));mostrarElementoVending(c.contenedor,lista.length>0);mostrarElementoVending(c.vacio,todos.length===0);mostrarElementoVending(c.sinResultados,todos.length>0&&lista.length===0);textoVending(c.resultado,`${lista.length} resultado(s)`);}
-

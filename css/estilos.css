@@ -1774,6 +1774,14 @@ body.pagina-app {
     min-width: 1250px;
 }
 
+.tabla-carrito-venta {
+    min-width: 560px;
+}
+
+.tabla-carrito-venta td:first-child {
+    min-width: 180px;
+}
+
 /* ==========================================================
    MODALES DE VENTAS
 ========================================================== */
