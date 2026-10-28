@@ -15,11 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaUsuariosVending();
     inicializarPaginaAlertasVending();
     inicializarPaginaReportesVending();
-<<<<<<< Updated upstream
-=======
     inicializarResumenInventarioVending();
     inicializarCambioContrasenaInicialVending();
->>>>>>> Stashed changes
 });
 
 function inicializarNavegacionLateral() {
@@ -4038,6 +4035,7 @@ function inicializarDashboardVending() {
         ?.addEventListener("change", mostrarDashboardVending);
 
     mostrarDashboardVending();
+    cargarAlertasDashboardVending();
 }
 
 function mostrarDashboardVending() {
@@ -4071,12 +4069,6 @@ function mostrarDashboardVending() {
 
     const valores = {
         totalProductosDashboard: productosFiltrados.length,
-        totalStockCriticoDashboard: productosFiltrados.filter(
-            (producto) =>
-                ["critico", "stock-bajo", "agotado"].includes(
-                    obtenerEstadoStockVending(producto).valor
-                )
-        ).length,
         totalVentasDashboard: formatearMonedaCRC(
             ventasFiltradas.reduce(
                 (total, venta) => total + Number(venta.total || 0),
@@ -4092,7 +4084,6 @@ function mostrarDashboardVending() {
     });
 
     mostrarMovimientosDashboardVending(movimientosFiltrados);
-    mostrarAlertasDashboardVending(productosFiltrados);
 }
 
 function mostrarMovimientosDashboardVending(movimientos) {
@@ -4146,19 +4137,16 @@ function mostrarMovimientosDashboardVending(movimientos) {
     });
 }
 
-function mostrarAlertasDashboardVending(productos) {
+function mostrarAlertasDashboardVending(alertas) {
     const lista = document.getElementById("listaAlertasDashboard");
 
     if (!lista) {
         return;
     }
 
-    const alertas = productos.filter(
-        (producto) =>
-            obtenerEstadoStockVending(producto).valor !== "normal"
-    );
-
     lista.innerHTML = "";
+    const contador = document.getElementById("totalStockCriticoDashboard");
+    if (contador) contador.textContent = alertas.length;
 
     if (alertas.length === 0) {
         const vacio = document.createElement("div");
@@ -4168,38 +4156,112 @@ function mostrarAlertasDashboardVending(productos) {
         icono.className = "fa-regular fa-bell";
 
         const titulo = document.createElement("strong");
-        titulo.textContent = "No hay alertas registradas";
+        titulo.textContent = "No hay alertas de inventario activas";
 
         const texto = document.createElement("span");
-        texto.textContent = "Las alertas del sistema aparecerán aquí.";
+        texto.textContent = "El stock se encuentra por encima de los mínimos configurados.";
 
         vacio.append(icono, titulo, texto);
         lista.appendChild(vacio);
     } else {
-        alertas.slice(0, 6).forEach((producto) => {
-            const alerta = document.createElement("div");
-            alerta.className = "alerta-dashboard";
-            alerta.textContent =
-                `${producto.nombre}: ${obtenerEstadoStockVending(producto).texto} (${producto.stock} unidades)`;
-            lista.appendChild(alerta);
+        alertas.slice(0, 6).forEach((datoAlerta) => {
+            const tarjeta = document.createElement("div");
+            tarjeta.className = "alerta-dashboard";
+            const titulo = document.createElement("strong");
+            titulo.textContent = `${datoAlerta.producto} · ${datoAlerta.tipo_alerta}`;
+            const detalle = document.createElement("span");
+            detalle.textContent =
+                `${datoAlerta.tienda} / ${datoAlerta.ubicacion}: ${datoAlerta.stock_actual} disponibles (mínimo ${datoAlerta.stock_minimo})`;
+            tarjeta.append(titulo, detalle);
+            lista.appendChild(tarjeta);
         });
     }
 }
 
-function actualizarContadoresNotificacionVending() {
-    const cantidad = obtenerProductosGuardados().filter(
-        (producto) =>
-            obtenerEstadoStockVending(producto).valor !== "normal"
-    ).length;
+async function cargarAlertasDashboardVending() {
+    try {
+        const alertas = await obtenerAlertasInventarioVending();
+        mostrarAlertasDashboardVending(alertas);
+        actualizarContadoresNotificacionVending(alertas);
+    } catch (error) {
+        console.error("No se pudieron cargar las alertas del dashboard:", error);
+        const lista = document.getElementById("listaAlertasDashboard");
+        if (lista) lista.textContent = "No fue posible cargar las alertas de inventario.";
+    }
+}
 
-    document.querySelectorAll(".boton-notificacion .contador")
-        .forEach((elemento) => {
-            elemento.textContent = cantidad;
-            elemento.setAttribute(
-                "aria-label",
-                `${cantidad} notificaciones`
-            );
+let alertasInventarioMostradas = [];
+let promesaAlertasInventarioVending = null;
+let secuenciaCargaAlertasVending = 0;
+
+async function obtenerAlertasInventarioVending() {
+    if (!promesaAlertasInventarioVending) {
+        const parametros = new URLSearchParams({ accion: "listar", estado: "ACTIVAS" });
+        promesaAlertasInventarioVending = fetch(urlApiAlertasInventarioVending(parametros), {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" }
+        }).then(async (respuesta) => {
+            const resultado = await respuesta.json();
+            if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+                throw new Error(resultado.message || "No fue posible consultar las alertas.");
+            }
+            return resultado.data;
+        }).catch((error) => {
+            promesaAlertasInventarioVending = null;
+            throw error;
         });
+    }
+    return promesaAlertasInventarioVending;
+}
+
+function invalidarAlertasInventarioVending() {
+    promesaAlertasInventarioVending = null;
+}
+
+function urlApiAlertasInventarioVending(parametros = new URLSearchParams()) {
+    const scriptAplicacion = Array.from(document.scripts).find((script) => {
+        return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+    });
+    if (!scriptAplicacion) {
+        throw new Error("No se pudo determinar la ruta de la API de alertas.");
+    }
+
+    const urlApi = new URL("../api/inventario/alertas.php", scriptAplicacion.src);
+    urlApi.search = parametros.toString();
+    return urlApi;
+}
+
+async function solicitarApiAlertasInventarioVending(accion, datos = {}) {
+    const respuesta = await fetch(urlApiAlertasInventarioVending(), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ...datos, accion })
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success) {
+        throw new Error(resultado.message || "No fue posible guardar la gestión de alerta.");
+    }
+    return resultado.data;
+}
+
+function actualizarContadoresNotificacionVending(alertas) {
+    const contadores = document.querySelectorAll(".boton-notificacion .contador");
+    if (contadores.length === 0) return;
+
+    if (!alertas) {
+        obtenerAlertasInventarioVending()
+            .then(actualizarContadoresNotificacionVending)
+            .catch((error) => console.error("No se pudieron actualizar las alertas:", error));
+        return;
+    }
+    contadores.forEach((elemento) => {
+        elemento.textContent = alertas.length;
+        elemento.setAttribute("aria-label", `${alertas.length} alertas de inventario`);
+    });
 }
 
 
@@ -4208,7 +4270,6 @@ function actualizarContadoresNotificacionVending() {
   PEDIDOS Y FACTURAS
 =========================================================*/
 
-const CLAVE_ALERTAS_VENDING = "alertasVending";
 const CLAVE_COMPRAS_VENDING = "comprasVending";
 const CLAVE_PEDIDOS_VENDING = "pedidosVending";
 const CLAVE_FACTURAS_VENDING = "facturasVending";
@@ -5006,31 +5067,337 @@ async function renderUsuariosVending() {
 }
 
 /* ALERTAS */
-function obtenerAlertasVending(){
-    const guardadas=leerListaVending(CLAVE_ALERTAS_VENDING); const mapa=new Map(guardadas.map(a=>[a.id,a]));
-    obtenerProductosGuardados().forEach(p=>{
-        const estado=obtenerEstadoStockVending(p); if(estado.valor==="normal")return;
-        const id=`stock-${p.id||p.codigo}`; mapa.set(id,{...(mapa.get(id)||{}),id,tipo:"Inventario",prioridad:estado.valor==="agotado"?"Crítica":"Alta",titulo:estado.valor==="agotado"?"Producto agotado":"Stock bajo",descripcion:`${p.nombre} tiene ${Number(p.stock)||0} unidades disponibles.`,tienda:p.ubicacion||"Sin asignar",fecha:fechaHoyVending(),estado:mapa.get(id)?.estado||"Pendiente"});
+function prioridadAlertaInventarioVending(tipo) {
+    if (tipo === "negativo") return "Crítica";
+    if (tipo === "cero") return "Alta";
+    return "Media";
+}
+
+function inicializarPaginaAlertasVending() {
+    const lista = document.getElementById("listaAlertas");
+    if (!lista) return;
+
+    ["filtroTipoAlerta", "filtroEstadoAlerta", "filtroTiendaAlerta"]
+        .forEach((id) => document.getElementById(id)?.addEventListener("change", refrescarAlertasPaginaVending));
+    let temporizadorBusqueda;
+    document.getElementById("buscarAlerta")?.addEventListener("input", () => {
+        window.clearTimeout(temporizadorBusqueda);
+        temporizadorBusqueda = window.setTimeout(refrescarAlertasPaginaVending, 250);
     });
-    const lista=[...mapa.values()]; guardarListaVending(CLAVE_ALERTAS_VENDING,lista); return lista;
+
+    document.getElementById("botonActualizarAlertas")?.addEventListener("click", async () => {
+        const boton = document.getElementById("botonActualizarAlertas");
+        boton.disabled = true;
+        try {
+            invalidarAlertasInventarioVending();
+            await cargarAlertasPaginaVending();
+            mostrarMensajeModuloVending("mensajeAlertas", "Alertas actualizadas.");
+        } catch (error) {
+            console.error("No se pudieron actualizar las alertas:", error);
+            mostrarMensajeModuloVending("mensajeAlertas", error.message, "error");
+        } finally {
+            boton.disabled = false;
+        }
+    });
+
+    document.getElementById("botonLimpiarFiltrosAlertas")?.addEventListener("click", () => {
+        ["buscarAlerta", "filtroTipoAlerta", "filtroEstadoAlerta", "filtroTiendaAlerta"]
+            .forEach((id) => {
+                const campo = document.getElementById(id);
+                if (campo) campo.value = "";
+            });
+        refrescarAlertasPaginaVending();
+    });
+
+    document.getElementById("formularioGestionAlerta")?.addEventListener("submit", gestionarAlertaVending);
+    document.getElementById("botonCancelarGestionAlerta")?.addEventListener("click", () => cerrarModalVending("modalGestionAlerta"));
+    document.querySelector("[data-cerrar-modal-alerta]")?.addEventListener("click", () => cerrarModalVending("modalGestionAlerta"));
+    lista.addEventListener("click", manejarAccionListaAlertasVending);
+    lista.addEventListener("toggle", cargarHistorialAlertaVending, true);
+
+    cargarTiendasAlertaVending().catch((error) => {
+        console.error("No se pudieron cargar las tiendas de alertas:", error);
+        mostrarMensajeModuloVending("mensajeAlertas", error.message, "error");
+    });
+    refrescarAlertasPaginaVending();
 }
-function inicializarPaginaAlertasVending(){
-    if(!document.getElementById("listaAlertas"))return;
-    ["buscarAlerta","filtroTipoAlerta","filtroPrioridadAlerta","filtroTiendaAlerta","filtroEstadoAlerta"].forEach(id=>document.getElementById(id)?.addEventListener(id==="buscarAlerta"?"input":"change",renderAlertasVending));
-    document.getElementById("botonActualizarAlertas")?.addEventListener("click",()=>{renderAlertasVending();mostrarMensajeModuloVending("mensajeAlertas","Alertas actualizadas.");});
-    document.getElementById("botonMarcarTodasAlertas")?.addEventListener("click",()=>{const a=obtenerAlertasVending();a.forEach(x=>x.estado="Atendida");guardarListaVending(CLAVE_ALERTAS_VENDING,a);renderAlertasVending();});
-    document.getElementById("botonLimpiarFiltrosAlertas")?.addEventListener("click",()=>{["buscarAlerta","filtroTipoAlerta","filtroPrioridadAlerta","filtroTiendaAlerta","filtroEstadoAlerta"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});renderAlertasVending();});
-    document.getElementById("listaAlertas")?.addEventListener("click",e=>{const b=e.target.closest("button[data-alerta]");if(!b)return;const a=obtenerAlertasVending();const x=a.find(i=>i.id===b.dataset.alerta);if(x)x.estado=x.estado==="Atendida"?"Pendiente":"Atendida";guardarListaVending(CLAVE_ALERTAS_VENDING,a);renderAlertasVending();});
-    renderAlertasVending();
+
+async function cargarTiendasAlertaVending() {
+    const parametros = new URLSearchParams({ accion: "tiendas" });
+    const respuesta = await fetch(urlApiAlertasInventarioVending(parametros), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+        throw new Error(resultado.message || "No fue posible consultar las tiendas.");
+    }
+
+    const selector = document.getElementById("filtroTiendaAlerta");
+    selector.replaceChildren(new Option("Todas las tiendas", ""));
+    resultado.data.forEach((tienda) => {
+        selector.add(new Option(tienda.nombre, tienda.id_tienda));
+    });
 }
-function renderAlertasVending(){
-    const alertas=obtenerAlertasVending(); const q=normalizarTexto(document.getElementById("buscarAlerta")?.value||"");
-    const filtros=["Tipo","Prioridad","Tienda","Estado"].reduce((o,n)=>(o[n.toLowerCase()]=document.getElementById(`filtro${n}Alerta`)?.value||"",o),{});
-    const lista=alertas.filter(a=>(!q||normalizarTexto(`${a.titulo} ${a.descripcion} ${a.tienda}`).includes(q))&&(!filtros.tipo||a.tipo===filtros.tipo)&&(!filtros.prioridad||a.prioridad===filtros.prioridad)&&(!filtros.tienda||a.tienda===filtros.tienda)&&(!filtros.estado||a.estado===filtros.estado));
-    textoVending("totalAlertas",alertas.length);textoVending("alertasCriticas",alertas.filter(a=>a.prioridad==="Crítica").length);textoVending("alertasPendientes",alertas.filter(a=>a.estado!=="Atendida").length);textoVending("alertasAtendidas",alertas.filter(a=>a.estado==="Atendida").length);
-    document.getElementById("listaAlertas").innerHTML=lista.map(a=>`<article class="tarjeta-alerta alerta-${normalizarTexto(a.prioridad)} ${a.estado==="Atendida"?"alerta-atendida":""}"><div class="alerta-icono"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="alerta-contenido"><h3>${escaparHTMLVending(a.titulo)}</h3><p>${escaparHTMLVending(a.descripcion)}</p><div class="alerta-metadatos"><span>${escaparHTMLVending(a.tipo)}</span><span>${escaparHTMLVending(a.tienda)}</span><span>${escaparHTMLVending(a.fecha)}</span><span>${escaparHTMLVending(a.prioridad)}</span></div></div><div class="alerta-acciones"><button class="boton boton-borde boton-tabla" data-alerta="${a.id}">${a.estado==="Atendida"?"Reabrir":"Atender"}</button></div></article>`).join("");
-    mostrarElementoVending("mensajeSinAlertas",alertas.length===0);mostrarElementoVending("mensajeSinResultadosAlertas",alertas.length>0&&lista.length===0);textoVending("resultadoBusquedaAlertas",`${lista.length} resultado(s)`);
-    document.querySelectorAll(".boton-notificacion .contador").forEach(e=>e.textContent=alertas.filter(a=>a.estado!=="Atendida").length);
+
+function refrescarAlertasPaginaVending() {
+    cargarAlertasPaginaVending().catch((error) => {
+        console.error("No se pudieron cargar las alertas:", error);
+        mostrarMensajeModuloVending("mensajeAlertas", error.message, "error");
+    });
+}
+
+async function cargarAlertasPaginaVending() {
+    const secuenciaCarga = ++secuenciaCargaAlertasVending;
+    const filtros = {
+        producto: document.getElementById("buscarAlerta")?.value.trim() || "",
+        tipo: document.getElementById("filtroTipoAlerta")?.value || "",
+        estado: document.getElementById("filtroEstadoAlerta")?.value || "ACTIVAS",
+        tienda: document.getElementById("filtroTiendaAlerta")?.value || ""
+    };
+    if (!filtros.producto && !filtros.tipo && !filtros.tienda && filtros.estado === "ACTIVAS") {
+        const alertas = await obtenerAlertasInventarioVending();
+        if (secuenciaCarga !== secuenciaCargaAlertasVending) return alertas;
+        renderAlertasVending(alertas);
+        actualizarContadoresNotificacionVending(alertas);
+        return alertas;
+    }
+
+    const parametros = new URLSearchParams({ accion: "listar" });
+    Object.entries(filtros).forEach(([clave, valor]) => {
+        if (valor) parametros.set(clave, valor);
+    });
+
+    const respuesta = await fetch(urlApiAlertasInventarioVending(parametros), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+        throw new Error(resultado.message || "No fue posible consultar las alertas.");
+    }
+
+    if (secuenciaCarga !== secuenciaCargaAlertasVending) return resultado.data;
+    renderAlertasVending(resultado.data);
+    actualizarContadoresNotificacionVending(resultado.data);
+    return resultado.data;
+}
+
+function renderAlertasVending(alertas) {
+    const contenedor = document.getElementById("listaAlertas");
+    if (!contenedor) return;
+
+    alertasInventarioMostradas = alertas;
+    const todos = alertasInventarioMostradas;
+    textoVending("totalAlertas", todos.length);
+    textoVending("alertasCriticas", todos.filter((alerta) => ["negativo", "cero"].includes(alerta.tipo_alerta)).length);
+    textoVending("alertasPendientes", todos.filter((alerta) => alerta.tipo_alerta === "bajo").length);
+
+    contenedor.replaceChildren(...todos.map((alerta) => {
+        const prioridadAlerta = prioridadAlertaInventarioVending(alerta.tipo_alerta);
+        const tarjeta = document.createElement("article");
+        tarjeta.className = `tarjeta-alerta alerta-${normalizarTexto(prioridadAlerta)}`;
+        tarjeta.dataset.alerta = alerta.id_alerta;
+
+        const icono = document.createElement("div");
+        icono.className = "alerta-icono";
+        const imagen = document.createElement("i");
+        imagen.className = "fa-solid fa-triangle-exclamation";
+        icono.appendChild(imagen);
+
+        const contenido = document.createElement("div");
+        contenido.className = "alerta-contenido";
+        const encabezado = document.createElement("h3");
+        encabezado.textContent = alerta.producto;
+        const detalle = document.createElement("p");
+        detalle.textContent = `${alerta.tienda} / ${alerta.ubicacion} · Stock: ${alerta.stock_actual ?? "No disponible"} · Mínimo: ${alerta.stock_minimo ?? alerta.stock_minimo_generacion}`;
+        const metadatos = document.createElement("div");
+        metadatos.className = "alerta-metadatos";
+        [
+            `Stock ${alerta.tipo_alerta}`,
+            alerta.ultimo_tipo_movimiento
+                ? `Último movimiento: ${alerta.ultimo_tipo_movimiento} (${alerta.ultimo_estado_movimiento || "sin estado"})`
+                : "Sin movimientos registrados",
+            `Fecha del último movimiento: ${alerta.ultimo_movimiento ? formatearFechaHoraVenta(alerta.ultimo_movimiento) : "Fecha no disponible"}`,
+            `Generada: ${formatearFechaHoraVenta(alerta.fecha_generacion)}`,
+            `Estado: ${alerta.estado}`,
+            `Prioridad: ${prioridadAlerta}`
+        ].forEach((dato) => {
+            const elemento = document.createElement("span");
+            elemento.textContent = dato;
+            metadatos.appendChild(elemento);
+        });
+        contenido.append(encabezado, detalle, metadatos);
+
+        if (alerta.responsable || alerta.ultimas_observaciones || alerta.ultima_justificacion) {
+            const gestion = document.createElement("p");
+            gestion.className = "alerta-ultima-gestion";
+            gestion.textContent = [
+                alerta.ultima_accion ? `Última acción: ${alerta.ultima_accion}` : "",
+                alerta.responsable ? `Responsable: ${alerta.responsable}` : "",
+                alerta.fecha_ultima_gestion ? `Fecha: ${formatearFechaHoraVenta(alerta.fecha_ultima_gestion)}` : "",
+                alerta.ultimas_observaciones ? `Observaciones: ${alerta.ultimas_observaciones}` : "",
+                alerta.ultima_justificacion ? `Justificación: ${alerta.ultima_justificacion}` : "",
+                alerta.ultima_evidencia ? `Evidencia: ${alerta.ultima_evidencia}` : ""
+            ].filter(Boolean).join(" · ");
+            contenido.appendChild(gestion);
+        }
+
+        const acciones = document.createElement("div");
+        acciones.className = "alerta-acciones";
+        if (["PENDIENTE", "ATENDIDA"].includes(alerta.estado)) {
+            [
+                ["ATENDIDA", "Atender", "fa-check"],
+                ["CERRADA", "Cerrar", "fa-lock"],
+                ["DESCARTADA", "Descartar", "fa-ban"]
+            ].forEach(([estado, etiqueta, claseIcono]) => {
+                const boton = document.createElement("button");
+                boton.type = "button";
+                boton.className = "boton boton-borde boton-tabla";
+                boton.dataset.gestionAlerta = estado;
+                boton.dataset.idAlerta = alerta.id_alerta;
+                const iconoAccion = document.createElement("i");
+                iconoAccion.className = `fa-solid ${claseIcono}`;
+                boton.append(iconoAccion, document.createTextNode(` ${etiqueta}`));
+                acciones.appendChild(boton);
+            });
+        }
+        [
+            ["../compras/pedido.php", "Reabastecer", "fa-cart-plus"],
+            ["../inventario/inventario.php", "Inventario", "fa-clipboard-check"]
+        ].forEach(([url, etiqueta, claseIcono]) => {
+            const enlace = document.createElement("a");
+            enlace.className = "boton boton-borde boton-tabla";
+            enlace.href = url;
+            const iconoAccion = document.createElement("i");
+            iconoAccion.className = `fa-solid ${claseIcono}`;
+            enlace.append(iconoAccion, document.createTextNode(` ${etiqueta}`));
+            acciones.appendChild(enlace);
+        });
+
+        const historial = document.createElement("details");
+        historial.className = "alerta-historial";
+        const resumenHistorial = document.createElement("summary");
+        resumenHistorial.textContent = "Ver historial de gestión";
+        const cuerpoHistorial = document.createElement("div");
+        cuerpoHistorial.dataset.historialAlerta = alerta.id_alerta;
+        cuerpoHistorial.textContent = "Abre para consultar el historial.";
+        historial.append(resumenHistorial, cuerpoHistorial);
+
+        tarjeta.append(icono, contenido, acciones, historial);
+        return tarjeta;
+    }));
+
+    const estado = document.getElementById("filtroEstadoAlerta")?.value || "ACTIVAS";
+    const hayFiltros = Boolean(
+        document.getElementById("buscarAlerta")?.value.trim()
+        || document.getElementById("filtroTipoAlerta")?.value
+        || document.getElementById("filtroTiendaAlerta")?.value
+        || (estado && estado !== "ACTIVAS")
+    );
+    mostrarElementoVending("mensajeSinAlertas", todos.length === 0 && !hayFiltros);
+    mostrarElementoVending("mensajeSinResultadosAlertas", todos.length === 0 && hayFiltros);
+    textoVending("resultadoBusquedaAlertas", `Mostrando ${todos.length} alerta(s)`);
+}
+
+function actualizarCamposGestionAlertaVending() {
+    const accion = document.getElementById("accionGestionAlerta")?.value || "";
+    const requiereAtencion = accion === "ATENDIDA";
+    const evidencia = document.getElementById("evidenciaGestionAlerta");
+    const observaciones = document.getElementById("observacionesGestionAlerta");
+    const justificacion = document.getElementById("justificacionGestionAlerta");
+
+    document.getElementById("grupoEvidenciaGestionAlerta").hidden = !requiereAtencion;
+    document.getElementById("grupoObservacionesGestionAlerta").hidden = !requiereAtencion;
+    document.getElementById("grupoJustificacionGestionAlerta").hidden = requiereAtencion;
+    evidencia.required = requiereAtencion;
+    observaciones.required = requiereAtencion;
+    justificacion.required = !requiereAtencion;
+}
+
+function abrirGestionAlertaVending(idAlerta, accion) {
+    const formulario = document.getElementById("formularioGestionAlerta");
+    formulario.reset();
+    const mensaje = document.getElementById("mensajeGestionAlerta");
+    mensaje.hidden = true;
+    mensaje.textContent = "";
+    document.getElementById("idAlertaGestion").value = idAlerta;
+    document.getElementById("accionGestionAlerta").value = accion;
+    document.getElementById("tituloGestionAlerta").textContent =
+        accion === "ATENDIDA" ? "Atender alerta" : accion === "CERRADA" ? "Cerrar alerta" : "Descartar alerta";
+    actualizarCamposGestionAlertaVending();
+    abrirModalVending("modalGestionAlerta");
+}
+
+function manejarAccionListaAlertasVending(evento) {
+    const boton = evento.target.closest("button[data-gestion-alerta]");
+    if (boton) {
+        abrirGestionAlertaVending(boton.dataset.idAlerta, boton.dataset.gestionAlerta);
+    }
+}
+
+async function gestionarAlertaVending(evento) {
+    evento.preventDefault();
+    const formulario = evento.currentTarget;
+    const boton = formulario.querySelector('[type="submit"]');
+    boton.disabled = true;
+    try {
+        await solicitarApiAlertasInventarioVending("gestionar", {
+            id_alerta: Number(document.getElementById("idAlertaGestion").value),
+            estado: document.getElementById("accionGestionAlerta").value,
+            evidencia: document.getElementById("evidenciaGestionAlerta").value.trim(),
+            observaciones: document.getElementById("observacionesGestionAlerta").value.trim(),
+            justificacion: document.getElementById("justificacionGestionAlerta").value.trim()
+        });
+        invalidarAlertasInventarioVending();
+    } catch (error) {
+        console.error("No se pudo guardar la gestión de la alerta:", error);
+        mostrarMensajeModuloVending("mensajeGestionAlerta", error.message, "error");
+        boton.disabled = false;
+        return;
+    } finally {
+        boton.disabled = false;
+    }
+    cerrarModalVending("modalGestionAlerta");
+    mostrarMensajeModuloVending("mensajeAlertas", "Gestión de alerta registrada.");
+    refrescarAlertasPaginaVending();
+}
+
+async function cargarHistorialAlertaVending(evento) {
+    const detalles = evento.target;
+    if (!(detalles instanceof HTMLDetailsElement) || !detalles.open) return;
+    const contenedor = detalles.querySelector("[data-historial-alerta]");
+    if (!contenedor || contenedor.dataset.cargado === "true") return;
+
+    const parametros = new URLSearchParams({
+        accion: "historial",
+        id_alerta: contenedor.dataset.historialAlerta
+    });
+    try {
+        const respuesta = await fetch(urlApiAlertasInventarioVending(parametros), {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" }
+        });
+        const resultado = await respuesta.json();
+        if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+            throw new Error(resultado.message || "No fue posible cargar el historial.");
+        }
+        contenedor.replaceChildren(...resultado.data.map((eventoGestion) => {
+            const registro = document.createElement("p");
+            registro.textContent = [
+                `${formatearFechaHoraVenta(eventoGestion.fecha)} · ${eventoGestion.accion}`,
+                eventoGestion.responsable ? `Responsable: ${eventoGestion.responsable}` : "Sistema",
+                eventoGestion.evidencia ? `Evidencia: ${eventoGestion.evidencia}` : "",
+                eventoGestion.observaciones ? `Observaciones: ${eventoGestion.observaciones}` : "",
+                eventoGestion.justificacion ? `Justificación: ${eventoGestion.justificacion}` : ""
+            ].filter(Boolean).join(" · ");
+            return registro;
+        }));
+        contenedor.dataset.cargado = "true";
+    } catch (error) {
+        console.error("No se pudo cargar el historial de la alerta:", error);
+        contenedor.textContent = error.message;
+    }
 }
 
 /* REPORTES */
@@ -5043,6 +5410,137 @@ function inicializarPaginaReportesVending(){
     document.getElementById("botonExportarReporte")?.addEventListener("click",exportarReporteVending);
     inicializarConciliacionVending();
 }
+
+function urlApiResumenInventarioVending() {
+    const scriptAplicacion = Array.from(document.scripts).find((script) => {
+        return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+    });
+    if (!scriptAplicacion) {
+        throw new Error("No se pudo determinar la ruta de la API del resumen.");
+    }
+    return new URL("../api/inventario/resumen.php", scriptAplicacion.src);
+}
+
+function mostrarMensajeResumenInventarioVending(mensaje, error = false) {
+    const contenedor = document.getElementById("mensajeResumenInventario");
+    if (!contenedor) return;
+    contenedor.hidden = !mensaje;
+    contenedor.textContent = mensaje;
+    contenedor.classList.toggle("mensaje-error", error);
+    contenedor.classList.toggle("mensaje-exito", !error && Boolean(mensaje));
+}
+
+function mostrarHistorialResumenInventarioVending(registros) {
+    const cuerpo = document.getElementById("historialResumenInventario");
+    if (!cuerpo) return;
+    if (!registros.length) {
+        const fila = document.createElement("tr");
+        const celda = document.createElement("td");
+        celda.colSpan = 6;
+        celda.textContent = "Todavía no hay ejecuciones registradas.";
+        fila.appendChild(celda);
+        cuerpo.replaceChildren(fila);
+        return;
+    }
+
+    cuerpo.replaceChildren(...registros.map((registro) => {
+        const fila = document.createElement("tr");
+        const valores = [
+            registro.fecha_ejecucion ? formatearFechaHoraVenta(registro.fecha_ejecucion) : "—",
+            `${registro.periodo_inicio} al ${registro.periodo_fin}`,
+            registro.responsable || "No disponible",
+            registro.correo_destino,
+            registro.estado_envio,
+            registro.error || "—"
+        ];
+        valores.forEach((valor) => {
+            const celda = document.createElement("td");
+            celda.textContent = valor;
+            fila.appendChild(celda);
+        });
+        return fila;
+    }));
+}
+
+async function cargarResumenInventarioVending() {
+    const respuesta = await fetch(`${urlApiResumenInventarioVending()}?accion=configuracion`, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success || !resultado.data?.configuracion) {
+        throw new Error(resultado.message || "No fue posible cargar la configuración del resumen.");
+    }
+
+    const config = resultado.data.configuracion;
+    document.getElementById("correoResumenInventario").value = config.correo_destino || "";
+    document.getElementById("frecuenciaResumenInventario").value = config.frecuencia || "DIARIA";
+    document.getElementById("diaResumenInventario").value = String(config.dia_semana || 1);
+    document.getElementById("horaResumenInventario").value = config.hora || "07:00";
+    document.getElementById("habilitadoResumenInventario").checked =
+        config.habilitado === true || config.habilitado === "t" || config.habilitado === "1";
+    actualizarDiaResumenInventarioVending();
+    document.getElementById("proximaEjecucionResumenInventario").textContent =
+        config.proxima_ejecucion
+            ? formatearFechaHoraVenta(config.proxima_ejecucion)
+            : "Sin programar";
+    mostrarHistorialResumenInventarioVending(resultado.data.historial || []);
+}
+
+function actualizarDiaResumenInventarioVending() {
+    const grupo = document.getElementById("grupoDiaResumenInventario");
+    const semanal = document.getElementById("frecuenciaResumenInventario")?.value === "SEMANAL";
+    if (grupo) grupo.hidden = !semanal;
+}
+
+function inicializarResumenInventarioVending() {
+    const formulario = document.getElementById("formularioResumenInventario");
+    if (!formulario) return;
+
+    document.getElementById("frecuenciaResumenInventario")
+        ?.addEventListener("change", actualizarDiaResumenInventarioVending);
+    formulario.addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const boton = formulario.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensajeResumenInventarioVending("");
+        const datos = {
+            habilitado: document.getElementById("habilitadoResumenInventario").checked,
+            frecuencia: document.getElementById("frecuenciaResumenInventario").value,
+            dia_semana: Number(document.getElementById("diaResumenInventario").value),
+            hora: document.getElementById("horaResumenInventario").value,
+            correo_destino: document.getElementById("correoResumenInventario").value.trim()
+        };
+        try {
+            const respuesta = await fetch(urlApiResumenInventarioVending(), {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ accion: "guardar", ...datos })
+            });
+            const resultado = await respuesta.json();
+            if (!respuesta.ok || !resultado.success) {
+                throw new Error(resultado.message || "No fue posible guardar la configuración.");
+            }
+            mostrarMensajeResumenInventarioVending(resultado.message || "Configuración guardada.");
+            await cargarResumenInventarioVending();
+        } catch (error) {
+            mostrarMensajeResumenInventarioVending(error.message, true);
+        } finally {
+            boton.disabled = false;
+        }
+    });
+
+    cargarResumenInventarioVending().catch((error) => {
+        console.error("No se pudo cargar el resumen periódico:", error);
+        mostrarMensajeResumenInventarioVending(error.message, true);
+        mostrarHistorialResumenInventarioVending([]);
+    });
+}
+
 function datosReporteVending(tipo){
     if(tipo==="Ventas")return leerListaVending("ventasVending"); if(tipo==="Inventario"||tipo==="Productos")return obtenerProductosGuardados();
     if(tipo==="Movimientos")return obtenerMovimientosVending(); if(tipo==="Compras")return leerListaVending(CLAVE_COMPRAS_VENDING); if(tipo==="Cierres de caja")return leerListaVending("cierresCajaVending"); return [];

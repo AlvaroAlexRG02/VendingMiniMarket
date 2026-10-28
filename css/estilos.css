@@ -2144,6 +2144,15 @@ body.pagina-app {
     line-height: 1.5;
 }
 
+.alerta-dashboard strong,
+.alerta-dashboard span {
+    display: block;
+}
+
+.alerta-dashboard span {
+    margin-top: 3px;
+}
+
 .alerta-dashboard::before {
     position: absolute;
     top: 15px;
@@ -2651,6 +2660,75 @@ body.pagina-app {
     background: #ffffff;
 }
 
+.tarjeta-alerta > .alerta-historial {
+    grid-column: 2 / -1;
+    color: var(--texto-secundario);
+    font-size: 13px;
+}
+
+.alerta-historial summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.alerta-historial p,
+.alerta-ultima-gestion {
+    overflow-wrap: anywhere;
+}
+
+.alerta-ultima-gestion {
+    margin: 10px 0 0;
+    color: var(--texto-secundario);
+    font-size: 13px;
+}
+
+.modal-gestion-alerta-contenido {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 560px);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 26px;
+    border-radius: var(--radio-md);
+    background: #ffffff;
+    box-shadow: var(--sombra-lg);
+}
+
+.modal-gestion-alerta-contenido h2 {
+    margin: 0 0 8px;
+}
+
+.modal-gestion-alerta-contenido p {
+    color: var(--texto-secundario);
+}
+
+.modal-gestion-alerta-contenido label {
+    display: block;
+    margin: 14px 0 6px;
+    font-weight: 600;
+}
+
+.modal-gestion-alerta-contenido input,
+.modal-gestion-alerta-contenido select,
+.modal-gestion-alerta-contenido textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-sm);
+    font: inherit;
+}
+
+.modal-gestion-alerta-contenido textarea {
+    resize: vertical;
+}
+
+.acciones-modal-gestion-alerta {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 .tarjeta-alerta.alerta-critica {
     border-left-color: var(--rojo);
 }
@@ -2707,6 +2785,8 @@ body.pagina-app {
 .alerta-acciones {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
@@ -3339,6 +3419,41 @@ body.pagina-app {
         justify-content: flex-start;
     }
 
+}
+
+.configuracion-resumen-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.opcion-resumen-inventario {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 8px 0 16px;
+    font-weight: 600;
+}
+
+.opcion-resumen-inventario input {
+    width: 18px;
+    height: 18px;
+}
+
+.resumen-programacion-inventario {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 20px 0;
+    padding: 14px;
+    border-radius: var(--radio-sm);
+    background: #f1f5f9;
+}
+
+#historialResumenInventario td:last-child {
+    min-width: 220px;
+    white-space: normal;
 }
 
 .panel-conciliacion {
