@@ -470,6 +470,112 @@ header("Expires: 0");
 
             </section>
 
+            <?php if (esAdministrador()): ?>
+                <section class="panel" aria-labelledby="tituloResumenInventario">
+                    <div class="panel-encabezado">
+                        <div>
+                            <h2 id="tituloResumenInventario">Resumen periódico del inventario</h2>
+                            <p class="descripcion-panel">
+                                Configura el envío diario o semanal de existencias críticas, alertas pendientes
+                                y movimientos confirmados del periodo.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form id="formularioResumenInventario">
+                        <div class="configuracion-resumen-grid">
+                            <div class="grupo-formulario">
+                                <label for="correoResumenInventario">Correo de destino</label>
+                                <input
+                                    type="email"
+                                    id="correoResumenInventario"
+                                    maxlength="254"
+                                    autocomplete="email"
+                                    required
+                                >
+                            </div>
+
+                            <div class="grupo-formulario">
+                                <label for="frecuenciaResumenInventario">Frecuencia</label>
+                                <select id="frecuenciaResumenInventario" required>
+                                    <option value="DIARIA">Diaria</option>
+                                    <option value="SEMANAL">Semanal</option>
+                                </select>
+                            </div>
+
+                            <div class="grupo-formulario" id="grupoDiaResumenInventario" hidden>
+                                <label for="diaResumenInventario">Día de envío</label>
+                                <select id="diaResumenInventario">
+                                    <option value="1">Lunes</option>
+                                    <option value="2">Martes</option>
+                                    <option value="3">Miércoles</option>
+                                    <option value="4">Jueves</option>
+                                    <option value="5">Viernes</option>
+                                    <option value="6">Sábado</option>
+                                    <option value="7">Domingo</option>
+                                </select>
+                            </div>
+
+                            <div class="grupo-formulario">
+                                <label for="horaResumenInventario">Hora de envío</label>
+                                <input type="time" id="horaResumenInventario" value="07:00" required>
+                            </div>
+                        </div>
+
+                        <label class="opcion-resumen-inventario" for="habilitadoResumenInventario">
+                            <input type="checkbox" id="habilitadoResumenInventario">
+                            Activar el envío automático
+                        </label>
+
+                        <p class="descripcion-panel">
+                            La tarea del servidor debe ejecutar
+                            <code>scripts/ejecutar_resumen_inventario.php</code> cada 5 minutos.
+                            El sistema enviará el resumen cuando llegue la próxima ejecución programada.
+                            Los horarios se interpretan en la zona horaria de Costa Rica.
+                        </p>
+
+                        <div
+                            id="mensajeResumenInventario"
+                            class="mensaje-producto"
+                            aria-live="polite"
+                            hidden
+                        ></div>
+
+                        <div class="acciones-formulario-reporte">
+                            <button type="submit" class="boton boton-azul">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                Guardar configuración
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="resumen-programacion-inventario">
+                        <strong>Próximo envío:</strong>
+                        <span id="proximaEjecucionResumenInventario">Sin programar</span>
+                    </div>
+
+                    <h3>Historial de envíos</h3>
+                    <div class="contenedor-tabla">
+                        <table class="tabla-datos">
+                            <caption class="texto-solo-lectores">Historial de ejecuciones del resumen periódico</caption>
+                            <thead>
+                                <tr>
+                                    <th>Fecha de ejecución</th>
+                                    <th>Periodo</th>
+                                    <th>Responsable</th>
+                                    <th>Destino</th>
+                                    <th>Estado</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historialResumenInventario">
+                                <tr><td colspan="6">Cargando historial…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            <?php endif; ?>
+
             <?php if (esAdministradorOGerente()): ?>
                 <section class="panel panel-conciliacion" aria-labelledby="tituloConciliacion">
                     <div class="panel-encabezado">
