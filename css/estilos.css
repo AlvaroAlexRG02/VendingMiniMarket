@@ -3341,6 +3341,61 @@ body.pagina-app {
 
 }
 
+.panel-conciliacion {
+    margin-bottom: 24px;
+}
+
+.grupo-boton-conciliacion {
+    justify-content: flex-end;
+}
+
+.resumen-conciliacion {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin: 18px 0;
+    padding: 14px 16px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-sm);
+    background: var(--fondo-pagina);
+    font-weight: 600;
+}
+
+.tabla-conciliacion {
+    min-width: 1550px;
+}
+
+.fila-conciliacion-diferencia {
+    background: #fff7ed;
+}
+
+.acciones-fila-conciliacion {
+    display: grid;
+    min-width: 240px;
+    gap: 8px;
+}
+
+.acciones-fila-conciliacion input {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-sm);
+}
+
+.campo-ajuste-conciliacion {
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.campo-ajuste-conciliacion label {
+    grid-column: 1 / -1;
+    color: var(--texto-secundario);
+    font-size: 12px;
+}
+
 /* ==========================================
    DISEÑO DE BITÁCORA
 ========================================== */

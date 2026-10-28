@@ -142,7 +142,7 @@ function accionProductosVenta(PDO $pdo): void
         FROM producto p
         JOIN impuesto i ON i.id_impuesto = p.id_impuesto
         JOIN LATERAL (
-            SELECT precio_venta
+            SELECT precio_venta, costo
             FROM precio_tienda
             WHERE id_producto = p.id_producto
               AND id_tienda = :tienda
@@ -334,11 +334,12 @@ function accionRegistrarVenta(PDO $pdo): void
                 p.nombre,
                 p.estado,
                 i.porcentaje AS impuesto_porcentaje,
-                pt.precio_venta
+                pt.precio_venta,
+                pt.costo
             FROM producto p
             JOIN impuesto i ON i.id_impuesto = p.id_impuesto
             JOIN LATERAL (
-                SELECT precio_venta
+                SELECT precio_venta, costo
                 FROM precio_tienda
                 WHERE id_producto = p.id_producto
                   AND id_tienda = :tienda
@@ -391,6 +392,7 @@ function accionRegistrarVenta(PDO $pdo): void
                 'nombre' => $producto['nombre'],
                 'cantidad' => $cantidad,
                 'precio_unitario' => $precioBase,
+                'costo_unitario' => (float)$producto['costo'],
                 'porcentaje_impuesto' => $porcentajeImpuesto,
                 'subtotal' => $base,
                 'impuesto' => $impuesto,
@@ -408,12 +410,46 @@ function accionRegistrarVenta(PDO $pdo): void
         $impuestoVenta = round($impuestoVenta, 2);
         $totalVenta = round($totalVenta, 2);
 
+        $insertMovimiento = $pdo->prepare("
+            INSERT INTO movimiento_inventario
+                (id_usuario, id_ubicacion_origen, tipo_movimiento, motivo, observaciones,
+                 estado, id_usuario_autoriza, fecha_confirmacion, fecha_autorizacion)
+            VALUES
+                (:usuario, :ubicacion, 'SALIDA', 'Venta manual', :observaciones,
+                 'CONFIRMADO', :autorizador, NOW(), NOW())
+            RETURNING id_movimiento
+        ");
+        $insertMovimiento->execute([
+            ':usuario' => (int)$usuario['id_usuario'],
+            ':ubicacion' => (int)$ubicacion['id_ubicacion'],
+            ':observaciones' => 'Venta manual en ' . $tienda['nombre'],
+            ':autorizador' => (int)$usuario['id_usuario'],
+        ]);
+        $idMovimiento = (int)$insertMovimiento->fetchColumn();
+
+        $insertDetalleMovimiento = $pdo->prepare("
+            INSERT INTO detalle_movimiento
+                (id_movimiento, id_producto, cantidad,
+                 saldo_origen_anterior, saldo_origen_resultante)
+            VALUES
+                (:movimiento, :producto, :cantidad, :anterior, :resultante)
+        ");
+        foreach ($detalleVenta as $detalle) {
+            $insertDetalleMovimiento->execute([
+                ':movimiento' => $idMovimiento,
+                ':producto' => $detalle['id_producto'],
+                ':cantidad' => $detalle['cantidad'],
+                ':anterior' => $detalle['stock_anterior'],
+                ':resultante' => $detalle['stock_anterior'] - $detalle['cantidad'],
+            ]);
+        }
+
         $insertVenta = $pdo->prepare("
             INSERT INTO venta_manual
-                (id_tienda, id_ubicacion, id_usuario, metodo_pago, referencia_sinpe,
+                (id_tienda, id_ubicacion, id_usuario, id_movimiento, metodo_pago, referencia_sinpe,
                  subtotal, impuesto, total, observaciones)
             VALUES
-                (:tienda, :ubicacion, :usuario, :metodo, :referencia,
+                (:tienda, :ubicacion, :usuario, :movimiento, :metodo, :referencia,
                  :subtotal, :impuesto, :total, :observaciones)
             RETURNING id_venta, fecha
         ");
@@ -421,6 +457,7 @@ function accionRegistrarVenta(PDO $pdo): void
             ':tienda' => $idTienda,
             ':ubicacion' => (int)$ubicacion['id_ubicacion'],
             ':usuario' => (int)$usuario['id_usuario'],
+            ':movimiento' => $idMovimiento,
             ':metodo' => $metodo,
             ':referencia' => $metodo === 'SINPE' ? $referencia : null,
             ':subtotal' => $subtotalVenta,
@@ -433,10 +470,10 @@ function accionRegistrarVenta(PDO $pdo): void
 
         $insertDetalle = $pdo->prepare("
             INSERT INTO venta_manual_detalle
-                (id_venta, id_producto, cantidad, precio_unitario, porcentaje_impuesto,
+                (id_venta, id_producto, cantidad, precio_unitario, costo_unitario, porcentaje_impuesto,
                  subtotal, impuesto, total)
             VALUES
-                (:venta, :producto, :cantidad, :precio, :porcentaje, :subtotal, :impuesto, :total)
+                (:venta, :producto, :cantidad, :precio, :costo, :porcentaje, :subtotal, :impuesto, :total)
         ");
         $actualizarExistencia = $pdo->prepare("
             UPDATE existencia
@@ -452,6 +489,7 @@ function accionRegistrarVenta(PDO $pdo): void
                 ':producto' => $detalle['id_producto'],
                 ':cantidad' => $detalle['cantidad'],
                 ':precio' => $detalle['precio_unitario'],
+                ':costo' => $detalle['costo_unitario'],
                 ':porcentaje' => $detalle['porcentaje_impuesto'],
                 ':subtotal' => $detalle['subtotal'],
                 ':impuesto' => $detalle['impuesto'],

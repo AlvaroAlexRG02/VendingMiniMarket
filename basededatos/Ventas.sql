@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS public.venta_manual (
     id_tienda BIGINT NOT NULL REFERENCES public.tienda(id_tienda),
     id_ubicacion BIGINT NOT NULL REFERENCES public.ubicacion_inventario(id_ubicacion),
     id_usuario BIGINT NOT NULL REFERENCES public.usuario(id_usuario),
+    id_movimiento BIGINT UNIQUE REFERENCES public.movimiento_inventario(id_movimiento),
     fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     metodo_pago VARCHAR(10) NOT NULL,
     referencia_sinpe VARCHAR(60),
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.venta_manual_detalle (
     cantidad INTEGER NOT NULL CHECK (cantidad > 0),
     precio_unitario NUMERIC(12,2) NOT NULL CHECK (precio_unitario >= 0),
     porcentaje_impuesto NUMERIC(7,4) NOT NULL CHECK (porcentaje_impuesto >= 0),
+    costo_unitario NUMERIC(12,2) CHECK (costo_unitario IS NULL OR costo_unitario >= 0),
     subtotal NUMERIC(12,2) NOT NULL CHECK (subtotal >= 0),
     impuesto NUMERIC(12,2) NOT NULL CHECK (impuesto >= 0),
     total NUMERIC(12,2) NOT NULL CHECK (total >= 0),
@@ -41,3 +43,11 @@ CREATE INDEX IF NOT EXISTS idx_venta_manual_tienda_fecha
 
 CREATE INDEX IF NOT EXISTS idx_venta_manual_usuario_fecha
     ON public.venta_manual (id_usuario, fecha DESC);
+
+ALTER TABLE public.venta_manual
+    ADD COLUMN IF NOT EXISTS id_movimiento BIGINT UNIQUE
+    REFERENCES public.movimiento_inventario(id_movimiento);
+
+ALTER TABLE public.venta_manual_detalle
+    ADD COLUMN IF NOT EXISTS costo_unitario NUMERIC(12,2)
+    CHECK (costo_unitario IS NULL OR costo_unitario >= 0);

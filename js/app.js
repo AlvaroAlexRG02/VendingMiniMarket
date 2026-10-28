@@ -4967,6 +4967,7 @@ function inicializarPaginaReportesVending(){
     document.getElementById("botonLimpiarReporte")?.addEventListener("click",()=>{form.reset();document.getElementById("fechaInicioReporte").value=fechaHoyVending();document.getElementById("fechaFinReporte").value=fechaHoyVending();});
     document.getElementById("botonImprimirReporte")?.addEventListener("click",()=>window.print());
     document.getElementById("botonExportarReporte")?.addEventListener("click",exportarReporteVending);
+    inicializarConciliacionVending();
 }
 function datosReporteVending(tipo){
     if(tipo==="Ventas")return leerListaVending("ventasVending"); if(tipo==="Inventario"||tipo==="Productos")return obtenerProductosGuardados();
@@ -4989,6 +4990,262 @@ function exportarReporteVending(){
     const filas=[...document.querySelectorAll("#contenedorTablaReporte tr")].map(f=>[...f.children].map(c=>`"${c.textContent.trim().replace(/"/g,'""')}"`).join(","));
     if(!filas.length){mostrarMensajeModuloVending("mensajeReportes","Primero genera un reporte.","error");return;}
     const blob=new Blob(["\ufeff"+filas.join("\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="reporte-vending.csv";a.click();URL.revokeObjectURL(a.href);
+}
+
+let resultadosConciliacionVending = [];
+let idConciliacionVending = null;
+
+function solicitarApiConciliacionVending(accion, opciones = {}) {
+    return fetch(`../api/ventas/conciliacion.php?accion=${encodeURIComponent(accion)}`, {
+        credentials: "same-origin",
+        cache: "no-store",
+        ...opciones
+    }).then(async respuesta => {
+        const resultado = await respuesta.json();
+        if (!respuesta.ok || !resultado.success) {
+            throw new Error(resultado.message || "No fue posible completar la conciliación.");
+        }
+        return resultado.data;
+    });
+}
+
+function inicializarConciliacionVending() {
+    const formulario = document.getElementById("formularioConciliacion");
+    if (!formulario) return;
+
+    const hoy = fechaHoyVending();
+    document.getElementById("fechaInicioConciliacion").value = hoy;
+    document.getElementById("fechaFinConciliacion").value = hoy;
+
+    solicitarApiConciliacionVending("tiendas")
+        .then(tiendas => {
+            const selector = document.getElementById("tiendaConciliacion");
+            tiendas.forEach(tienda => {
+                const opcion = document.createElement("option");
+                opcion.value = String(tienda.id_tienda);
+                opcion.textContent = tienda.nombre;
+                selector.appendChild(opcion);
+            });
+        })
+        .catch(error => mostrarMensajeConciliacionVending(error.message, "error"));
+
+    formulario.addEventListener("submit", generarConciliacionVending);
+    document.getElementById("botonExportarConciliacion")?.addEventListener(
+        "click",
+        exportarConciliacionVending
+    );
+    document.getElementById("cuerpoConciliacion").addEventListener(
+        "click",
+        manejarAccionConciliacionVending
+    );
+}
+
+async function generarConciliacionVending(evento) {
+    evento.preventDefault();
+    const formulario = document.getElementById("formularioConciliacion");
+    const boton = formulario.querySelector('[type="submit"]');
+    const fechaInicio = document.getElementById("fechaInicioConciliacion").value;
+    const fechaFin = document.getElementById("fechaFinConciliacion").value;
+
+    if (fechaInicio > fechaFin) {
+        mostrarMensajeConciliacionVending("La fecha inicial no puede ser posterior a la fecha final.", "error");
+        return;
+    }
+
+    boton.disabled = true;
+    try {
+        const resultado = await solicitarApiConciliacionVending("generar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                fecha_inicio: fechaInicio,
+                fecha_fin: fechaFin,
+                id_tienda: Number(document.getElementById("tiendaConciliacion").value || 0)
+            })
+        });
+        idConciliacionVending = resultado.id_conciliacion;
+        resultadosConciliacionVending = resultado.resultados;
+        renderizarConciliacionVending();
+        mostrarMensajeConciliacionVending(
+            `Conciliación ${resultado.id_conciliacion} guardada. Fuente: ${resultado.fuente}.`,
+            "exito"
+        );
+    } catch (error) {
+        mostrarMensajeConciliacionVending(error.message, "error");
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+function renderizarConciliacionVending() {
+    const cuerpo = document.getElementById("cuerpoConciliacion");
+    const contenedor = document.getElementById("contenedorConciliacion");
+    const vacio = document.getElementById("mensajeSinDatosConciliacion");
+    const resumen = document.getElementById("resumenConciliacion");
+    if (!cuerpo || !contenedor || !vacio || !resumen) return;
+
+    cuerpo.innerHTML = resultadosConciliacionVending.map(fila => {
+        const diferenciaStock = fila.diferencia_existencia === null
+            ? "Sin saldo registrado"
+            : String(fila.diferencia_existencia);
+        const utilidad = fila.utilidad_estimada === null ||
+            Number(fila.lineas_sin_costo) > 0
+            ? "Costo histórico no disponible"
+            : monedaVending(fila.utilidad_estimada);
+        const discrepancia = Number(fila.diferencia_venta_movimiento) !== 0 ||
+            Number(fila.diferencia_existencia || 0) !== 0;
+
+        return `<tr class="${discrepancia ? "fila-conciliacion-diferencia" : ""}">
+            <td>${escaparHTMLVending(fila.producto)}</td>
+            <td>${escaparHTMLVending(`${fila.tienda} / ${fila.ubicacion}`)}</td>
+            <td>${fila.cantidad_vendida}</td>
+            <td>${fila.cantidad_movimiento}</td>
+            <td>${fila.diferencia_venta_movimiento}</td>
+            <td>${fila.existencia_actual}</td>
+            <td>${fila.saldo_ultimo_movimiento === null ? "—" : fila.saldo_ultimo_movimiento}</td>
+            <td>${escaparHTMLVending(diferenciaStock)}</td>
+            <td>${escaparHTMLVending(utilidad)}</td>
+            <td>
+                <div class="acciones-fila-conciliacion">
+                    <input type="text" maxlength="500" value="${escaparHTMLVending(fila.observacion || "")}"
+                        aria-label="Observación para ${escaparHTMLVending(fila.producto)}"
+                        data-observacion-conciliacion="${fila.id_detalle}">
+                    <button type="button" class="boton boton-borde"
+                        data-accion-conciliacion="observacion" data-id-detalle="${fila.id_detalle}">
+                        Guardar observación
+                    </button>
+                    <div class="campo-ajuste-conciliacion">
+                        <label for="ajusteConciliacion${fila.id_detalle}">Ajuste (+/- unidades)</label>
+                        <input type="number" step="1" id="ajusteConciliacion${fila.id_detalle}"
+                            data-ajuste-conciliacion="${fila.id_detalle}">
+                        <button type="button" class="boton boton-borde"
+                            data-accion-conciliacion="ajustar" data-id-detalle="${fila.id_detalle}">
+                            Aplicar ajuste
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    }).join("");
+
+    const diferencias = resultadosConciliacionVending.filter(fila =>
+        Number(fila.diferencia_venta_movimiento) !== 0 ||
+        Number(fila.diferencia_existencia || 0) !== 0
+    );
+    const utilidadDisponible = resultadosConciliacionVending
+        .filter(fila => fila.utilidad_estimada !== null && Number(fila.lineas_sin_costo) === 0)
+        .reduce((total, fila) => total + Number(fila.utilidad_estimada), 0);
+
+    document.getElementById("periodoConciliacion").textContent =
+        `Periodo: ${document.getElementById("fechaInicioConciliacion").value} al ${document.getElementById("fechaFinConciliacion").value}`;
+    document.getElementById("cantidadDiferenciasConciliacion").textContent =
+        `${diferencias.length} producto(s) con diferencias`;
+    document.getElementById("utilidadConciliacion").textContent =
+        `Utilidad estimada: ${monedaVending(utilidadDisponible)}`;
+    resumen.hidden = resultadosConciliacionVending.length === 0;
+    contenedor.hidden = resultadosConciliacionVending.length === 0;
+    vacio.hidden = resultadosConciliacionVending.length > 0;
+}
+
+function exportarConciliacionVending() {
+    if (!resultadosConciliacionVending.length) {
+        mostrarMensajeConciliacionVending("Primero genera una conciliación.", "error");
+        return;
+    }
+
+    const columnas = [
+        ["Tienda", "tienda"],
+        ["Ubicación", "ubicacion"],
+        ["Producto", "producto"],
+        ["Cantidad vendida", "cantidad_vendida"],
+        ["Cantidad salida", "cantidad_movimiento"],
+        ["Diferencia ventas y salida", "diferencia_venta_movimiento"],
+        ["Existencia actual", "existencia_actual"],
+        ["Saldo último movimiento", "saldo_ultimo_movimiento"],
+        ["Diferencia de existencia", "diferencia_existencia"],
+        ["Utilidad estimada", "utilidad_estimada"],
+        ["Observación", "observacion"]
+    ];
+    const csv = [
+        columnas.map(([titulo]) => titulo),
+        ...resultadosConciliacionVending.map(fila =>
+            columnas.map(([, clave]) => fila[clave] ?? "")
+        )
+    ].map(fila => fila.map(valor =>
+        `"${String(valor).replace(/"/g, '""')}"`
+    ).join(",")).join("\r\n");
+    const archivo = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
+    const enlace = document.createElement("a");
+    enlace.href = URL.createObjectURL(archivo);
+    enlace.download = `conciliacion-${idConciliacionVending}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
+}
+
+async function manejarAccionConciliacionVending(evento) {
+    const boton = evento.target.closest("button[data-accion-conciliacion]");
+    if (!boton) return;
+
+    const idDetalle = Number(boton.dataset.idDetalle);
+    const accion = boton.dataset.accionConciliacion;
+    const campoObservacion = document.querySelector(`[data-observacion-conciliacion="${idDetalle}"]`);
+    const observacion = campoObservacion?.value.trim() || "";
+
+    if (!observacion) {
+        mostrarMensajeConciliacionVending("Agregue una observación antes de guardar o ajustar.", "error");
+        campoObservacion?.focus();
+        return;
+    }
+
+    const body = { id_detalle: idDetalle, observacion };
+    if (accion === "ajustar") {
+        const campoAjuste = document.querySelector(`[data-ajuste-conciliacion="${idDetalle}"]`);
+        const cantidad = Number(campoAjuste?.value);
+        if (!Number.isInteger(cantidad) || cantidad === 0) {
+            mostrarMensajeConciliacionVending("Indique una cantidad de ajuste entera distinta de cero.", "error");
+            campoAjuste?.focus();
+            return;
+        }
+        if (!window.confirm(`¿Autoriza el ajuste de ${cantidad > 0 ? "+" : ""}${cantidad} unidades?`)) {
+            return;
+        }
+        body.cantidad_ajuste = cantidad;
+    }
+
+    boton.disabled = true;
+    try {
+        const resultado = await solicitarApiConciliacionVending(accion, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        const fila = resultadosConciliacionVending.find(item => item.id_detalle === idDetalle);
+        if (fila) {
+            fila.observacion = observacion;
+            if (accion === "ajustar") {
+                fila.existencia_actual = resultado.cantidad_despues;
+                fila.saldo_ultimo_movimiento = resultado.cantidad_despues;
+                fila.diferencia_existencia = 0;
+            }
+        }
+        renderizarConciliacionVending();
+        mostrarMensajeConciliacionVending(
+            accion === "ajustar" ? "Ajuste autorizado y registrado en el inventario." : "Observación guardada.",
+            "exito"
+        );
+    } catch (error) {
+        mostrarMensajeConciliacionVending(error.message, "error");
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+function mostrarMensajeConciliacionVending(mensaje, tipo) {
+    const elemento = document.getElementById("mensajeConciliacion");
+    if (!elemento) return;
+    elemento.textContent = mensaje;
+    elemento.className = `mensaje-producto mensaje-${tipo}`;
+    elemento.hidden = false;
 }
 
 /* CRUD GENÉRICO DE COMPRAS, PEDIDOS Y FACTURAS */

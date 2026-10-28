@@ -470,6 +470,85 @@ header("Expires: 0");
 
             </section>
 
+            <?php if (esAdministradorOGerente()): ?>
+                <section class="panel panel-conciliacion" aria-labelledby="tituloConciliacion">
+                    <div class="panel-encabezado">
+                        <div>
+                            <h2 id="tituloConciliacion">Conciliación de ventas e inventario</h2>
+                            <p class="descripcion-panel">
+                                Compara las ventas manuales con sus salidas de inventario y los saldos actuales.
+                                Las importaciones Nayax aún no se incluyen porque sus filas no se almacenan en el sistema.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form id="formularioConciliacion">
+                        <div class="cuadricula-filtros-reportes">
+                            <div class="grupo-formulario">
+                                <label for="tiendaConciliacion">Tienda</label>
+                                <select id="tiendaConciliacion" name="id_tienda">
+                                    <option value="">Todas las tiendas</option>
+                                </select>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="fechaInicioConciliacion">Fecha inicial</label>
+                                <input type="date" id="fechaInicioConciliacion" required>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="fechaFinConciliacion">Fecha final</label>
+                                <input type="date" id="fechaFinConciliacion" required>
+                            </div>
+                            <div class="grupo-formulario grupo-boton-conciliacion">
+                                <label>&nbsp;</label>
+                                <button type="submit" class="boton boton-azul">
+                                    <i class="fa-solid fa-scale-balanced"></i>
+                                    Conciliar periodo
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <p id="mensajeConciliacion" class="mensaje-producto" aria-live="polite" hidden></p>
+
+                    <div id="resumenConciliacion" class="resumen-conciliacion" hidden>
+                        <span id="periodoConciliacion"></span>
+                        <span id="cantidadDiferenciasConciliacion"></span>
+                        <span id="utilidadConciliacion"></span>
+                        <button type="button" id="botonExportarConciliacion" class="boton boton-borde">
+                            <i class="fa-solid fa-file-export"></i>
+                            Exportar resultados
+                        </button>
+                    </div>
+
+                    <div id="contenedorConciliacion" class="contenedor-tabla" hidden>
+                        <table class="tabla-datos tabla-conciliacion">
+                            <caption class="texto-solo-lectores">Diferencias de ventas e inventario</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col">Tienda / ubicación</th>
+                                    <th scope="col">Vendido</th>
+                                    <th scope="col">Salida vinculada</th>
+                                    <th scope="col">Diferencia venta / salida</th>
+                                    <th scope="col">Existencia actual</th>
+                                    <th scope="col">Último saldo de movimiento</th>
+                                    <th scope="col">Diferencia de existencia</th>
+                                    <th scope="col">Utilidad estimada</th>
+                                    <th scope="col">Observación y ajuste autorizado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoConciliacion"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="mensajeSinDatosConciliacion" class="estado-vacio-productos" hidden>
+                        <i class="fa-solid fa-circle-check"></i>
+                        <h3>Sin ventas manuales para conciliar</h3>
+                        <p>No se encontraron ventas en las fechas seleccionadas.</p>
+                    </div>
+                </section>
+            <?php endif; ?>
+
             <!-- ==========================================
                  RESUMEN
             =========================================== -->
