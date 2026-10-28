@@ -7,9 +7,12 @@ const estadoHU21 = {
     productos: [],
     ubicaciones: [],
     proveedores: [],
+    proveedoresProducto: [],
     pedidos: [],
     productoSeleccionadoId: "",
-    conservarMensajeTrasReset: false
+    conservarMensajeTrasReset: false,
+    itemsMovimiento: [],
+    pedidoTablaActual: ""
 };
 
 
@@ -148,16 +151,18 @@ function registrarEventosHU21() {
             estadoHU21.productoSeleccionadoId =
                 producto.value || "";
 
+            cargarProveedoresHU21(estadoHU21.proveedores);
+            cargarPedidosHU21(estadoHU21.pedidos);
             actualizarResumenHU21();
 
         }
     );
 
 
-    destino?.addEventListener(
-        "change",
-        actualizarResumenHU21
-    );
+    destino?.addEventListener("change", () => {
+        cargarPedidosHU21(estadoHU21.pedidos);
+        actualizarResumenHU21();
+    });
 
 
     cantidad?.addEventListener(
@@ -169,8 +174,13 @@ function registrarEventosHU21() {
     origenMercaderia?.addEventListener(
         "change",
         () => {
+            estadoHU21.itemsMovimiento = [];
+            estadoHU21.pedidoTablaActual = "";
+            const destinoActual = document.getElementById("ubicacionDestino");
+            if (destinoActual) destinoActual.value = "";
             actualizarCamposOrigenEntradaHU21();
-            actualizarResumenHU21();
+            cargarPedidosHU21(estadoHU21.pedidos);
+            renderizarTablaMovimientoHU21();
         }
     );
 
@@ -181,11 +191,21 @@ function registrarEventosHU21() {
     );
 
 
-    pedido?.addEventListener(
-        "change",
-        actualizarResumenHU21
+    pedido?.addEventListener("change", () => {
+        cargarTablaPedidoHU21();
+    });
+
+
+    document.getElementById("botonAgregarProductoMovimiento")?.addEventListener(
+        "click", agregarProductoTablaHU21
     );
 
+    document.getElementById("tablaProductosMovimiento")?.addEventListener(
+        "input", cambiarCantidadTablaHU21
+    );
+    document.getElementById("tablaProductosMovimiento")?.addEventListener(
+        "click", eliminarProductoTablaHU21
+    );
 
     formulario?.addEventListener(
         "submit",
@@ -225,13 +245,10 @@ function registrarEventosHU21() {
   CARGAR DATOS DEL FORMULARIO
 =========================================================*/
 
-async function cargarDatosHU21() {
-
-    mostrarMensajeHU21(
-        "Cargando datos del formulario...",
-        "info",
-        "cargando"
-    );
+async function cargarDatosHU21(silencioso = false) {
+    if (!silencioso) {
+        mostrarMensajeHU21("Cargando datos del formulario...", "info", "cargando");
+    }
 
     try {
 
@@ -303,10 +320,13 @@ async function cargarDatosHU21() {
 
 
         estadoHU21.proveedores =
-            Array.isArray(
-                resultado.data?.proveedores
-            )
+            Array.isArray(resultado.data?.proveedores)
                 ? resultado.data.proveedores
+                : [];
+
+        estadoHU21.proveedoresProducto =
+            Array.isArray(resultado.data?.proveedores_producto)
+                ? resultado.data.proveedores_producto
                 : [];
 
 
@@ -341,6 +361,8 @@ async function cargarDatosHU21() {
             estadoHU21.pedidos
         );
 
+        renderizarTablaMovimientoHU21();
+
 
         actualizarCamposOrigenEntradaHU21();
 
@@ -352,8 +374,7 @@ async function cargarDatosHU21() {
         );
 
 
-        ocultarMensajeHU21();
-
+        if (!silencioso) ocultarMensajeHU21();
 
     } catch (error) {
 
@@ -363,11 +384,12 @@ async function cargarDatosHU21() {
         );
 
 
-        mostrarMensajeHU21(
-            error.message ||
-            "No fue posible cargar los datos del formulario.",
-            "error"
-        );
+        if (!silencioso) {
+            mostrarMensajeHU21(
+                error.message || "No fue posible cargar los datos del formulario.",
+                "error"
+            );
+        }
 
     }
 }
@@ -592,10 +614,9 @@ function seleccionarProductoHU21(
         id;
 
 
-    estadoHU21.productoSeleccionadoId =
-        id;
-
-
+    estadoHU21.productoSeleccionadoId = id;
+    cargarProveedoresHU21(estadoHU21.proveedores);
+    cargarPedidosHU21(estadoHU21.pedidos);
     actualizarResumenHU21();
 
 
@@ -625,16 +646,16 @@ function filtrarProductosHU21(
 
 
     /*
-     * Al borrar la búsqueda,
-     * volvemos a mostrar todos los productos.
-     * Si ya existía un producto seleccionado,
-     * se conserva.
+     * Si se borra la búsqueda, reiniciamos la selección.
+     * No se borra la tabla de productos ya agregados.
      */
     if (!busqueda) {
 
+        estadoHU21.productoSeleccionadoId = "";
+
         cargarProductosHU21(
             estadoHU21.productos,
-            true
+            false
         );
 
 
@@ -645,8 +666,9 @@ function filtrarProductosHU21(
         );
 
 
+        cargarProveedoresHU21(estadoHU21.proveedores);
+        cargarPedidosHU21(estadoHU21.pedidos);
         actualizarResumenHU21();
-
 
         return;
     }
@@ -696,6 +718,13 @@ function filtrarProductosHU21(
         resultados,
         true
     );
+
+    // Si el nuevo filtro excluye al producto anterior, ya no sigue seleccionado.
+    if (!resultados.some(
+        (producto) => String(producto.id_producto) === estadoHU21.productoSeleccionadoId
+    )) {
+        estadoHU21.productoSeleccionadoId = "";
+    }
 
 
     /*
@@ -747,7 +776,8 @@ function filtrarProductosHU21(
         seleccionadoAutomaticamente
     );
 
-
+    cargarProveedoresHU21(estadoHU21.proveedores);
+    cargarPedidosHU21(estadoHU21.pedidos);
     actualizarResumenHU21();
 }
 
@@ -1087,86 +1117,89 @@ function cargarUbicacionesHU21(
   PROVEEDORES
 =========================================================*/
 
-function cargarProveedoresHU21(
-    proveedores
-) {
+/**
+ * Devuelve los proveedores activos comunes a los productos indicados.
+ * Se usa la relación producto_proveedor enviada por entrada.php (GET).
+ * Los productos ya agregados deben pertenecer al mismo proveedor.
+ */
+function proveedoresComunesHU21(idsProducto) {
+    const ids = [...new Set(idsProducto.map(Number).filter(Number.isInteger))];
+    if (!ids.length) return [];
 
-    const selector =
-        document.getElementById(
-            "proveedorMovimiento"
-        );
+    const relaciones = estadoHU21.proveedoresProducto;
+    const permitidos = ids.map(idProducto => new Set(
+        relaciones
+            .filter(rel => Number(rel.id_producto) === idProducto)
+            .map(rel => Number(rel.id_proveedor))
+    ));
 
+    return estadoHU21.proveedores.filter(proveedor =>
+        permitidos.every(grupo => grupo.has(Number(proveedor.id_proveedor)))
+    );
+}
 
-    if (!selector) {
-        return;
+/*=========================================================
+  PROVEEDORES ASOCIADOS AL PRODUCTO / A LA TABLA
+=========================================================*/
+function cargarProveedoresHU21(proveedores = estadoHU21.proveedores) {
+    const selector = document.getElementById('proveedorMovimiento');
+    if (!selector) return;
+
+    const origen = document.getElementById('origenMercaderia')?.value;
+    const esProveedor = document.getElementById('tipoMovimiento')?.value === 'entrada'
+        && origen === 'Proveedor';
+    const seleccionadoAnterior = selector.value;
+    const idProductoActual = Number(document.getElementById('productoMovimiento')?.value || 0);
+
+    const idsTabla = estadoHU21.itemsMovimiento.map(item => Number(item.id_producto));
+    const idsRelevantes = [...idsTabla];
+    if (idProductoActual > 0) idsRelevantes.push(idProductoActual);
+
+    const visibles = esProveedor && idsRelevantes.length
+        ? proveedoresComunesHU21(idsRelevantes)
+        : [];
+
+    selector.replaceChildren();
+    const inicial = document.createElement('option');
+    inicial.value = '';
+    inicial.textContent = !esProveedor
+        ? 'Seleccione un proveedor'
+        : idsRelevantes.length === 0
+            ? 'Seleccione primero un producto'
+            : visibles.length === 0
+                ? (idsTabla.length > 0
+                    ? 'No hay proveedores comunes a los productos'
+                    : 'El producto no tiene proveedores asociados activos')
+                : 'Seleccione un proveedor del producto';
+    selector.appendChild(inicial);
+
+    for (const proveedor of visibles) {
+        const opcion = document.createElement('option');
+        opcion.value = String(proveedor.id_proveedor);
+        opcion.textContent = proveedor.nombre || `Proveedor #${proveedor.id_proveedor}`;
+        selector.appendChild(opcion);
     }
 
+    // Si el proveedor seleccionado continúa siendo compatible, se conserva.
+    // Si deja de serlo, se limpia, evitando asociaciones inválidas.
+    selector.value = visibles.some(p => String(p.id_proveedor) === seleccionadoAnterior)
+        ? seleccionadoAnterior : '';
 
-    const seleccionado =
-        selector.value;
-
-
-    selector.innerHTML = "";
-
-
-    const opcionInicial =
-        document.createElement(
-            "option"
-        );
-
-
-    opcionInicial.value = "";
-
-
-    opcionInicial.textContent =
-        proveedores.length > 0
-            ? "Seleccione un proveedor"
-            : "No hay proveedores disponibles";
-
-
-    selector.appendChild(
-        opcionInicial
-    );
-
-
-    proveedores.forEach(
-        (proveedor) => {
-
-            const opcion =
-                document.createElement(
-                    "option"
-                );
-
-
-            opcion.value =
-                String(
-                    proveedor.id_proveedor
-                );
-
-
-            opcion.textContent =
-                proveedor.nombre ||
-                `Proveedor #${proveedor.id_proveedor}`;
-
-
-            selector.appendChild(
-                opcion
-            );
-
-        }
-    );
-
-
-    if (
-        seleccionado &&
-        Array.from(
-            selector.options
-        ).some(
-            (opcion) =>
-                opcion.value === seleccionado
-        )
-    ) {
-        selector.value = seleccionado;
+    let ayuda = document.getElementById('ayudaProveedorMovimiento');
+    if (!ayuda) {
+        ayuda = document.createElement('small');
+        ayuda.id = 'ayudaProveedorMovimiento';
+        ayuda.className = 'texto-secundario';
+        ayuda.setAttribute('aria-live', 'polite');
+        selector.insertAdjacentElement('afterend', ayuda);
+    }
+    ayuda.hidden = !esProveedor;
+    if (esProveedor) {
+        ayuda.textContent = idsRelevantes.length === 0
+            ? 'Seleccione un producto para ver sus proveedores asociados.'
+            : visibles.length === 0
+                ? 'No existe un proveedor activo que suministre todos los productos seleccionados.'
+                : `${visibles.length} proveedor(es) compatible(s) con el producto y la tabla.`;
     }
 }
 
@@ -1175,111 +1208,201 @@ function cargarProveedoresHU21(
   PEDIDOS DE COMPRA
 =========================================================*/
 
-function cargarPedidosHU21(
-    pedidos
-) {
-
-    const selector =
-        document.getElementById(
-            "pedidoMovimiento"
-        );
-
-
-    if (!selector) {
-        return;
-    }
-
-
-    const seleccionado =
-        selector.value;
-
-
-    selector.innerHTML = "";
-
-
-    const opcionInicial =
-        document.createElement(
-            "option"
-        );
-
-
-    opcionInicial.value = "";
-
-
-    opcionInicial.textContent =
-        pedidos.length > 0
-            ? "Seleccione un pedido"
-            : "No hay pedidos disponibles";
-
-
-    selector.appendChild(
-        opcionInicial
-    );
-
-
-    pedidos.forEach(
-        (pedido) => {
-
-            const opcion =
-                document.createElement(
-                    "option"
-                );
-
-
-            opcion.value =
-                String(
-                    pedido.id_pedido
-                );
-
-
-            const proveedor =
-                pedido.proveedor ||
-                "Proveedor sin nombre";
-
-
-            const fecha =
-                formatearFechaPedidoHU21(
-                    pedido.fecha_pedido
-                );
-
-
-            const estado =
-                pedido.estado ||
-                "Sin estado";
-
-
-            opcion.textContent =
-                `Pedido #${pedido.id_pedido} — ` +
-                `${proveedor} — ${fecha} — ${estado}`;
-
-
-            opcion.dataset.idProveedor =
-                String(
-                    pedido.id_proveedor || ""
-                );
-
-
-            selector.appendChild(
-                opcion
-            );
-
+function cargarPedidosHU21(pedidos) {
+    const selector = document.getElementById("pedidoMovimiento");
+    if (!selector) return;
+    const seleccionado = selector.value;
+    const ubicaciones = new Map(estadoHU21.ubicaciones.map(u => [Number(u.id_ubicacion), u]));
+    const unicos = new Map();
+    for (const pedido of pedidos) {
+        const id = Number(pedido.id_pedido);
+        if (!unicos.has(id)) {
+            unicos.set(id, { ...pedido, totalPendiente: 0 });
         }
-    );
-
-
-    if (
-        seleccionado &&
-        Array.from(
-            selector.options
-        ).some(
-            (opcion) =>
-                opcion.value === seleccionado
-        )
-    ) {
-        selector.value = seleccionado;
+        unicos.get(id).totalPendiente += Number(pedido.cantidad_pendiente || 0);
+    }
+    selector.replaceChildren();
+    const inicial = document.createElement("option");
+    inicial.value = "";
+    inicial.textContent = unicos.size
+        ? "Seleccione un pedido y vea los productos"
+        : "No hay pedidos autorizados con mercadería pendiente";
+    selector.appendChild(inicial);
+    for (const p of unicos.values()) {
+        const opcion = document.createElement("option");
+        const ubicacion = ubicaciones.get(Number(p.id_ubicacion));
+        opcion.value = String(p.id_pedido);
+        opcion.textContent = `Pedido #${p.id_pedido} — ${p.proveedor || 'Proveedor'} — ` +
+            `${ubicacion?.nombre || 'Ubicación'} — ${p.estado} — Pendiente: ${p.totalPendiente}`;
+        selector.appendChild(opcion);
+    }
+    selector.value = unicos.has(Number(seleccionado)) ? seleccionado : "";
+    // El selector no depende de que el usuario adivine un producto.
+    // Cuando cambia la selección, la tabla se llena con TODO el pedido.
+    if (selector.value !== estadoHU21.pedidoTablaActual) {
+        cargarTablaPedidoHU21();
     }
 }
 
+function cargarTablaPedidoHU21() {
+    const idPedido = document.getElementById("pedidoMovimiento")?.value || "";
+    estadoHU21.pedidoTablaActual = idPedido;
+    if (!idPedido) {
+        estadoHU21.itemsMovimiento = [];
+        const destino = document.getElementById("ubicacionDestino");
+        if (destino && document.getElementById("origenMercaderia")?.value === "Pedido de compra") {
+            destino.value = "";
+        }
+        renderizarTablaMovimientoHU21();
+        return;
+    }
+    const filas = estadoHU21.pedidos.filter(p => String(p.id_pedido) === idPedido);
+    const primera = filas[0];
+    const destino = document.getElementById("ubicacionDestino");
+    if (destino && primera) destino.value = String(primera.id_ubicacion);
+    estadoHU21.itemsMovimiento = filas.map(f => {
+        const producto = estadoHU21.productos.find(p => Number(p.id_producto) === Number(f.id_producto));
+        const solicitada = Number(f.cantidad_solicitada ?? f.cantidad_pendiente);
+        const recibida = Number(f.cantidad_recibida ?? 0);
+        return {
+            id_producto: Number(f.id_producto),
+            nombre: producto?.nombre || `Producto #${f.id_producto}`,
+            cantidad: 0,
+            solicitada,
+            recibida,
+            pendiente: Number(f.cantidad_pendiente),
+        };
+    });
+    renderizarTablaMovimientoHU21();
+}
+
+function agregarProductoTablaHU21() {
+    if (document.getElementById("tipoMovimiento")?.value !== "entrada") return;
+    const origen = document.getElementById("origenMercaderia")?.value;
+    if (origen === "Pedido de compra") return;
+    if (!['Proveedor', 'Devolución'].includes(origen)) {
+        mostrarMensajeHU21("Seleccione primero el tipo de entrada.", "error");
+        return;
+    }
+    const id = Number(document.getElementById("productoMovimiento")?.value || 0);
+    const cantidad = Number(document.getElementById("cantidadMovimiento")?.value || 0);
+    const producto = estadoHU21.productos.find(p => Number(p.id_producto) === id);
+    if (!producto || !Number.isSafeInteger(cantidad) || cantidad <= 0) {
+        mostrarMensajeHU21("Seleccione un producto y una cantidad entera mayor que cero.", "error");
+        return;
+    }
+    if (origen === 'Proveedor') {
+        const ids = [...estadoHU21.itemsMovimiento.map(p => p.id_producto), id];
+        if (proveedoresComunesHU21(ids).length === 0) {
+            mostrarMensajeHU21(
+                'El producto no comparte un proveedor activo con los productos de la tabla. ' +
+                'Registre otra entrada por separado o elija un producto compatible.', 'error'
+            );
+            return;
+        }
+    }
+    const existente = estadoHU21.itemsMovimiento.find(p => p.id_producto === id);
+    if (existente) existente.cantidad += cantidad;
+    else estadoHU21.itemsMovimiento.push({id_producto:id, nombre:producto.nombre, cantidad, pendiente:null});
+    document.getElementById("cantidadMovimiento").value = "";
+    cargarProveedoresHU21(estadoHU21.proveedores);
+    renderizarTablaMovimientoHU21();
+}
+
+function cambiarCantidadTablaHU21(evento) {
+    if (!evento.target.matches(".cantidad-item-movimiento")) return;
+    const id = Number(evento.target.dataset.producto);
+    const item = estadoHU21.itemsMovimiento.find(p => p.id_producto === id);
+    if (!item) return;
+    const valor = Number(evento.target.value);
+    item.cantidad = evento.target.value === "" ? 0 : valor;
+    const invalida = !Number.isSafeInteger(valor) || valor < 0 ||
+        (item.pendiente !== null && valor > item.pendiente);
+    evento.target.setCustomValidity(invalida ? `Ingrese un entero entre 0 y ${item.pendiente ?? 'el límite permitido'}.` : "");
+    actualizarResumenHU21();
+}
+
+function eliminarProductoTablaHU21(evento) {
+    const boton = evento.target.closest(".quitar-item-movimiento");
+    if (!boton) return;
+    // En pedidos los ítems pertenecen al documento: 0 significa 'no recibido hoy'.
+    const id = Number(boton.dataset.producto);
+    estadoHU21.itemsMovimiento = estadoHU21.itemsMovimiento.filter(p => p.id_producto !== id);
+    cargarProveedoresHU21(estadoHU21.proveedores);
+    renderizarTablaMovimientoHU21();
+}
+
+function renderizarTablaMovimientoHU21() {
+    const tbody = document.getElementById("tablaProductosMovimiento");
+    if (!tbody) return;
+    tbody.replaceChildren();
+    const esPedido = document.getElementById("origenMercaderia")?.value === "Pedido de compra";
+    if (!estadoHU21.itemsMovimiento.length) {
+        const tr = tbody.insertRow();
+        const td = tr.insertCell();
+        td.colSpan = 6;
+        td.textContent = esPedido
+            ? "Seleccione un pedido para cargar los productos solicitados."
+            : "Aún no hay productos agregados.";
+    }
+    for (const item of estadoHU21.itemsMovimiento) {
+        const tr = tbody.insertRow();
+        const texto = valor => {const td=tr.insertCell();td.textContent=String(valor);return td;};
+        texto(item.nombre);
+        texto(esPedido ? (item.solicitada ?? '—') : '—');
+        texto(esPedido ? (item.recibida ?? '—') : '—');
+        texto(esPedido ? (item.pendiente ?? '—') : '—');
+        const tdCantidad = tr.insertCell();
+        const input = document.createElement('input');
+        input.type='number'; input.min=esPedido ? '0':'1';input.step='1';
+        input.className='cantidad-item-movimiento';
+        input.dataset.producto=String(item.id_producto);
+        input.value=String(item.cantidad);
+        if (esPedido) input.max=String(item.pendiente);
+        input.style.width='110px';
+        input.setAttribute('aria-label',`Cantidad a registrar de ${item.nombre}`);
+        tdCantidad.appendChild(input);
+        const tdQuitar=tr.insertCell();
+        if (esPedido) {
+            tdQuitar.textContent = '—'; // No se altera el detalle del pedido, 0 = no recibido.
+        } else {
+            const button=document.createElement('button');
+            button.type='button';button.className='boton boton-borde quitar-item-movimiento';
+            button.dataset.producto=String(item.id_producto);
+            button.textContent='Quitar';
+            tdQuitar.appendChild(button);
+        }
+    }
+    actualizarResumenHU21();
+}
+
+function prepararCamposTablaHU21() {
+    const entrada = document.getElementById("tipoMovimiento")?.value === "entrada";
+    const pedido = entrada && document.getElementById("origenMercaderia")?.value === "Pedido de compra";
+    const producto = document.getElementById("productoMovimiento");
+    const buscador = document.getElementById("buscarProductoMovimiento");
+    const cantidad = document.getElementById("cantidadMovimiento");
+    const destino = document.getElementById("ubicacionDestino");
+    for (const elemento of [producto, buscador, cantidad]) {
+        if (!elemento) continue;
+        const grupo = elemento.closest('.grupo-formulario');
+        if (grupo) grupo.style.display = pedido ? 'none' : '';
+    }
+    if (producto) producto.required = false; // Se valida al agregar a la tabla.
+    if (cantidad) cantidad.required = false; // El guardado utiliza la tabla.
+    if (destino) destino.disabled = pedido;
+    const boton = document.getElementById('botonAgregarProductoMovimiento');
+    if (boton) boton.style.display = pedido || !entrada ? 'none' : '';
+    const mensaje = document.getElementById('instruccionTablaMovimiento');
+    if (mensaje) mensaje.textContent = pedido
+        ? 'Seleccione un pedido. Sus productos aparecerán aquí; indique cuánto recibió de cada uno (0 si no llegó).'
+        : 'Seleccione un producto, indique la cantidad y pulse «Agregar producto». Puede repetirlo.';
+    const grupoPedido = document.getElementById('grupoPedidoMovimiento');
+    if (grupoPedido) {
+        // Forzar visibilidad aun si CSS utiliza display para los grupos.
+        grupoPedido.style.display = pedido ? '' : 'none';
+    }
+}
 
 /*=========================================================
   FORMATEAR FECHA DE PEDIDO
@@ -1373,7 +1496,7 @@ function actualizarTipoMovimientoHU21() {
     if (grupoUbicacionOrigen) {
 
         grupoUbicacionOrigen.hidden =
-            esEntrada;
+            esEntrada || !tipo;
 
     }
 
@@ -1413,31 +1536,24 @@ function actualizarTipoMovimientoHU21() {
     }
 
 
-    if (!esEntrada) {
-
-        mostrarMensajeHU21(
-            "Este tipo de movimiento aún no está disponible.",
-            "info",
-            "tipo-pendiente"
-        );
-
-        return;
-    }
-
-
     const mensaje =
         document.getElementById(
             "mensajeMovimiento"
         );
 
+    if (!esEntrada && tipo) {
+        mostrarMensajeHU21(
+            "Este tipo de movimiento aún no está disponible.",
+            "info",
+            "tipo-pendiente"
+        );
+        return;
+    }
 
-    if (
-        mensaje?.dataset.clave ===
-        "tipo-pendiente"
-    ) {
-
+    // Sin tipo seleccionado no mostramos una alerta de funcionalidad pendiente.
+    // Mantener cualquier mensaje de éxito del registro anterior.
+    if (mensaje?.dataset.clave === "tipo-pendiente") {
         ocultarMensajeHU21();
-
     }
 }
 
@@ -1616,6 +1732,9 @@ function actualizarCamposOrigenEntradaHU21() {
             observaciones.value = "";
         }
     }
+    prepararCamposTablaHU21();
+    cargarProveedoresHU21(estadoHU21.proveedores);
+    cargarPedidosHU21(estadoHU21.pedidos);
 }
 
 /*=========================================================
@@ -1660,555 +1779,107 @@ function establecerFechaHU21() {
 =========================================================*/
 
 function actualizarResumenHU21() {
-
-    const resumen =
-        document.getElementById(
-            "textoResumenEntrada"
-        );
-
-
-    if (!resumen) {
-        return;
-    }
-
-
-    const producto =
-        document.getElementById(
-            "productoMovimiento"
-        );
-
-
-    const destino =
-        document.getElementById(
-            "ubicacionDestino"
-        );
-
-
-    const cantidad =
-        Number(
-            document.getElementById(
-                "cantidadMovimiento"
-            )?.value || 0
-        );
-
-
-    if (
-        !producto?.value &&
-        !destino?.value &&
-        cantidad <= 0
-    ) {
-
-        resumen.textContent =
-            "Seleccione producto, ubicación y cantidad.";
-
-        return;
-    }
-
-
-    const nombreProducto =
-        producto?.value
-            ? producto
-                .selectedOptions[0]
-                ?.textContent
-                ?.trim()
-            : "Sin seleccionar";
-
-
-    const nombreDestino =
-        destino?.value
-            ? destino
-                .selectedOptions[0]
-                ?.textContent
-                ?.trim()
-            : "Sin seleccionar";
-
-
-    const origen =
-        document.getElementById(
-            "origenMercaderia"
-        )?.value || "";
-
-
-    let detalleOrigen =
-        origen || "Sin seleccionar";
-
-
-    if (origen === "Proveedor") {
-
-        const proveedor =
-            document.getElementById(
-                "proveedorMovimiento"
-            );
-
-        if (proveedor?.value) {
-            detalleOrigen +=
-                `: ${proveedor.selectedOptions[0]?.textContent?.trim() || ""}`;
-        }
-    }
-
-
-    if (origen === "Pedido de compra") {
-
-        const pedido =
-            document.getElementById(
-                "pedidoMovimiento"
-            );
-
-        if (pedido?.value) {
-            detalleOrigen +=
-                `: ${pedido.selectedOptions[0]?.textContent?.trim() || ""}`;
-        }
-    }
-
-
-    resumen.textContent =
-        `Producto: ${nombreProducto} | ` +
-        `Destino: ${nombreDestino} | ` +
-        `Cantidad: ${cantidad > 0 ? cantidad : 0} | ` +
-        `Origen: ${detalleOrigen}`;
+    const unidades = estadoHU21.itemsMovimiento.reduce((s, p) => s +
+        (Number.isSafeInteger(p.cantidad) && p.cantidad > 0 ? p.cantidad : 0), 0);
+    const total = document.getElementById('totalUnidadesMovimiento');
+    if (total) total.textContent = String(unidades);
+    const resumen = document.getElementById('textoResumenEntrada');
+    const destino = document.getElementById('ubicacionDestino');
+    const origen = document.getElementById('origenMercaderia')?.value || 'Sin seleccionar';
+    const pedido = document.getElementById('pedidoMovimiento');
+    if (resumen) resumen.textContent = `${estadoHU21.itemsMovimiento.length} producto(s) en la tabla | ` +
+        `${unidades} unidad(es) a registrar | Destino: ` +
+        `${destino?.selectedOptions[0]?.textContent || 'Sin seleccionar'} | Tipo: ${origen}` +
+        (origen === 'Pedido de compra' && pedido?.value ? ` | Pedido #${pedido.value}` : '');
 }
-
 
 /*=========================================================
   REGISTRAR ENTRADA
 =========================================================*/
 
-async function registrarEntradaHU21(
-    evento
-) {
-
+async function registrarEntradaHU21(evento) {
     evento.preventDefault();
-
-
-    const tipo =
-        document.getElementById(
-            "tipoMovimiento"
-        )?.value;
-
-
-    if (tipo !== "entrada") {
-
-        mostrarMensajeHU21(
-            "Este tipo de movimiento aún no está disponible.",
-            "info",
-            "tipo-pendiente"
-        );
-
+    if (document.getElementById('tipoMovimiento')?.value !== 'entrada') {
+        mostrarMensajeHU21('Este tipo de movimiento aún no está disponible.', 'info');
         return;
     }
-
-
-    const idProducto =
-        Number(
-            document.getElementById(
-                "productoMovimiento"
-            )?.value || 0
-        );
-
-
-    const idUbicacion =
-        Number(
-            document.getElementById(
-                "ubicacionDestino"
-            )?.value || 0
-        );
-
-
-    const cantidad =
-        Number(
-            document.getElementById(
-                "cantidadMovimiento"
-            )?.value || 0
-        );
-
-
-    const origen =
-        document.getElementById(
-            "origenMercaderia"
-        )?.value || "";
-
-
-    const proveedorTexto =
-        document.getElementById(
-            "proveedorMovimiento"
-        )?.value.trim() || "";
-
-
-    const pedidoTexto =
-        document.getElementById(
-            "pedidoMovimiento"
-        )?.value.trim() || "";
-
-
-    const referencia =
-        document.getElementById(
-            "referenciaMovimiento"
-        )?.value.trim() || "";
-
-
-    const observaciones =
-        document.getElementById(
-            "observacionesMovimiento"
-        )?.value.trim() || "";
-
-
-    /* ======================================================
-       VALIDACIONES
-    ====================================================== */
-
-    if (idProducto <= 0) {
-
-        mostrarMensajeHU21(
-            "Debe seleccionar un producto.",
-            "error"
-        );
-
-        return;
+    const origen = document.getElementById('origenMercaderia')?.value || '';
+    const esPedido = origen === 'Pedido de compra';
+    const idUbicacion = Number(document.getElementById('ubicacionDestino')?.value || 0);
+    const idPedido = Number(document.getElementById('pedidoMovimiento')?.value || 0);
+    const idProveedor = Number(document.getElementById('proveedorMovimiento')?.value || 0);
+    const referencia = document.getElementById('referenciaMovimiento')?.value.trim() || '';
+    const observaciones = document.getElementById('observacionesMovimiento')?.value.trim() || '';
+    const items = estadoHU21.itemsMovimiento.filter(p => Number(p.cantidad) > 0);
+    const campos = [...document.querySelectorAll('#tablaProductosMovimiento .cantidad-item-movimiento')];
+    if (!['Proveedor','Devolución','Pedido de compra'].includes(origen)) {
+        mostrarMensajeHU21('Indique el tipo de entrada.', 'error');return;
     }
-
-
-    if (idUbicacion <= 0) {
-
-        mostrarMensajeHU21(
-            "Debe seleccionar una ubicación de destino.",
-            "error"
-        );
-
-        return;
+    if (!idUbicacion) {mostrarMensajeHU21('Seleccione ubicación de destino.', 'error');return;}
+    if (!items.length) {mostrarMensajeHU21('Agregue al menos un producto con cantidad mayor que cero.', 'error');return;}
+    if (estadoHU21.itemsMovimiento.some(p => !Number.isSafeInteger(p.cantidad) || p.cantidad < 0 ||
+        (p.pendiente !== null && p.cantidad > p.pendiente)) ||
+        campos.some(c => !c.checkValidity())) {
+        mostrarMensajeHU21('Revise las cantidades: solo enteros y nunca mayores a lo pendiente.', 'error');return;
     }
-
-
-    if (
-        !Number.isInteger(
-            cantidad
-        ) ||
-        cantidad <= 0
-    ) {
-
-        mostrarMensajeHU21(
-            "La cantidad debe ser un número entero mayor que cero.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    const origenesPermitidos = [
-        "Proveedor",
-        "Pedido de compra",
-        "Devolución"
-    ];
-
-
-    if (!origenesPermitidos.includes(origen)) {
-
-        mostrarMensajeHU21(
-            "Debe indicar un origen válido para la mercadería.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    let idProveedor =
-        null;
-
-
-    if (origen === "Proveedor") {
-
-        if (proveedorTexto === "") {
-
-            mostrarMensajeHU21(
-                "Debe seleccionar un proveedor.",
-                "error"
-            );
-
-            return;
+    if (esPedido) {
+        const pedido = estadoHU21.pedidos.find(p => Number(p.id_pedido) === idPedido);
+        if (!pedido || Number(pedido.id_ubicacion) !== idUbicacion) {
+            mostrarMensajeHU21('Seleccione un pedido disponible.', 'error');return;
         }
-
-
-        idProveedor =
-            Number(
-                proveedorTexto
-            );
-
-
-        if (
-            !Number.isInteger(
-                idProveedor
-            ) ||
-            idProveedor <= 0 ||
-            !estadoHU21.proveedores.some(
-                (proveedor) =>
-                    Number(proveedor.id_proveedor) ===
-                    idProveedor
-            )
-        ) {
-
-            mostrarMensajeHU21(
-                "El proveedor seleccionado no es válido.",
-                "error"
-            );
-
-            return;
+        const validos = estadoHU21.pedidos.filter(p => Number(p.id_pedido) === idPedido);
+        if (items.some(i => !validos.some(p => Number(p.id_producto) === i.id_producto &&
+                i.cantidad <= Number(p.cantidad_pendiente)))) {
+            mostrarMensajeHU21('Algún producto excede las unidades disponibles del pedido.', 'error');return;
         }
+    } else if (origen === 'Proveedor' && (!idProveedor || !referencia)) {
+        mostrarMensajeHU21('Seleccione proveedor e indique documento o referencia.', 'error');return;
+    } else if (origen === 'Proveedor' &&
+        !proveedoresComunesHU21(items.map(item => item.id_producto))
+            .some(proveedor => Number(proveedor.id_proveedor) === idProveedor)) {
+        mostrarMensajeHU21('El proveedor no está asociado a todos los productos de la entrada.', 'error');return;
+    } else if (origen === 'Devolución' && !observaciones) {
+        mostrarMensajeHU21('Indique el motivo de la devolución.', 'error');return;
     }
-
-
-    if (
-        origen === "Proveedor" &&
-        !referencia
-    ) {
-
-        mostrarMensajeHU21(
-            "Debe indicar el documento o referencia del proveedor.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    if (
-        origen === "Devolución" &&
-        !observaciones
-    ) {
-
-        mostrarMensajeHU21(
-            "Debe indicar el motivo de la devolución.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    let idPedido =
-        null;
-
-
-    if (origen === "Pedido de compra") {
-
-        if (pedidoTexto === "") {
-
-            mostrarMensajeHU21(
-                "Debe seleccionar un pedido de compra.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        idPedido =
-            Number(
-                pedidoTexto
-            );
-
-
-        if (
-            !Number.isInteger(
-                idPedido
-            ) ||
-            idPedido <= 0 ||
-            !estadoHU21.pedidos.some(
-                (pedido) =>
-                    Number(pedido.id_pedido) ===
-                    idPedido
-            )
-        ) {
-
-            mostrarMensajeHU21(
-                "El pedido seleccionado no es válido o ya no está disponible.",
-                "error"
-            );
-
-            return;
-        }
-    }
-
-
-    const datos = {
-
-        id_producto:
-            idProducto,
-
-        id_ubicacion:
-            idUbicacion,
-
-        cantidad:
-            cantidad,
-
-        origen:
-            origen,
-
-        referencia:
-            referencia,
-
-        observaciones:
-            observaciones,
-
-        id_pedido:
-            idPedido,
-
-        id_proveedor:
-            idProveedor
-
-    };
-
-
-    /* ======================================================
-       BLOQUEAR BOTÓN
-    ====================================================== */
-
-    const boton =
-        document.getElementById(
-            "botonRegistrarMovimiento"
-        );
-
-
-    if (boton) {
-
-        boton.disabled =
-            true;
-
-
-        boton.innerHTML =
-            '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
-
-    }
-
-
-    mostrarMensajeHU21(
-        "Registrando entrada de mercadería...",
-        "info",
-        "registrando"
-    );
-
-
-    /* ======================================================
-       LLAMAR API
-    ====================================================== */
-
+    const unidades = items.reduce((s,p)=>s+p.cantidad,0);
+    const boton = document.getElementById('botonRegistrarMovimiento');
+    if (boton) {boton.disabled=true;boton.textContent='Registrando...';}
+    mostrarMensajeHU21('Registrando movimiento...', 'info', 'registrando');
     try {
-
-        const respuesta =
-            await fetch(
-                "../api/inventario/entrada.php",
-                {
-                    method:
-                        "POST",
-
-                    credentials:
-                        "same-origin",
-
-                    cache:
-                        "no-store",
-
-                    headers: {
-
-                        "Accept":
-                            "application/json",
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body:
-                        JSON.stringify(
-                            datos
-                        )
-                }
-            );
-
-
-        const resultado =
-            await leerRespuestaJSONHU21(
-                respuesta
-            );
-
-
-        if (
-            !respuesta.ok ||
-            !resultado.success
-        ) {
-
-            if (
-                respuesta.status === 401
-            ) {
-
-                window.location.href =
-                    "../index/index.html";
-
-                return;
-            }
-
-
-            throw new Error(
-                resultado.message ||
-                "No fue posible registrar la entrada."
-            );
-        }
-
-
-        const respuestaDatos =
-            resultado.data || {};
-
-
-        mostrarMensajeHU21(
-            `${resultado.message} ` +
-            `Stock anterior: ` +
-            `${respuestaDatos.saldo_anterior ?? 0}. ` +
-            `Nuevo stock: ` +
-            `${respuestaDatos.saldo_resultante ?? 0}. ` +
-            `Movimiento #` +
-            `${respuestaDatos.id_movimiento ?? ""}.`,
-            "exito",
-            "entrada-registrada"
+        const url = esPedido
+            ? '../api/compras/recepciones.php?accion=registrar_recepcion'
+            : '../api/inventario/entrada-lote.php';
+        const datos = esPedido
+            ? {id_pedido:idPedido, items:items.map(p=>({id_producto:p.id_producto,cantidad:p.cantidad})),
+                observaciones:[referencia && `Referencia: ${referencia}`,observaciones].filter(Boolean).join(' | ')}
+            : {id_ubicacion:idUbicacion,id_proveedor:origen==='Proveedor'?idProveedor:null,
+                origen,referencia,observaciones,
+                items:items.map(p=>({id_producto:p.id_producto,cantidad:p.cantidad}))};
+        const respuesta = await fetch(url,{method:'POST',credentials:'same-origin',cache:'no-store',
+            headers:{Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify(datos)});
+        const resultado = await leerRespuestaJSONHU21(respuesta);
+        if (respuesta.status===401) {window.location.href='../index/index.html';return;}
+        if (!respuesta.ok || !resultado.success) throw new Error(resultado.message || 'No fue posible registrar la entrada.');
+        const confirmado = !esPedido || resultado.data?.confirmado === true;
+        // La confirmación se ve en el centro de la pantalla, sin desplazarse.
+        // Se mantiene la barra superior para errores y mensajes de carga.
+        ocultarMensajeHU21();
+        mostrarNotificacionCentralHU21(
+            confirmado
+                ? `Movimiento #${resultado.data?.id_movimiento ?? '—'} registrado: ${unidades} unidades de ${items.length} producto(s).`
+                : `Recepción #${resultado.data?.id_movimiento ?? '—'} registrada y pendiente de confirmación. El stock aún NO aumenta.`,
+            confirmado ? 'exito' : 'info'
         );
-
-
-        actualizarTarjetaEntradasHU21(
-            cantidad
-        );
-
-
+        if (confirmado) actualizarTarjetaEntradasHU21(unidades);
         limpiarFormularioDespuesEntradaHU21();
-
-
-    } catch (error) {
-
-        console.error(
-            "HU-21 - Error registrando entrada:",
-            error
-        );
-
-
-        mostrarMensajeHU21(
-            error.message ||
-            "No fue posible registrar la entrada de mercadería.",
-            "error"
-        );
-
-
+        if (esPedido) await cargarDatosHU21(true);
+    } catch(error) {
+        console.error('HU-21 - Error registrando:',error);
+        mostrarMensajeHU21(error.message || 'No fue posible registrar el movimiento.','error');
     } finally {
-
-        if (boton) {
-
-            boton.disabled =
-                false;
-
-
-            boton.innerHTML =
-                '<i class="fa-solid fa-floppy-disk"></i> Registrar movimiento';
-
-        }
+        if (boton) {boton.disabled=false;boton.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Registrar movimiento';}
     }
 }
-
 
 /*=========================================================
   ACTUALIZAR TARJETA DE ENTRADAS
@@ -2292,14 +1963,14 @@ function reiniciarControlesHU21(
         );
 
 
-    estadoHU21.productoSeleccionadoId =
-        "";
-
+    estadoHU21.productoSeleccionadoId = "";
+    estadoHU21.itemsMovimiento = [];
+    estadoHU21.pedidoTablaActual = "";
 
     if (tipo) {
 
         tipo.value =
-            "entrada";
+            "";
 
     }
 
@@ -2346,8 +2017,8 @@ function reiniciarControlesHU21(
     actualizarTipoMovimientoHU21();
 
 
-    actualizarResumenHU21();
-
+    prepararCamposTablaHU21();
+    renderizarTablaMovimientoHU21();
 
     if (ocultarMensaje) {
 
@@ -2498,4 +2169,141 @@ function ocultarMensajeHU21() {
 
 
     delete mensaje.dataset.clave;
+}
+
+/*=========================================================
+  HU-21 — NOTIFICACIÓN CENTRAL DE CONFIRMACIÓN
+  Solo se muestra al guardar correctamente un movimiento.
+  No modifica la API, la base de datos ni las validaciones.
+=========================================================*/
+let temporizadorNotificacionCentralHU21 = null;
+
+function mostrarNotificacionCentralHU21(texto, tipo = 'exito') {
+    if (!document.getElementById('estilosNotificacionCentralHU21')) {
+        const estilos = document.createElement('style');
+        estilos.id = 'estilosNotificacionCentralHU21';
+        estilos.textContent = `
+            .hu21-notificacion-central {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10000;
+                width: min(480px, calc(100vw - 32px));
+                box-sizing: border-box;
+                padding: 23px 24px;
+                border-radius: 15px;
+                box-shadow: 0 18px 55px rgba(15, 23, 42, .24);
+                border: 1px solid #a7dec0;
+                background: #f0fff5;
+                color: #14532d;
+                font-family: inherit;
+            }
+            .hu21-notificacion-central.hu21-info {
+                border-color: #b8cdfa;
+                background: #f0f5ff;
+                color: #1e40af;
+            }
+            .hu21-notificacion-contenido {
+                display: flex;
+                align-items: flex-start;
+                gap: 13px;
+            }
+            .hu21-notificacion-icono {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 39px;
+                width: 39px;
+                height: 39px;
+                border-radius: 50%;
+                background: #dcfce7;
+                font-size: 19px;
+            }
+            .hu21-info .hu21-notificacion-icono { background: #dbeafe; }
+            .hu21-notificacion-texto { flex: 1; min-width: 0; }
+            .hu21-notificacion-titulo {
+                display: block;
+                margin: 0 0 6px;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .hu21-notificacion-detalle {
+                margin: 0;
+                line-height: 1.55;
+                font-size: 14px;
+                overflow-wrap: anywhere;
+            }
+            .hu21-notificacion-cerrar {
+                border: 0;
+                background: transparent;
+                color: inherit;
+                cursor: pointer;
+                font-size: 21px;
+                line-height: 1;
+                padding: 1px 4px;
+                border-radius: 5px;
+            }
+            .hu21-notificacion-cerrar:focus-visible {
+                outline: 2px solid currentColor;
+                outline-offset: 2px;
+            }
+        `;
+        document.head.appendChild(estilos);
+    }
+
+    let aviso = document.getElementById('notificacionCentralHU21');
+    if (!aviso) {
+        aviso = document.createElement('div');
+        aviso.id = 'notificacionCentralHU21';
+        aviso.setAttribute('role', 'status');
+        aviso.setAttribute('aria-live', 'polite');
+        document.body.appendChild(aviso);
+    }
+
+    aviso.className = 'hu21-notificacion-central' + (tipo === 'info' ? ' hu21-info' : '');
+    aviso.replaceChildren();
+
+    const contenido = document.createElement('div');
+    contenido.className = 'hu21-notificacion-contenido';
+
+    const icono = document.createElement('span');
+    icono.className = 'hu21-notificacion-icono';
+    icono.setAttribute('aria-hidden', 'true');
+    icono.textContent = tipo === 'info' ? 'ℹ' : '✓';
+
+    const textos = document.createElement('div');
+    textos.className = 'hu21-notificacion-texto';
+    const titulo = document.createElement('strong');
+    titulo.className = 'hu21-notificacion-titulo';
+    titulo.textContent = tipo === 'info' ? 'Recepción registrada' : 'Movimiento registrado';
+    const detalle = document.createElement('p');
+    detalle.className = 'hu21-notificacion-detalle';
+    detalle.textContent = texto; // Evita interpretar contenido como HTML.
+    textos.append(titulo, detalle);
+
+    const cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'hu21-notificacion-cerrar';
+    cerrar.setAttribute('aria-label', 'Cerrar notificación');
+    cerrar.textContent = '×';
+    cerrar.addEventListener('click', ocultarNotificacionCentralHU21);
+
+    contenido.append(icono, textos, cerrar);
+    aviso.appendChild(contenido);
+    aviso.hidden = false;
+
+    if (temporizadorNotificacionCentralHU21 !== null) {
+        clearTimeout(temporizadorNotificacionCentralHU21);
+    }
+    temporizadorNotificacionCentralHU21 = setTimeout(ocultarNotificacionCentralHU21, 6500);
+}
+
+function ocultarNotificacionCentralHU21() {
+    const aviso = document.getElementById('notificacionCentralHU21');
+    if (aviso) aviso.hidden = true;
+    if (temporizadorNotificacionCentralHU21 !== null) {
+        clearTimeout(temporizadorNotificacionCentralHU21);
+        temporizadorNotificacionCentralHU21 = null;
+    }
 }

@@ -33,7 +33,7 @@ $correoUsuario =
 
 $tipoSolicitado = strtolower(
     trim(
-        (string)($_GET['tipo'] ?? 'entrada')
+        (string)($_GET['tipo'] ?? '')
     )
 );
 
@@ -52,7 +52,7 @@ if (
         true
     )
 ) {
-    $tipoSolicitado = 'entrada';
+    $tipoSolicitado = '';
 }
 
 
@@ -687,6 +687,10 @@ header('Expires: 0');
                                 name="tipoMovimiento"
                                 required>
 
+                                <option value="" disabled <?= $tipoSolicitado === '' ? 'selected' : '' ?>>
+                                    Seleccione un tipo de movimiento
+                                </option>
+
                                 <option
                                     value="entrada"
                                     <?= $tipoSolicitado === 'entrada'
@@ -814,7 +818,7 @@ header('Expires: 0');
 
                             <label for="origenMercaderia">
 
-                                Origen de la mercadería
+                                Tipo de entrada
 
                             </label>
 
@@ -832,21 +836,52 @@ header('Expires: 0');
 
                                 <option value="Proveedor">
 
-                                    Proveedor
+                                    Entrada directa de proveedor
 
                                 </option>
 
 
                                 <option value="Pedido de compra">
 
-                                    Pedido de compra
+                                    Recepción de pedido de compra
 
                                 </option>
 
 
                                 <option value="Devolución">
 
-                                    Devolución
+                                    Devolución de mercadería
+
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- ==========================================
+                             PEDIDO DE COMPRA
+                        =========================================== -->
+
+                        <div
+                            class="grupo-formulario"
+                            id="grupoPedidoMovimiento"
+                            hidden>
+
+                            <label for="pedidoMovimiento">
+
+                                Pedido de compra
+
+                            </label>
+
+
+                            <select
+                                id="pedidoMovimiento"
+                                name="pedidoMovimiento">
+
+                                <option value="">
+
+                                    Cargando pedidos...
 
                                 </option>
 
@@ -1003,37 +1038,6 @@ header('Expires: 0');
 
 
                         <!-- ==========================================
-                             PEDIDO DE COMPRA
-                        =========================================== -->
-
-                        <div
-                            class="grupo-formulario"
-                            id="grupoPedidoMovimiento"
-                            hidden>
-
-                            <label for="pedidoMovimiento">
-
-                                Pedido de compra
-
-                            </label>
-
-
-                            <select
-                                id="pedidoMovimiento"
-                                name="pedidoMovimiento">
-
-                                <option value="">
-
-                                    Cargando pedidos...
-
-                                </option>
-
-                            </select>
-
-                        </div>
-
-
-                        <!-- ==========================================
                              DOCUMENTO O REFERENCIA
                         =========================================== -->
 
@@ -1114,6 +1118,44 @@ header('Expires: 0');
 
                     </div>
 
+
+                    <!-- ==============================================
+                         TABLA DE PRODUCTOS DEL MOVIMIENTO
+                         HU-21: un movimiento, varios productos
+                    =============================================== -->
+                    <section id="seccionProductosMovimiento" class="panel" style="padding:16px; margin:18px 0;">
+                        <div class="panel-encabezado" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <h3>Productos del movimiento</h3>
+                                <p class="descripcion-panel" id="instruccionTablaMovimiento">
+                                    Seleccione un producto y su cantidad, luego agréguelo a la tabla.
+                                </p>
+                            </div>
+                            <button type="button" class="boton boton-borde" id="botonAgregarProductoMovimiento">
+                                <i class="fa-solid fa-plus"></i> Agregar producto
+                            </button>
+                        </div>
+                        <div class="contenedor-tabla" style="overflow-x:auto;">
+                            <table class="tabla-datos" aria-label="Productos a registrar en el movimiento" style="min-width:740px;width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Solicitado</th>
+                                        <th>Ya recibido</th>
+                                        <th>Pendiente</th>
+                                        <th>Recibir ahora</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaProductosMovimiento">
+                                    <tr><td colspan="6">Aún no hay productos agregados.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="texto-secundario" style="margin:10px 0 0;" aria-live="polite">
+                            Total de unidades del movimiento: <strong id="totalUnidadesMovimiento">0</strong>
+                        </p>
+                    </section>
 
                     <!-- ==============================================
                          RESUMEN DE ENTRADA

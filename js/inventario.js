@@ -677,11 +677,17 @@ function crearFilaInventarioHU20(registro) {
     );
 
 
-    /* Código */
+    /* Código retail: identificador interno del catálogo */
     fila.appendChild(
         crearCeldaInventarioHU20(
-            registro.codigo ||
-            "Sin código"
+            registro.codigo_articulo_retail || "—"
+        )
+    );
+
+    /* Código de barras: mostrarlo por separado, sin sustituir el retail */
+    fila.appendChild(
+        crearCeldaInventarioHU20(
+            registro.codigo_barras || "—"
         )
     );
 

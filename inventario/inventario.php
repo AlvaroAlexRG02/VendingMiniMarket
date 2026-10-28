@@ -762,9 +762,10 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
                 <div
                     id="contenedorTablaInventario"
                     class="contenedor-tabla"
+                    style="overflow-x: auto;"
                 >
 
-                    <table class="tabla-datos">
+                    <table class="tabla-datos" style="min-width: 1200px; width: 100%;">
 
                         <caption class="texto-solo-lectores">
                             Inventario de productos por tienda
@@ -774,7 +775,8 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                             <tr>
                                 <th scope="col">Producto</th>
-                                <th scope="col">Código</th>
+                                <th scope="col">Código retail</th>
+                                <th scope="col">Código de barras</th>
                                 <th scope="col">Tienda</th>
                                 <th scope="col">Stock actual</th>
                                 <th scope="col">Stock mínimo</th>

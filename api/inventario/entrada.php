@@ -269,42 +269,87 @@ function consultarOpcionesEntrada(
     $proveedores =
         $consultaProveedores->fetchAll();
 
+    /* Asociaciones activas de producto y proveedor para el selector. */
+    $consultaRelaciones = $pdo->query(<<<'SQL'
+        SELECT DISTINCT pp.id_producto, pp.id_proveedor
+        FROM producto_proveedor pp
+        JOIN producto p ON p.id_producto = pp.id_producto AND p.estado = TRUE
+        JOIN proveedor pr ON pr.id_proveedor = pp.id_proveedor AND pr.estado = TRUE
+        WHERE pp.estado = TRUE
+        ORDER BY pp.id_producto, pp.id_proveedor
+    SQL);
+    $proveedoresProducto = $consultaRelaciones->fetchAll();
+
 
     /*
-     * Pedidos disponibles para recepción.
-     *
-     * Se incluyen Pendiente y Aprobado para que funcione
-     * tanto con el flujo actual como con la aprobación
-     * de pedidos cuando ese módulo quede completamente
-     * integrado.
+     * Productos de pedidos con recepción habilitada, por destino.
+     * Se descuentan también las recepciones registradas que aún
+     * están pendientes de confirmación, para no ofrecer unidades
+     * que ya se encuentran reservadas para una recepción.
      */
-    $consultaPedidos =
-        $pdo->query(
-            '
-            SELECT
-                p.id_pedido,
-                p.id_proveedor,
-                p.fecha_pedido,
-                p.estado,
-                pr.nombre AS proveedor
+    $sqlPedidos = <<<'SQL'
+        SELECT
+            p.id_pedido,
+            p.id_proveedor,
+            p.id_ubicacion,
+            p.fecha_pedido,
+            p.estado,
+            pr.nombre AS proveedor,
+            pd.id_producto,
+            pd.cantidad_solicitada,
+            pd.cantidad_recibida,
+            (
+                pd.cantidad_solicitada - pd.cantidad_recibida
+                - COALESCE(reservas.cantidad_reservada, 0)
+            ) AS cantidad_pendiente
+        FROM pedido p
+        JOIN proveedor pr ON pr.id_proveedor = p.id_proveedor
+        JOIN ubicacion_inventario ui ON ui.id_ubicacion = p.id_ubicacion
+        JOIN pedido_detalle pd ON pd.id_pedido = p.id_pedido
+        LEFT JOIN (
+            SELECT m.id_pedido, dm.id_producto,
+                   SUM(dm.cantidad) AS cantidad_reservada
+            FROM movimiento_inventario m
+            JOIN detalle_movimiento dm ON dm.id_movimiento = m.id_movimiento
+            WHERE m.tipo_movimiento = 'ENTRADA'
+              AND m.estado = 'PENDIENTE'
+              AND m.id_pedido IS NOT NULL
+            GROUP BY m.id_pedido, dm.id_producto
+        ) reservas
+          ON reservas.id_pedido = pd.id_pedido
+         AND reservas.id_producto = pd.id_producto
+        WHERE UPPER(TRIM(p.estado)) IN ('PENDIENTE', 'EN_CAMINO', 'PARCIAL')
+          AND p.requiere_aprobacion = FALSE
+          AND ui.estado = TRUE
+          AND (
+              pd.cantidad_solicitada - pd.cantidad_recibida
+              - COALESCE(reservas.cantidad_reservada, 0)
+          ) > 0
+    SQL;
 
-            FROM pedido p
+    $parametrosPedidos = [];
+    if ($tiendasPermitidas !== null) {
+        if (!$tiendasPermitidas) {
+            $sqlPedidos .= ' AND FALSE';
+        } else {
+            $marcadoresPedidos = [];
+            foreach ($tiendasPermitidas as $indice => $idTienda) {
+                $clave = ':pedido_tienda_' . $indice;
+                $marcadoresPedidos[] = $clave;
+                $parametrosPedidos[$clave] = $idTienda;
+            }
+            $sqlPedidos .= ' AND ui.id_tienda IN (' .
+                implode(', ', $marcadoresPedidos) . ')';
+        }
+    }
 
-            JOIN proveedor pr
-              ON pr.id_proveedor = p.id_proveedor
-
-            WHERE UPPER(TRIM(p.estado))
-                  IN (\'PENDIENTE\', \'APROBADO\')
-
-            ORDER BY
-                p.fecha_pedido DESC,
-                p.id_pedido DESC
-            '
-        );
-
-
-    $pedidos =
-        $consultaPedidos->fetchAll();
+    $sqlPedidos .= ' ORDER BY p.fecha_pedido DESC, p.id_pedido DESC';
+    $consultaPedidos = $pdo->prepare($sqlPedidos);
+    foreach ($parametrosPedidos as $clave => $valor) {
+        $consultaPedidos->bindValue($clave, $valor, PDO::PARAM_INT);
+    }
+    $consultaPedidos->execute();
+    $pedidos = $consultaPedidos->fetchAll();
 
 
     responderEntrada(
@@ -313,6 +358,7 @@ function consultarOpcionesEntrada(
             'ubicaciones' => $ubicaciones,
             'productos' => $productos,
             'proveedores' => $proveedores,
+            'proveedores_producto' => $proveedoresProducto,
             'pedidos' => $pedidos
         ],
         'Opciones cargadas correctamente.'
@@ -527,6 +573,20 @@ function registrarEntrada(
 
 
     /*
+     * La recepción asociada a un pedido siempre debe pasar por
+     * la API de Compras (HU-32). Evita un alta de existencias
+     * que no actualice pedido_detalle y permita duplicados.
+     */
+    if ($origen === 'Pedido de compra') {
+        responderEntrada(
+            false,
+            null,
+            'Las entradas por pedido se registran mediante la recepción de Compras.',
+            409
+        );
+    }
+
+    /*
      * Normalizar relaciones según el origen.
      */
     if ($origen !== 'Pedido de compra') {
@@ -699,6 +759,28 @@ function registrarEntrada(
         }
     }
 
+
+    /* Asociación proveedor-producto válida también para llamadas directas. */
+    if ($origen === 'Proveedor' && $idProveedor !== null) {
+        $consultaAsociacion = $pdo->prepare(<<<'SQL'
+            SELECT 1
+            FROM producto_proveedor pp
+            JOIN proveedor pr ON pr.id_proveedor = pp.id_proveedor
+            WHERE pp.id_producto = :producto
+              AND pp.id_proveedor = :proveedor
+              AND pp.estado = TRUE
+              AND pr.estado = TRUE
+            LIMIT 1
+        SQL);
+        $consultaAsociacion->execute([
+            ':producto' => $idProducto,
+            ':proveedor' => $idProveedor,
+        ]);
+        if (!$consultaAsociacion->fetchColumn()) {
+            responderEntrada(false, null,
+                'El proveedor no está asociado a este producto.', 400);
+        }
+    }
 
     /* ======================================================
        VALIDAR PEDIDO RELACIONADO
