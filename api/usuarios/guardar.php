@@ -347,6 +347,7 @@ try {
                 correo,
                 password_hash,
                 estado,
+                debe_cambiar_contrasena,
                 intentos_fallidos,
                 bloqueado_hasta
             )
@@ -357,6 +358,7 @@ try {
                 :correo,
                 :password_hash,
                 :estado,
+                TRUE,
                 0,
                 NULL
             )
@@ -438,7 +440,8 @@ try {
             "correo" => $correo,
             "id_rol" => $idRol,
             "id_tienda" => $idTienda,
-            "estado" => (bool)$estado
+            "estado" => (bool)$estado,
+            "debe_cambiar_contrasena" => true
         ]);
 
         $auditoria->execute([

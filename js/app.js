@@ -15,6 +15,11 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaUsuariosVending();
     inicializarPaginaAlertasVending();
     inicializarPaginaReportesVending();
+<<<<<<< Updated upstream
+=======
+    inicializarResumenInventarioVending();
+    inicializarCambioContrasenaInicialVending();
+>>>>>>> Stashed changes
 });
 
 function inicializarNavegacionLateral() {
@@ -3081,8 +3086,9 @@ async function procesarInicioSesionVending(evento) {
          * la sesión en localStorage.
          */
 
-        window.location.href =
-            "../dashboard/dashboard.php";
+        window.location.href = resultado.debe_cambiar_contrasena
+            ? "cambiar-contrasena.php"
+            : "../dashboard/dashboard.php";
 
     } catch (error) {
 
@@ -3102,6 +3108,69 @@ async function procesarInicioSesionVending(evento) {
             botonIngresar.disabled = false;
         }
     }
+}
+
+function inicializarCambioContrasenaInicialVending() {
+    const formulario = document.getElementById("formularioCambioContrasenaInicial");
+    if (!formulario) return;
+
+    formulario.addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const boton = formulario.querySelector('button[type="submit"]');
+        const mensaje = document.getElementById("mensajeCambioContrasenaInicial");
+        const datos = {
+            contrasena_actual: document.getElementById("contrasenaActualInicial").value,
+            contrasena_nueva: document.getElementById("contrasenaNuevaInicial").value,
+            confirmar_contrasena: document.getElementById("confirmarContrasenaInicial").value
+        };
+        if (mensaje) mensaje.textContent = "";
+        boton.disabled = true;
+
+        try {
+            const respuesta = await fetch("../api/auth/cambiar_contrasena_inicial.php", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(datos)
+            });
+            const resultado = await respuesta.json();
+            if (!respuesta.ok || !resultado.exito) {
+                throw new Error(resultado.mensaje || "No fue posible actualizar la contraseña.");
+            }
+            if (mensaje) mensaje.textContent = resultado.mensaje;
+            formulario.reset();
+            window.setTimeout(() => {
+                window.location.href = "../dashboard/dashboard.php";
+            }, 900);
+        } catch (error) {
+            if (mensaje) mensaje.textContent = error.message;
+        } finally {
+            boton.disabled = false;
+        }
+    });
+
+    document.getElementById("botonCerrarSesionCambioInicial")
+        ?.addEventListener("click", async (evento) => {
+            evento.preventDefault();
+            try {
+                const respuesta = await fetch("../api/auth/logout.php", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" }
+                });
+                const resultado = await respuesta.json();
+                if (!respuesta.ok || !resultado.exito) {
+                    throw new Error(resultado.mensaje || "No fue posible cerrar sesión.");
+                }
+                window.location.href = "index.html";
+            } catch (error) {
+                const mensaje = document.getElementById("mensajeCambioContrasenaInicial");
+                if (mensaje) mensaje.textContent = error.message;
+            }
+        });
 }
 
 
@@ -4296,6 +4365,10 @@ async function prepararFormularioUsuarioVending(id = "") {
     // Si es un usuario nuevo
     if (!id) {
 
+        textoVending(
+            "etiquetaContrasenaUsuario",
+            "Contraseña temporal (deberá cambiarla al iniciar sesión)"
+        );
         document.getElementById("contrasenaUsuario").required = true;
         document.getElementById("confirmarContrasenaUsuario").required = true;
 
@@ -4354,6 +4427,7 @@ async function prepararFormularioUsuarioVending(id = "") {
                 : "Inactivo";
 
         // Al editar, la contraseña no es obligatoria.
+        textoVending("etiquetaContrasenaUsuario", "Nueva contraseña (opcional)");
         document.getElementById("contrasenaUsuario").required = false;
 
         document.getElementById("confirmarContrasenaUsuario").required = false;

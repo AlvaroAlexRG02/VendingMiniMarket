@@ -43,6 +43,7 @@ try {
             u.correo,
             u.password_hash,
             u.estado,
+            u.debe_cambiar_contrasena,
             u.intentos_fallidos,
             u.bloqueado_hasta,
             r.nombre AS rol_nombre,
@@ -214,7 +215,8 @@ try {
         "nombre" => $usuario["nombre"],
         "apellido" => $usuario["apellido"],
         "correo" => $usuario["correo"],
-        "rol" => $usuario["rol_nombre"]
+        "rol" => $usuario["rol_nombre"],
+        "debe_cambiar_contrasena" => (bool)$usuario["debe_cambiar_contrasena"]
     ];
 
     /*
@@ -238,7 +240,8 @@ try {
     echo json_encode([
         "exito" => true,
         "mensaje" => "Inicio de sesión exitoso.",
-        "usuario" => $_SESSION["usuario"]
+        "usuario" => $_SESSION["usuario"],
+        "debe_cambiar_contrasena" => $_SESSION["usuario"]["debe_cambiar_contrasena"]
     ]);
 
 } catch (PDOException $e) {

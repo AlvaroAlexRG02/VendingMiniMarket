@@ -862,7 +862,7 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
 
                     <div class="grupo-formulario">
 
-                        <label for="contrasenaUsuario">
+                        <label id="etiquetaContrasenaUsuario" for="contrasenaUsuario">
                             Contraseña
                         </label>
 
