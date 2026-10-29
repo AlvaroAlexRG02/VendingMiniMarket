@@ -633,7 +633,7 @@
             mostrarElemento('botonEnviarRevisionDetalle', puedeRevisarFactura && factura.estado === 'PENDIENTE');
 
             const puedeAprobarEstaFactura = puedeValidarFactura && factura.estado === 'EN_REVISION';
-            const puedeRechazarEstaFactura = puedeRevisarFactura && ['PENDIENTE', 'EN_REVISION'].includes(factura.estado);
+            const puedeRechazarEstaFactura = puedeValidarFactura && ['PENDIENTE', 'EN_REVISION'].includes(factura.estado);
             const puedeAnularEstaFactura = puedeAnularFactura && factura.estado !== 'ANULADA';
             mostrarElemento('grupoMotivoRechazoFactura', puedeRechazarEstaFactura);
             mostrarElemento('botonAprobarFacturaDetalle', puedeAprobarEstaFactura);

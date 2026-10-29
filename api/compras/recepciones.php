@@ -69,24 +69,24 @@ function exigirSesion(): array
     return $_SESSION['usuario'];
 }
 
-/** HU-32: Dependiente, Encargado o Administrador pueden registrar una recepción. */
+/** HU-32: Dependiente, Encargado, Gerente General o Administrador pueden registrar una recepción. */
 function exigirPuedeRegistrarRecepcion(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado() && !esDependiente()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado() && !esDependiente()) {
         respuesta(false, null, 'No tiene permisos para registrar recepciones.', 403);
     }
 
     return $usuario;
 }
 
-/** HU-32: solo Encargado o Administrador finalizan (confirman) una recepción. */
+/** HU-32: Encargado, Gerente General o Administrador finalizan (confirman) una recepción. */
 function exigirPuedeConfirmarRecepcion(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
         respuesta(false, null, 'No tiene permisos para confirmar recepciones.', 403);
     }
 
@@ -288,7 +288,7 @@ function accionRegistrarRecepcion(array $in): void
     $detallePendiente = pedidoDetallePendiente($idPedido);
     $items = leerItemsRecepcion($in, $detallePendiente);
 
-    $autoConfirmar = esAdministrador() || esEncargado();
+    $autoConfirmar = esAdministrador() || esGerenteGeneral() || esEncargado();
 
     $resultado = enTransaccion(function () use ($idPedido, $pedido, $usuario, $observaciones, $items, $autoConfirmar) {
         $pdo = db();

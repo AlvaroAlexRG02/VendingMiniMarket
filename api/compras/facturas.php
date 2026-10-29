@@ -69,36 +69,36 @@ function exigirPuedeCrearFactura(): array
     return exigirSesion();
 }
 
-/** HU-33: solo Encargado o Administrador validan (envían a revisión) una factura. */
+/** HU-33: Encargado, Gerente General o Administrador validan (envían a revisión) una factura. */
 function exigirPuedeRevisarFactura(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
         respuesta(false, null, 'No tiene permisos para revisar facturas.', 403);
     }
 
     return $usuario;
 }
 
-/** HU-34: solo el Administrador aprueba o rechaza una factura en revisión. */
+/** HU-34: el Administrador o el Gerente General aprueban o rechazan una factura en revisión. */
 function exigirPuedeValidarFactura(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador()) {
+    if (!esAdministrador() && !esGerenteGeneral()) {
         respuesta(false, null, 'No tiene permisos para validar facturas.', 403);
     }
 
     return $usuario;
 }
 
-/** HU-36: solo el Administrador anula una factura (cancelación definitiva, con trazabilidad). */
+/** HU-36: el Administrador o el Gerente General anulan una factura (cancelación definitiva, con trazabilidad). */
 function exigirPuedeAnularFactura(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador()) {
+    if (!esAdministrador() && !esGerenteGeneral()) {
         respuesta(false, null, 'No tiene permisos para anular facturas.', 403);
     }
 
@@ -488,7 +488,7 @@ function accionActualizarFactura(array $in): void
 
     $factura = obtenerFacturaParaEditar($idFactura);
 
-    $esRevisor = esAdministrador() || esEncargado();
+    $esRevisor = esAdministrador() || esGerenteGeneral() || esEncargado();
     $esCreador = (int)$usuario['id_usuario'] === (int)$factura['id_usuario_registra'];
 
     if (!$esRevisor && !$esCreador) {
@@ -697,7 +697,7 @@ function accionAprobarFactura(array $in): void
 
 function accionRechazarFactura(array $in): void
 {
-    $usuario = exigirPuedeRevisarFactura();
+    $usuario = exigirPuedeValidarFactura();
     exigirPost();
 
     $idFactura = (int)($in['id_factura'] ?? 0);

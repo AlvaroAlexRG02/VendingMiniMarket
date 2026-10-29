@@ -16,7 +16,7 @@
     const ETIQUETAS_ESTADO = {
         PENDIENTE: 'Pendiente',
         EN_CAMINO: 'En camino',
-        PARCIAL: 'Parcial',
+        PARCIAL: 'Recibido parcial',
         RECIBIDO: 'Recibido',
         CANCELADO: 'Cancelado'
     };
@@ -399,7 +399,7 @@
                     <span class="badge badge-${COLOR_ESTADO[p.estado] || 'naranja'}">
                         ${ETIQUETAS_ESTADO[p.estado] || p.estado}
                     </span>
-                    ${p.requiere_aprobacion ? '<span class="badge badge-morado">Requiere aprobación</span>' : ''}
+                    ${p.requiere_aprobacion ? '<span class="badge badge-morado">Por aprobar</span>' : ''}
                 </td>
                 <td>${celdaAcciones(p)}</td>
             </tr>

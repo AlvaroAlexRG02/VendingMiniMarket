@@ -61,24 +61,24 @@ function exigirSesion(): array
     return $_SESSION['usuario'];
 }
 
-/** HU-30: solo Dependiente, Encargado o Administrador pueden crear pedidos. */
+/** HU-30: Dependiente, Encargado, Gerente General o Administrador pueden crear pedidos (todos los roles). */
 function exigirPuedeCrearPedido(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado() && !esDependiente()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado() && !esDependiente()) {
         respuesta(false, null, 'No tiene permisos para registrar pedidos.', 403);
     }
 
     return $usuario;
 }
 
-/** HU-31: solo Encargado o Administrador pueden actualizar el estado. */
+/** HU-31: Encargado, Gerente General o Administrador pueden actualizar el estado. */
 function exigirPuedeActualizarEstado(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
         respuesta(false, null, 'No tiene permisos para actualizar el estado del pedido.', 403);
     }
 

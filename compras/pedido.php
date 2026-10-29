@@ -25,7 +25,7 @@ $nombreUsuario = trim(
     ($_SESSION["usuario"]["apellido"] ?? "")
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
-$puedeActualizarEstado = esAdministrador() || esEncargado();
+$puedeActualizarEstado = esAdministrador() || esGerenteGeneral() || esEncargado();
 $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
 
 ?>
@@ -351,7 +351,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                         <div>
 
                             <div class="tarjeta-estadistica-titulo">
-                                Requieren aprobación
+                                Por aprobar
                             </div>
 
                             <div
@@ -416,11 +416,12 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
 
                     <div>
 
-                        <h2>Recepciones pendientes de confirmar</h2>
+                        <h2>Entregas por confirmar</h2>
 
                         <p class="descripcion-panel">
-                            Registradas por un Dependiente; requieren tu
-                            confirmación para actualizar el inventario.
+                            Un empleado ya registró lo que llegó del proveedor.
+                            Revisa las cantidades y confirma para que se sumen
+                            al inventario de la tienda.
                         </p>
 
                     </div>
@@ -435,7 +436,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                     <table class="tabla-datos">
 
                         <caption class="texto-solo-lectores">
-                            Recepciones pendientes de confirmar
+                            Entregas por confirmar
                         </caption>
 
                         <thead>
@@ -444,7 +445,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                                 <th scope="col">Fecha</th>
                                 <th scope="col">Proveedor</th>
                                 <th scope="col">Tienda</th>
-                                <th scope="col">Registrado por</th>
+                                <th scope="col">Quién lo registró</th>
                                 <th scope="col">Acciones</th>
                             </tr>
                         </thead>
@@ -470,11 +471,11 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
 
                     <div>
 
-                        <h2>Pedidos registrados</h2>
+                        <h2>Historial de pedidos</h2>
 
                         <p class="descripcion-panel">
-                            Consulta las solicitudes enviadas
-                            y su estado actual.
+                            Aquí puedes ver todos los pedidos que se han
+                            hecho a los proveedores y en qué estado está cada uno.
                         </p>
 
                     </div>
@@ -538,7 +539,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                             <option value="">Todos los estados</option>
                             <option value="PENDIENTE">Pendiente</option>
                             <option value="EN_CAMINO">En camino</option>
-                            <option value="PARCIAL">Parcial</option>
+                            <option value="PARCIAL">Recibido parcial</option>
                             <option value="RECIBIDO">Recibido</option>
                             <option value="CANCELADO">Cancelado</option>
 
@@ -585,7 +586,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                     <table class="tabla-datos tabla-pedidos">
 
                         <caption class="texto-solo-lectores">
-                            Pedidos registrados
+                            Historial de pedidos
                         </caption>
 
                         <thead>
@@ -621,7 +622,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                     <i class="fa-solid fa-file-circle-xmark"></i>
 
                     <h3>
-                        No hay pedidos registrados
+                        Todavía no hay pedidos
                     </h3>
 
                     <p>
@@ -1066,7 +1067,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                 </div>
 
                 <div class="grupo-formulario">
-                    <label for="registradoPorVerRecepcion">Registrado por</label>
+                    <label for="registradoPorVerRecepcion">Quién lo registró</label>
                     <input type="text" id="registradoPorVerRecepcion" disabled>
                 </div>
 
