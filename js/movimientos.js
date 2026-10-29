@@ -1062,9 +1062,9 @@ function buscarProductoPorCodigoExactoHU21(
 
             return (
                 retail ===
-                    codigoBuscado ||
+                codigoBuscado ||
                 barras ===
-                    codigoBuscado
+                codigoBuscado
             );
 
         }
@@ -1450,7 +1450,7 @@ function agregarProductoTablaHU21() {
     const esMovimientoSalida = tipo === 'salida' || tipo === 'traslado';
     const origen = document.getElementById('origenMercaderia')?.value;
     if (tipo === 'entrada' && origen === 'Pedido de compra') return;
-    if (tipo === 'entrada' && !['Proveedor','Devolución'].includes(origen)) {
+    if (tipo === 'entrada' && !['Proveedor', 'Devolución'].includes(origen)) {
         mostrarMensajeHU21('Seleccione primero el tipo de entrada.', 'error'); return;
     }
     if (!esMovimientoSalida && tipo !== 'entrada') return;
@@ -1500,13 +1500,13 @@ function cambiarCantidadTablaHU21(evento) {
     const valor = Number(evento.target.value);
     item.cantidad = evento.target.value === '' ? 0 : valor;
     const tipo = document.getElementById('tipoMovimiento')?.value;
-    const maximo = ['salida','traslado'].includes(tipo)
+    const maximo = ['salida', 'traslado'].includes(tipo)
         ? item.stockDisponible : item.pendiente;
     const invalida = !Number.isSafeInteger(valor) || valor < 0 ||
         (maximo !== null && maximo !== undefined && valor > maximo);
     evento.target.setCustomValidity(invalida
         ? `Ingrese un entero entre 0 y ${maximo ?? 'el límite permitido'}.` : '');
-    if (['salida','traslado'].includes(tipo)) {
+    if (['salida', 'traslado'].includes(tipo)) {
         const saldo = evento.target.closest('tr')?.cells?.[2];
         if (saldo) saldo.textContent = !invalida
             ? String(Number(item.stockDisponible || 0) - valor) : '—';
@@ -1530,12 +1530,12 @@ function renderizarTablaMovimientoHU21() {
     if (!tbody) return;
     tbody.replaceChildren();
     const tipo = document.getElementById('tipoMovimiento')?.value;
-    const esSalida = ['salida','traslado'].includes(tipo);
+    const esSalida = ['salida', 'traslado'].includes(tipo);
     const esPedido = tipo === 'entrada' && document.getElementById('origenMercaderia')?.value === 'Pedido de compra';
     const cabeceras = tbody.closest('table')?.querySelectorAll('thead th') || [];
     const nuevas = esSalida
-        ? ['Producto','Stock origen','Saldo origen resultante','Destino','Cantidad a mover','Acción']
-        : ['Producto','Solicitado','Ya recibido','Pendiente','Recibir ahora','Acción'];
+        ? ['Producto', 'Stock origen', 'Saldo origen resultante', 'Destino', 'Cantidad a mover', 'Acción']
+        : ['Producto', 'Solicitado', 'Ya recibido', 'Pendiente', 'Recibir ahora', 'Acción'];
     cabeceras.forEach((th, i) => { if (nuevas[i]) th.textContent = nuevas[i]; });
     if (!estadoHU21.itemsMovimiento.length) {
         const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 6;
@@ -1582,9 +1582,9 @@ function renderizarTablaMovimientoHU21() {
 function prepararCamposTablaHU21() {
     const tipo = document.getElementById('tipoMovimiento')?.value;
     const esEntrada = tipo === 'entrada';
-    const esSalida = ['salida','traslado'].includes(tipo);
+    const esSalida = ['salida', 'traslado'].includes(tipo);
     const pedido = esEntrada && document.getElementById('origenMercaderia')?.value === 'Pedido de compra';
-    for (const id of ['productoMovimiento','buscarProductoMovimiento','cantidadMovimiento']) {
+    for (const id of ['productoMovimiento', 'buscarProductoMovimiento', 'cantidadMovimiento']) {
         const el = document.getElementById(id);
         const grupo = el?.closest('.grupo-formulario');
         if (grupo) grupo.style.display = pedido || (!esEntrada && !esSalida) ? 'none' : '';
@@ -1598,7 +1598,7 @@ function prepararCamposTablaHU21() {
     if (mensaje) mensaje.textContent = pedido
         ? 'Seleccione un pedido. Aparecerán sus productos y las cantidades pendientes.'
         : esSalida ? 'Seleccione la ubicación de origen, un producto con existencias y una cantidad. Puede agregar varios productos.'
-        : 'Seleccione un producto, indique la cantidad y pulse «Agregar producto». Puede repetirlo.';
+            : 'Seleccione un producto, indique la cantidad y pulse «Agregar producto». Puede repetirlo.';
     const grupoPedido = document.getElementById('grupoPedidoMovimiento');
     if (grupoPedido) grupoPedido.style.display = pedido ? '' : 'none';
     const seccion = document.getElementById('seccionProductosMovimiento');
@@ -1658,7 +1658,7 @@ function actualizarTipoMovimientoHU21() {
     const selectorDestino = document.getElementById('ubicacionDestino');
     const boton = document.getElementById('botonRegistrarMovimiento');
     for (const [grupo, visible] of [[origenMercaderia, entrada], [origen, salida || traslado],
-        [destino, entrada || traslado]]) {
+    [destino, entrada || traslado]]) {
         if (grupo) { grupo.hidden = !visible; grupo.style.display = visible ? '' : 'none'; }
     }
     if (selectorOrigen) selectorOrigen.required = salida || traslado;
@@ -1681,7 +1681,7 @@ function actualizarTipoMovimientoHU21() {
     const obs = document.getElementById('observacionesMovimiento');
     if (obs && !entrada) { obs.required = salida || traslado; obs.placeholder = 'Motivo obligatorio del movimiento (por ejemplo: reposición, entrega o abastecimiento)'; }
     const grupoRef = document.getElementById('grupoReferenciaMovimiento');
-    if (grupoRef && !entrada) {grupoRef.hidden = true; grupoRef.style.display = 'none';}
+    if (grupoRef && !entrada) { grupoRef.hidden = true; grupoRef.style.display = 'none'; }
     const resumen = document.querySelector('#resumenEntradaMovimiento strong');
     if (resumen) resumen.textContent = entrada ? 'Resumen de la entrada' : traslado ? 'Resumen del traslado' : 'Resumen del movimiento';
     const mensaje = document.getElementById('mensajeMovimiento');
@@ -1919,7 +1919,7 @@ function establecerFechaHU21() {
 =========================================================*/
 
 function actualizarResumenHU21() {
-    const unidades = estadoHU21.itemsMovimiento.reduce((s,p)=>s+
+    const unidades = estadoHU21.itemsMovimiento.reduce((s, p) => s +
         (Number.isSafeInteger(p.cantidad) && p.cantidad > 0 ? p.cantidad : 0), 0);
     const total = document.getElementById('totalUnidadesMovimiento');
     if (total) total.textContent = String(unidades);
@@ -1927,14 +1927,14 @@ function actualizarResumenHU21() {
     if (!resumen) return;
     const tipo = document.getElementById('tipoMovimiento')?.value;
     const nombre = id => document.getElementById(id)?.selectedOptions?.[0]?.textContent?.trim() || 'Sin seleccionar';
-    if (['salida','traslado'].includes(tipo)) {
-        resumen.textContent = `${estadoHU21.itemsMovimiento.length} producto(s) | ${unidades} unidad(es) | `+
+    if (['salida', 'traslado'].includes(tipo)) {
+        resumen.textContent = `${estadoHU21.itemsMovimiento.length} producto(s) | ${unidades} unidad(es) | ` +
             `Origen: ${nombre('ubicacionOrigen')}` + (tipo === 'traslado' ? ` | Destino: ${nombre('ubicacionDestino')}` : ' | Salida de inventario');
     } else {
         const origen = document.getElementById('origenMercaderia')?.value || 'Sin seleccionar';
         const pedido = document.getElementById('pedidoMovimiento');
         resumen.textContent = `${estadoHU21.itemsMovimiento.length} producto(s) en la tabla | ` +
-            `${unidades} unidad(es) a registrar | Destino: ${nombre('ubicacionDestino')} | Tipo: ${origen}`+
+            `${unidades} unidad(es) a registrar | Destino: ${nombre('ubicacionDestino')} | Tipo: ${origen}` +
             (origen === 'Pedido de compra' && pedido?.value ? ` | Pedido #${pedido.value}` : '');
     }
 }
@@ -1964,53 +1964,59 @@ async function registrarEntradaHU21(evento) {
     const observaciones = document.getElementById('observacionesMovimiento')?.value.trim() || '';
     const items = estadoHU21.itemsMovimiento.filter(p => Number(p.cantidad) > 0);
     const campos = [...document.querySelectorAll('#tablaProductosMovimiento .cantidad-item-movimiento')];
-    if (!['Proveedor','Devolución','Pedido de compra'].includes(origen)) {
-        mostrarMensajeHU21('Indique el tipo de entrada.', 'error');return;
+    if (!['Proveedor', 'Devolución', 'Pedido de compra'].includes(origen)) {
+        mostrarMensajeHU21('Indique el tipo de entrada.', 'error'); return;
     }
-    if (!idUbicacion) {mostrarMensajeHU21('Seleccione ubicación de destino.', 'error');return;}
-    if (!items.length) {mostrarMensajeHU21('Agregue al menos un producto con cantidad mayor que cero.', 'error');return;}
+    if (!idUbicacion) { mostrarMensajeHU21('Seleccione ubicación de destino.', 'error'); return; }
+    if (!items.length) { mostrarMensajeHU21('Agregue al menos un producto con cantidad mayor que cero.', 'error'); return; }
     if (estadoHU21.itemsMovimiento.some(p => !Number.isSafeInteger(p.cantidad) || p.cantidad < 0 ||
         (p.pendiente !== null && p.cantidad > p.pendiente)) ||
         campos.some(c => !c.checkValidity())) {
-        mostrarMensajeHU21('Revise las cantidades: solo enteros y nunca mayores a lo pendiente.', 'error');return;
+        mostrarMensajeHU21('Revise las cantidades: solo enteros y nunca mayores a lo pendiente.', 'error'); return;
     }
     if (esPedido) {
         const pedido = estadoHU21.pedidos.find(p => Number(p.id_pedido) === idPedido);
         if (!pedido || Number(pedido.id_ubicacion) !== idUbicacion) {
-            mostrarMensajeHU21('Seleccione un pedido disponible.', 'error');return;
+            mostrarMensajeHU21('Seleccione un pedido disponible.', 'error'); return;
         }
         const validos = estadoHU21.pedidos.filter(p => Number(p.id_pedido) === idPedido);
         if (items.some(i => !validos.some(p => Number(p.id_producto) === i.id_producto &&
-                i.cantidad <= Number(p.cantidad_pendiente)))) {
-            mostrarMensajeHU21('Algún producto excede las unidades disponibles del pedido.', 'error');return;
+            i.cantidad <= Number(p.cantidad_pendiente)))) {
+            mostrarMensajeHU21('Algún producto excede las unidades disponibles del pedido.', 'error'); return;
         }
     } else if (origen === 'Proveedor' && (!idProveedor || !referencia)) {
-        mostrarMensajeHU21('Seleccione proveedor e indique documento o referencia.', 'error');return;
+        mostrarMensajeHU21('Seleccione proveedor e indique documento o referencia.', 'error'); return;
     } else if (origen === 'Proveedor' &&
         !proveedoresComunesHU21(items.map(item => item.id_producto))
             .some(proveedor => Number(proveedor.id_proveedor) === idProveedor)) {
-        mostrarMensajeHU21('El proveedor no está asociado a todos los productos de la entrada.', 'error');return;
+        mostrarMensajeHU21('El proveedor no está asociado a todos los productos de la entrada.', 'error'); return;
     } else if (origen === 'Devolución' && !observaciones) {
-        mostrarMensajeHU21('Indique el motivo de la devolución.', 'error');return;
+        mostrarMensajeHU21('Indique el motivo de la devolución.', 'error'); return;
     }
-    const unidades = items.reduce((s,p)=>s+p.cantidad,0);
+    const unidades = items.reduce((s, p) => s + p.cantidad, 0);
     const boton = document.getElementById('botonRegistrarMovimiento');
-    if (boton) {boton.disabled=true;boton.textContent='Registrando...';}
+    if (boton) { boton.disabled = true; boton.textContent = 'Registrando...'; }
     mostrarMensajeHU21('Registrando movimiento...', 'info', 'registrando');
     try {
         const url = esPedido
             ? '../api/compras/recepciones.php?accion=registrar_recepcion'
             : '../api/inventario/entrada-lote.php';
         const datos = esPedido
-            ? {id_pedido:idPedido, items:items.map(p=>({id_producto:p.id_producto,cantidad:p.cantidad})),
-                observaciones:[referencia && `Referencia: ${referencia}`,observaciones].filter(Boolean).join(' | ')}
-            : {id_ubicacion:idUbicacion,id_proveedor:origen==='Proveedor'?idProveedor:null,
-                origen,referencia,observaciones,
-                items:items.map(p=>({id_producto:p.id_producto,cantidad:p.cantidad}))};
-        const respuesta = await fetch(url,{method:'POST',credentials:'same-origin',cache:'no-store',
-            headers:{Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify(datos)});
+            ? {
+                id_pedido: idPedido, items: items.map(p => ({ id_producto: p.id_producto, cantidad: p.cantidad })),
+                observaciones: [referencia && `Referencia: ${referencia}`, observaciones].filter(Boolean).join(' | ')
+            }
+            : {
+                id_ubicacion: idUbicacion, id_proveedor: origen === 'Proveedor' ? idProveedor : null,
+                origen, referencia, observaciones,
+                items: items.map(p => ({ id_producto: p.id_producto, cantidad: p.cantidad }))
+            };
+        const respuesta = await fetch(url, {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
+        });
         const resultado = await leerRespuestaJSONHU21(respuesta);
-        if (respuesta.status===401) {window.location.href='../index/index.html';return;}
+        if (respuesta.status === 401) { window.location.href = '../index/index.html'; return; }
         if (!respuesta.ok || !resultado.success) throw new Error(resultado.message || 'No fue posible registrar la entrada.');
         const confirmado = !esPedido || resultado.data?.confirmado === true;
         // La confirmación se ve en el centro de la pantalla, sin desplazarse.
@@ -2025,11 +2031,11 @@ async function registrarEntradaHU21(evento) {
         if (confirmado) actualizarTarjetaEntradasHU21(unidades);
         limpiarFormularioDespuesEntradaHU21();
         if (esPedido) await cargarDatosHU21(true);
-    } catch(error) {
-        console.error('HU-21 - Error registrando:',error);
-        mostrarMensajeHU21(error.message || 'No fue posible registrar el movimiento.','error');
+    } catch (error) {
+        console.error('HU-21 - Error registrando:', error);
+        mostrarMensajeHU21(error.message || 'No fue posible registrar el movimiento.', 'error');
     } finally {
-        if (boton) {boton.disabled=false;boton.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Registrar movimiento';}
+        if (boton) { boton.disabled = false; boton.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Registrar movimiento'; }
     }
 }
 
@@ -2473,7 +2479,7 @@ async function cargarStockOrigenHU22HU23() {
     if (!idOrigen) return;
     try {
         const url = `../api/inventario/salidas-traslados.php?id_ubicacion_origen=${encodeURIComponent(idOrigen)}`;
-        const resp = await fetch(url, {credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+        const resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
         const res = await leerRespuestaJSONHU21(resp);
         if (resp.status === 401) { window.location.href = '../index/index.html'; return; }
         if (!resp.ok || !res.success) throw new Error(res.message || 'No se pudo consultar el stock.');
@@ -2505,24 +2511,26 @@ async function registrarSalidaTrasladoHU22HU23() {
         items.some(x => !Number.isSafeInteger(x.cantidad) || x.cantidad < 0 ||
             x.cantidad > Number(estadoHU21.stockOrigenHU22.get(x.id_producto) || 0)) ||
         [...document.querySelectorAll('#tablaProductosMovimiento .cantidad-item-movimiento')]
-            .some(x=>!x.checkValidity())) {
-        mostrarMensajeHU21('Revise las cantidades: no se puede exceder el stock disponible en origen.', 'error');return;
+            .some(x => !x.checkValidity())) {
+        mostrarMensajeHU21('Revise las cantidades: no se puede exceder el stock disponible en origen.', 'error'); return;
     }
     const boton = document.getElementById('botonRegistrarMovimiento');
     if (boton) { boton.disabled = true; boton.textContent = 'Registrando...'; }
     mostrarMensajeHU21('Registrando movimiento...', 'info', 'registrando');
     try {
         const resp = await fetch('../api/inventario/salidas-traslados.php', {
-            method:'POST',credentials:'same-origin',cache:'no-store',
-            headers:{Accept:'application/json','Content-Type':'application/json'},
-            body:JSON.stringify({tipo,id_ubicacion_origen:idOrigen,id_ubicacion_destino:idDestino,
-                motivo,items:items.map(x=>({id_producto:x.id_producto,cantidad:x.cantidad}))})
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tipo, id_ubicacion_origen: idOrigen, id_ubicacion_destino: idDestino,
+                motivo, items: items.map(x => ({ id_producto: x.id_producto, cantidad: x.cantidad }))
+            })
         });
         const res = await leerRespuestaJSONHU21(resp);
-        if (resp.status === 401) {window.location.href='../index/index.html';return;}
+        if (resp.status === 401) { window.location.href = '../index/index.html'; return; }
         if (!resp.ok || !res.success) throw new Error(res.message || 'No fue posible registrar el movimiento.');
         ocultarMensajeHU21();
-        mostrarNotificacionCentralHU21(`Movimiento #${res.data?.id_movimiento ?? '—'} registrado: `+
+        mostrarNotificacionCentralHU21(`Movimiento #${res.data?.id_movimiento ?? '—'} registrado: ` +
             `${res.data?.unidades ?? 0} unidades de ${res.data?.productos ?? 0} producto(s).`, 'exito');
         limpiarFormularioDespuesEntradaHU21();
     } catch (error) {

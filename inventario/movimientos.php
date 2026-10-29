@@ -692,6 +692,15 @@ header('Expires: 0');
                         Conteo físico
                     </a>
 
+                    <!-- HU-26: acceso independiente, sin alterar el registro de Entrada/Salida/Traslado. -->
+                    <a id="botonAccesoMerma"
+                       class="boton boton-borde"
+                       href="mermas.php"
+                       hidden>
+                        <i class="fa-solid fa-box-open"></i>
+                        Registrar merma
+                    </a>
+
                 </div>
 
 
@@ -1669,14 +1678,20 @@ header('Expires: 0');
     <!-- Solo lectura: paneles de Salida y Traslado (HU-22/HU-23) -->
     <script src="../js/movimientos-visual.js?v=20261029-integrado"></script>
 
-    <!-- Solo muestra el enlace de conteo en el movimiento Ajuste. -->
-    <style>#botonAccesoConteoFisico[hidden]{display:none!important}</style>
+    <!-- Accesos a pantallas independientes. No se modifica movimientos.js. -->
+    <style>#botonAccesoConteoFisico[hidden],#botonAccesoMerma[hidden],#botonRegistrarMovimiento[hidden]{display:none!important}</style>
     <script>
     (() => {
         const tipo = document.getElementById('tipoMovimiento');
-        const enlace = document.getElementById('botonAccesoConteoFisico');
-        if (!tipo || !enlace) return;
-        const actualizar = () => { enlace.hidden = tipo.value !== 'ajuste'; };
+        const conteo = document.getElementById('botonAccesoConteoFisico');
+        const merma = document.getElementById('botonAccesoMerma');
+        const registrar = document.getElementById('botonRegistrarMovimiento');
+        if (!tipo || !conteo || !merma) return;
+        const actualizar = () => {
+            conteo.hidden = tipo.value !== 'ajuste';
+            merma.hidden = tipo.value !== 'merma';
+            if (registrar) registrar.hidden = tipo.value === 'merma';
+        };
         tipo.addEventListener('change', actualizar);
         document.getElementById('formularioMovimientoInventario')?.addEventListener('reset',
             () => setTimeout(actualizar, 0));
