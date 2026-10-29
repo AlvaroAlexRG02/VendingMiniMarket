@@ -445,6 +445,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                                 <th scope="col">Fecha</th>
                                 <th scope="col">Proveedor</th>
                                 <th scope="col">Tienda</th>
+                                <th scope="col">Productos</th>
                                 <th scope="col">Quién lo registró</th>
                                 <th scope="col">Acciones</th>
                             </tr>
@@ -986,6 +987,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
 
                     <button
                         type="submit"
+                        id="botonGuardarRecepcion"
                         class="boton boton-azul"
                     >
                         <i class="fa-solid fa-truck-ramp-box"></i>

@@ -283,7 +283,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-file-circle-plus"></i>
-                        Nuevo pedido
+                        Sección de Pedidos
                     </a>
 
                     <?php if ($puedeExportarHistorial): ?>
@@ -302,7 +302,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                         class="boton boton-azul"
                     >
                         <i class="fa-solid fa-file-invoice"></i>
-                        Nueva factura
+                        Sección de Facturas
                     </a>
 
                 </div>

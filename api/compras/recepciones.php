@@ -579,7 +579,9 @@ function accionListarRecepcionesPendientes(array $in): void
             'PED-' || LPAD(m.id_pedido::text, 6, '0') AS numero_pedido,
             m.fecha_movimiento, m.observaciones,
             u.nombre AS registrado_por_nombre, u.apellido AS registrado_por_apellido,
-            prov.nombre AS proveedor_nombre, ubi.nombre AS ubicacion_nombre
+            prov.nombre AS proveedor_nombre, ubi.nombre AS ubicacion_nombre,
+            (SELECT COUNT(*) FROM detalle_movimiento dm WHERE dm.id_movimiento = m.id_movimiento) AS total_productos,
+            (SELECT COALESCE(SUM(dm.cantidad), 0) FROM detalle_movimiento dm WHERE dm.id_movimiento = m.id_movimiento) AS total_unidades
         FROM movimiento_inventario m
         JOIN usuario u ON u.id_usuario = m.id_usuario
         JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = m.id_ubicacion_destino

@@ -669,6 +669,9 @@
             return;
         }
 
+        const botonGuardar = $('botonGuardarRecepcion');
+        if (botonGuardar) botonGuardar.disabled = true;
+
         try {
             const resultado = await apiRecepciones('registrar_recepcion', {
                 id_pedido: Number($('idPedidoRecepcion').value),
@@ -685,6 +688,8 @@
             }
         } catch (error) {
             $('mensajeFormularioRecepcion').textContent = error.message;
+        } finally {
+            if (botonGuardar) botonGuardar.disabled = false;
         }
     }
 
@@ -706,6 +711,7 @@
                     <td>${new Date(r.fecha_movimiento).toLocaleString('es-CR')}</td>
                     <td>${escaparHTML(r.proveedor_nombre)}</td>
                     <td>${escaparHTML(r.ubicacion_nombre)}</td>
+                    <td>${r.total_productos} producto(s), ${r.total_unidades} unidad(es)</td>
                     <td>${escaparHTML(`${r.registrado_por_nombre} ${r.registrado_por_apellido || ''}`.trim())}</td>
                     <td>
                         <div class="acciones-tabla">
