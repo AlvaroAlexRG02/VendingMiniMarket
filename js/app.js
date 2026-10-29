@@ -89,7 +89,7 @@ function inicializarNavegacionLateral() {
             rutasActivas: ["inventario/inventario.php", "inventario/movimientos.html"]
         },
         {
-            nombre: "Compras",
+            nombre: "Pedidos",
             ruta: "compras/compras.php",
             icono: "fa-cart-shopping",
             rutasActivas: [

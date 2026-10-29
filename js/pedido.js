@@ -34,6 +34,8 @@
     let ubicaciones = [];
     let productosProveedorActual = [];
     let puedeActualizarEstado = false;
+    let puedeEditarPedido = false;
+    let pedidoEnEdicion = null;
 
     document.addEventListener('DOMContentLoaded', iniciar);
 
@@ -43,6 +45,7 @@
         }
 
         puedeActualizarEstado = document.body.dataset.puedeActualizarEstado === '1';
+        puedeEditarPedido = document.body.dataset.puedeEditarPedido === '1';
 
         registrarEventos();
 
@@ -75,6 +78,10 @@
         $('botonCerrarVerRecepcion')?.addEventListener('click', cerrarModalVerRecepcion);
         document.querySelector('[data-cerrar-modal-ver-recepcion]')?.addEventListener('click', cerrarModalVerRecepcion);
         $('botonConfirmarDesdeVerRecepcion')?.addEventListener('click', confirmarDesdeModalVerRecepcion);
+
+        $('botonCerrarModalVerPedido')?.addEventListener('click', cerrarModalVerPedido);
+        $('botonCerrarVerPedido')?.addEventListener('click', cerrarModalVerPedido);
+        document.querySelector('[data-cerrar-modal-ver-pedido]')?.addEventListener('click', cerrarModalVerPedido);
 
         $('formularioPedido')?.addEventListener('submit', guardarPedido);
         $('proveedorPedido')?.addEventListener('change', cargarProductosDelProveedor);
@@ -143,7 +150,7 @@
         });
     }
 
-    async function cargarProductosDelProveedor() {
+    async function cargarProductosDelProveedor(itemsPreset = null) {
         const idProveedor = $('proveedorPedido').value;
         $('listaProductosPedido').innerHTML = '';
         productosProveedorActual = [];
@@ -163,6 +170,8 @@
 
             if (productosProveedorActual.length === 0) {
                 mostrarMensaje('Este proveedor no tiene productos asociados.', 'error');
+            } else if (Array.isArray(itemsPreset) && itemsPreset.length) {
+                itemsPreset.forEach((item) => agregarFilaProducto(item.id_producto, item.cantidad));
             } else {
                 agregarFilaProducto();
             }
@@ -184,7 +193,7 @@
         `).join('');
     }
 
-    function agregarFilaProducto() {
+    function agregarFilaProducto(idProductoPreset = '', cantidadPreset = 1) {
         const lista = $('listaProductosPedido');
 
         const fila = document.createElement('div');
@@ -194,12 +203,12 @@
                 <label>Producto</label>
                 <select class="item-producto" required>
                     <option value="">Seleccione...</option>
-                    ${opcionesProducto('')}
+                    ${opcionesProducto(idProductoPreset)}
                 </select>
             </div>
             <div class="grupo-formulario">
                 <label>Cantidad</label>
-                <input class="item-cantidad" type="number" min="1" value="1" autocomplete="off" required>
+                <input class="item-cantidad" type="number" min="1" value="${cantidadPreset}" autocomplete="off" required>
             </div>
             <div class="grupo-formulario">
                 <label>Costo unitario</label>
@@ -223,8 +232,8 @@
         });
 
         lista.appendChild(fila);
-        fila.querySelector('.item-producto').value = '';
-        fila.querySelector('.item-cantidad').value = 1;
+        fila.querySelector('.item-producto').value = idProductoPreset || '';
+        fila.querySelector('.item-cantidad').value = cantidadPreset;
         mostrarElemento('mensajeSinProductosPedido', false);
         actualizarFila(fila);
     }
@@ -268,6 +277,8 @@
     -----------------------------------------------------*/
 
     function abrirModalNuevoPedido() {
+        pedidoEnEdicion = null;
+        $('tituloModalPedido').textContent = 'Nuevo pedido';
         $('formularioPedido').reset();
         $('fechaPedido').value = new Date().toLocaleDateString('es-CR');
         $('listaProductosPedido').innerHTML = '';
@@ -279,8 +290,36 @@
         $('modalPedido').hidden = false;
     }
 
+    async function abrirModalEditarPedido(idPedido) {
+        try {
+            const resultado = await api('obtener_pedido', null, { id_pedido: idPedido });
+            const pedido = resultado.data;
+
+            pedidoEnEdicion = pedido.id_pedido;
+
+            $('tituloModalPedido').textContent = 'Editar pedido';
+            $('mensajeFormularioPedido').textContent = '';
+            $('fechaPedido').value = new Date(pedido.fecha_pedido).toLocaleDateString('es-CR');
+            $('observacionesPedido').value = pedido.observaciones || '';
+            $('proveedorPedido').value = pedido.id_proveedor;
+            $('ubicacionPedido').value = pedido.id_ubicacion;
+
+            const itemsPreset = pedido.detalle.map((d) => ({
+                id_producto: d.id_producto,
+                cantidad: d.cantidad_solicitada
+            }));
+
+            await cargarProductosDelProveedor(itemsPreset);
+
+            $('modalPedido').hidden = false;
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+    }
+
     function cerrarModal() {
         $('modalPedido').hidden = true;
+        pedidoEnEdicion = null;
     }
 
     async function guardarPedido(evento) {
@@ -293,17 +332,26 @@
             return;
         }
 
-        try {
-            await api('crear_pedido', {
-                id_proveedor: Number($('proveedorPedido').value),
-                id_ubicacion: Number($('ubicacionPedido').value),
-                observaciones: $('observacionesPedido').value.trim(),
-                items
-            });
+        const datos = {
+            id_proveedor: Number($('proveedorPedido').value),
+            id_ubicacion: Number($('ubicacionPedido').value),
+            observaciones: $('observacionesPedido').value.trim(),
+            items
+        };
 
-            cerrarModal();
-            ocultarMensaje();
-            mostrarMensaje('Pedido registrado correctamente.', 'exito');
+        try {
+            if (pedidoEnEdicion) {
+                await api('editar_pedido', { ...datos, id_pedido: pedidoEnEdicion });
+                cerrarModal();
+                ocultarMensaje();
+                mostrarMensaje('Pedido actualizado correctamente.', 'exito');
+            } else {
+                await api('crear_pedido', datos);
+                cerrarModal();
+                ocultarMensaje();
+                mostrarMensaje('Pedido registrado correctamente.', 'exito');
+            }
+
             await cargarPedidos();
         } catch (error) {
             $('mensajeFormularioPedido').textContent = error.message;
@@ -371,6 +419,16 @@
     function celdaAcciones(pedido) {
         const cerrado = ['RECIBIDO', 'CANCELADO'].includes(pedido.estado);
 
+        const botonVer = `<button type="button" class="boton-tabla boton-ver-pedido" data-pedido="${pedido.id_pedido}" title="Ver pedido">
+                   <i class="fa-solid fa-eye"></i>
+               </button>`;
+
+        const botonEditar = (puedeEditarPedido && pedido.estado === 'PENDIENTE')
+            ? `<button type="button" class="boton-tabla boton-editar-pedido" data-pedido="${pedido.id_pedido}" title="Editar pedido">
+                   <i class="fa-solid fa-pen"></i>
+               </button>`
+            : '';
+
         const botonRecibir = cerrado
             ? ''
             : `<button type="button" class="boton-tabla boton-recibir-pedido" data-pedido="${pedido.id_pedido}" title="Recibir pedido">
@@ -378,11 +436,11 @@
                </button>`;
 
         if (!puedeActualizarEstado) {
-            return botonRecibir || '-';
+            return `<div class="acciones-tabla">${botonVer}${botonEditar}${botonRecibir}</div>`;
         }
 
         if (cerrado) {
-            return '-';
+            return `<div class="acciones-tabla">${botonVer}</div>`;
         }
 
         const opciones = Object.entries(ETIQUETAS_ESTADO)
@@ -391,6 +449,8 @@
 
         return `
             <div class="acciones-tabla">
+                ${botonVer}
+                ${botonEditar}
                 ${botonRecibir}
                 <select class="selector-estado-pedido" data-pedido="${pedido.id_pedido}">
                     ${opciones}
@@ -400,6 +460,18 @@
     }
 
     async function manejarClicTabla(evento) {
+        const botonVer = evento.target.closest('button.boton-ver-pedido');
+        if (botonVer) {
+            await abrirModalVerPedido(Number(botonVer.dataset.pedido));
+            return;
+        }
+
+        const botonEditar = evento.target.closest('button.boton-editar-pedido');
+        if (botonEditar) {
+            await abrirModalEditarPedido(Number(botonEditar.dataset.pedido));
+            return;
+        }
+
         const boton = evento.target.closest('button.boton-recibir-pedido');
         if (!boton) return;
 
@@ -439,13 +511,21 @@
             $('mensajeFormularioRecepcion').textContent = '';
 
             const lista = $('listaProductosRecepcion');
-            const pendientes = pedido.detalle.filter((d) => d.cantidad_recibida < d.cantidad_solicitada);
+            const pendientes = pedido.detalle
+                .map((d) => ({
+                    ...d,
+                    pendiente_real: d.cantidad_solicitada - d.cantidad_recibida - (d.cantidad_reservada_pendiente || 0)
+                }))
+                .filter((d) => d.pendiente_real > 0);
 
             if (!pendientes.length) {
-                lista.innerHTML = '<p>Este pedido ya no tiene cantidades pendientes de recibir.</p>';
+                lista.innerHTML = '<p>Este pedido ya no tiene cantidades pendientes de recibir. Si registraste una recepción, espera a que un Encargado o Administrador la confirme.</p>';
             } else {
                 lista.innerHTML = pendientes.map((d) => {
-                    const pendiente = d.cantidad_solicitada - d.cantidad_recibida;
+                    const pendiente = d.pendiente_real;
+                    const nota = d.cantidad_reservada_pendiente > 0
+                        ? `<small>${d.cantidad_reservada_pendiente} unidad(es) ya registradas, en espera de confirmación.</small>`
+                        : '';
                     return `
                         <div class="fila-producto-compra" data-producto="${d.id_producto}">
                             <div class="grupo-formulario">
@@ -469,6 +549,7 @@
                                     max="${pendiente}"
                                     value="0"
                                 >
+                                ${nota}
                             </div>
                         </div>
                     `;
@@ -504,6 +585,53 @@
 
     function cerrarModalRecepcion() {
         $('modalRecepcion').hidden = true;
+    }
+
+    async function abrirModalVerPedido(idPedido) {
+        try {
+            const resultado = await api('obtener_pedido', null, { id_pedido: idPedido });
+            const pedido = resultado.data;
+
+            $('numeroVerPedido').value = pedido.numero_pedido;
+            $('proveedorVerPedido').value = pedido.proveedor_nombre;
+            $('ubicacionVerPedido').value = pedido.ubicacion_nombre;
+            $('solicitaVerPedido').value = `${pedido.solicita_nombre} ${pedido.solicita_apellido || ''}`.trim();
+            $('fechaVerPedido').value = new Date(pedido.fecha_pedido).toLocaleDateString('es-CR');
+            $('estadoVerPedido').value = ETIQUETAS_ESTADO[pedido.estado] || pedido.estado;
+            $('observacionesVerPedido').value = pedido.observaciones || '';
+
+            const lista = $('listaProductosVerPedido');
+            lista.innerHTML = pedido.detalle.map((d) => `
+                <div class="fila-producto-compra" data-producto="${d.id_producto}">
+                    <div class="grupo-formulario">
+                        <label>Producto</label>
+                        <input type="text" value="${escaparHTML(d.nombre)}" readonly>
+                    </div>
+                    <div class="grupo-formulario">
+                        <label>Solicitado</label>
+                        <input type="text" value="${d.cantidad_solicitada}" readonly>
+                    </div>
+                    <div class="grupo-formulario">
+                        <label>Recibido</label>
+                        <input type="text" value="${d.cantidad_recibida}" readonly>
+                    </div>
+                    <div class="grupo-formulario">
+                        <label>Costo unitario</label>
+                        <input type="text" value="${moneda(d.costo_unitario)}" readonly>
+                    </div>
+                </div>
+            `).join('');
+
+            $('totalVerPedido').textContent = `Total estimado: ${moneda(pedido.monto_total)}`;
+
+            $('modalVerPedido').hidden = false;
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+    }
+
+    function cerrarModalVerPedido() {
+        $('modalVerPedido').hidden = true;
     }
 
     async function guardarRecepcion(evento) {

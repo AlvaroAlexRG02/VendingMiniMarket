@@ -125,7 +125,7 @@ $paginaActual = basename($_SERVER["PHP_SELF"]);
            class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
            <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-cart-shopping"></i>
-            Compras
+            Pedidos
         </a>
 
         <a href="/VendingMiniMarket/ventas/ventas.html"

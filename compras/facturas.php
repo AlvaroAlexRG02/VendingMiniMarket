@@ -108,7 +108,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                 class="activo"
             >
                 <i class="fa-solid fa-cart-shopping"></i>
-                Compras
+                Pedidos
             </a>
 
             <a href="../ventas/ventas.html">

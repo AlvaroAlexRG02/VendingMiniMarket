@@ -85,6 +85,18 @@ function exigirPuedeActualizarEstado(): array
     return $usuario;
 }
 
+/** Editar un pedido ya registrado: Administrador, Gerente General o Encargado. */
+function exigirPuedeEditarPedido(): array
+{
+    $usuario = exigirSesion();
+
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
+        respuesta(false, null, 'No tiene permisos para editar pedidos.', 403);
+    }
+
+    return $usuario;
+}
+
 function exigirPost(): void
 {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -416,6 +428,151 @@ function accionCrearPedido(array $in): void
 }
 
 
+function accionEditarPedido(array $in): void
+{
+    $usuario = exigirPuedeEditarPedido();
+    exigirPost();
+
+    $idPedido      = (int)($in['id_pedido'] ?? 0);
+    $idProveedor   = (int)($in['id_proveedor'] ?? 0);
+    $idUbicacion   = (int)($in['id_ubicacion'] ?? 0);
+    $observaciones = trim((string)($in['observaciones'] ?? ''));
+    $cantidades    = leerItemsPedido($in);
+
+    if ($idPedido <= 0) {
+        respuesta(false, null, 'Pedido inválido.', 400);
+    }
+
+    if ($idProveedor <= 0) {
+        respuesta(false, null, 'Debe seleccionar un proveedor.', 400);
+    }
+
+    if ($idUbicacion <= 0) {
+        respuesta(false, null, 'Debe seleccionar una tienda solicitante.', 400);
+    }
+
+    if (mb_strlen($observaciones, 'UTF-8') > 500) {
+        respuesta(false, null, 'Las observaciones no pueden superar 500 caracteres.', 400);
+    }
+
+    $actual = db()->prepare("
+        SELECT ped.id_pedido, ped.estado, ubi.id_tienda
+        FROM pedido ped
+        JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = ped.id_ubicacion
+        WHERE ped.id_pedido = :id
+    ");
+    $actual->execute([':id' => $idPedido]);
+    $actual = $actual->fetch();
+
+    if (!$actual) {
+        respuesta(false, null, 'El pedido no existe.', 404);
+    }
+
+    exigirOperarEnUbicacion(db(), (int)$actual['id_tienda']);
+
+    if ($actual['estado'] !== 'PENDIENTE') {
+        respuesta(false, null, 'Solo se pueden editar pedidos en estado Pendiente.', 409);
+    }
+
+    // La ubicación debe existir, ser de tipo TIENDA, y el usuario debe poder operar en su tienda (HU-19).
+    $ubicacion = db()->prepare("
+        SELECT id_ubicacion, id_tienda, tipo, estado
+        FROM ubicacion_inventario
+        WHERE id_ubicacion = :id
+    ");
+    $ubicacion->execute([':id' => $idUbicacion]);
+    $ubicacion = $ubicacion->fetch();
+
+    if (!$ubicacion) {
+        respuesta(false, null, 'La ubicación seleccionada no existe.', 404);
+    }
+
+    if ($ubicacion['tipo'] !== 'TIENDA') {
+        respuesta(false, null, 'Los pedidos solo se pueden entregar en una tienda.', 400);
+    }
+
+    exigirOperarEnUbicacion(db(), (int)$ubicacion['id_tienda']);
+
+    // Proveedor activo.
+    $proveedor = db()->prepare('SELECT id_proveedor FROM proveedor WHERE id_proveedor = :id AND estado = TRUE');
+    $proveedor->execute([':id' => $idProveedor]);
+
+    if (!$proveedor->fetchColumn()) {
+        respuesta(false, null, 'El proveedor seleccionado no existe o está inactivo.', 404);
+    }
+
+    // Costo vigente de cada producto para ESTE proveedor (producto_proveedor.costo).
+    $marcas = implode(',', array_fill(0, count($cantidades), '?'));
+    $costos = db()->prepare("
+        SELECT id_producto, costo
+        FROM producto_proveedor
+        WHERE id_proveedor = ? AND estado = TRUE AND id_producto IN ($marcas)
+    ");
+    $costos->execute(array_merge([$idProveedor], array_keys($cantidades)));
+
+    $costosPorProducto = [];
+    foreach ($costos->fetchAll() as $fila) {
+        $costosPorProducto[(int)$fila['id_producto']] = (float)($fila['costo'] ?? 0);
+    }
+
+    if (count($costosPorProducto) !== count($cantidades)) {
+        respuesta(false, null, 'Uno o más productos no están asociados a ese proveedor.', 400);
+    }
+
+    $montoTotal = 0.0;
+    foreach ($cantidades as $idProducto => $cantidad) {
+        $montoTotal += $cantidad * $costosPorProducto[$idProducto];
+    }
+
+    $umbral = (float)(db()->query('SELECT monto_aprobacion FROM configuracion_compras WHERE id_configuracion = 1')->fetchColumn());
+
+    // HU-30 criterio 3: requiere aprobación si lo crea personal operativo (Dependiente) o si supera el monto configurado.
+    $requiereAprobacion = esDependiente() || $montoTotal > $umbral;
+
+    $actualizado = enTransaccion(function () use ($idPedido, $idProveedor, $idUbicacion, $usuario, $observaciones, $cantidades, $costosPorProducto, $requiereAprobacion) {
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            UPDATE pedido
+            SET id_proveedor = :id_proveedor, id_ubicacion = :id_ubicacion, observaciones = :observaciones,
+                requiere_aprobacion = :requiere_aprobacion, id_usuario_actualiza = :id_usuario, fecha_actualizacion = NOW()
+            WHERE id_pedido = :id_pedido
+        ");
+        $st->execute([
+            ':id_proveedor'        => $idProveedor,
+            ':id_ubicacion'        => $idUbicacion,
+            ':observaciones'       => $observaciones !== '' ? $observaciones : null,
+            ':requiere_aprobacion' => $requiereAprobacion,
+            ':id_usuario'          => $usuario['id_usuario'],
+            ':id_pedido'           => $idPedido,
+        ]);
+
+        $pdo->prepare('DELETE FROM pedido_detalle WHERE id_pedido = :id')->execute([':id' => $idPedido]);
+
+        $detalle = $pdo->prepare("
+            INSERT INTO pedido_detalle (id_pedido, id_producto, cantidad_solicitada, costo_unitario)
+            VALUES (:id_pedido, :id_producto, :cantidad, :costo)
+        ");
+
+        foreach ($cantidades as $idProducto => $cantidad) {
+            $detalle->execute([
+                ':id_pedido'   => $idPedido,
+                ':id_producto' => $idProducto,
+                ':cantidad'    => $cantidad,
+                ':costo'       => $costosPorProducto[$idProducto],
+            ]);
+        }
+
+        $foto = fotoPedido($idPedido);
+        auditar('PEDIDO', 'EDITAR', null, $foto);
+
+        return $foto;
+    }, 'No se pudo editar el pedido.');
+
+    respuesta(true, $actualizado, 'Pedido actualizado correctamente.');
+}
+
+
 /* ==========================================================
    HU-31 — CONSULTAR Y ACTUALIZAR ESTADO
 ========================================================== */
@@ -466,6 +623,28 @@ function fotoPedido(int $idPedido): array
     $detalle->execute([':id' => $idPedido]);
 
     $pedido['detalle'] = $detalle->fetchAll();
+
+    // Cantidades ya reclamadas por recepciones registradas pero aún sin
+    // confirmar, para que el formulario de recepción no permita reservar
+    // de nuevo lo que ya está pendiente de aprobación (ver HU-32).
+    $reservado = db()->prepare("
+        SELECT dm.id_producto, SUM(dm.cantidad) AS total
+        FROM detalle_movimiento dm
+        JOIN movimiento_inventario m ON m.id_movimiento = dm.id_movimiento
+        WHERE m.id_pedido = :id AND m.tipo_movimiento = 'ENTRADA' AND m.estado = 'PENDIENTE'
+        GROUP BY dm.id_producto
+    ");
+    $reservado->execute([':id' => $idPedido]);
+    $reservadoPorProducto = [];
+    foreach ($reservado->fetchAll() as $fila) {
+        $reservadoPorProducto[(int)$fila['id_producto']] = (int)$fila['total'];
+    }
+
+    foreach ($pedido['detalle'] as &$item) {
+        $item['cantidad_reservada_pendiente'] = $reservadoPorProducto[(int)$item['id_producto']] ?? 0;
+    }
+    unset($item);
+
     $pedido['monto_total'] = array_reduce(
         $pedido['detalle'],
         fn ($acumulado, $fila) => $acumulado + ($fila['cantidad_solicitada'] * $fila['costo_unitario']),
@@ -655,6 +834,7 @@ $acciones = [
     'actualizar_configuracion_compras' => 'accionActualizarConfiguracionCompras',
 
     'crear_pedido'            => 'accionCrearPedido',
+    'editar_pedido'           => 'accionEditarPedido',
     'listar_pedidos'          => 'accionListarPedidos',
     'obtener_pedido'          => 'accionObtenerPedido',
     'actualizar_estado_pedido' => 'accionActualizarEstadoPedido',

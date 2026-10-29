@@ -194,9 +194,31 @@ function pedidoDetallePendiente(int $idPedido): array
     $detalle = [];
     foreach ($st->fetchAll() as $fila) {
         $detalle[(int)$fila['id_producto']] = [
-            'cantidad_solicitada' => (int)$fila['cantidad_solicitada'],
-            'cantidad_recibida'   => (int)$fila['cantidad_recibida'],
+            'cantidad_solicitada'          => (int)$fila['cantidad_solicitada'],
+            'cantidad_recibida'            => (int)$fila['cantidad_recibida'],
+            'cantidad_reservada_pendiente' => 0,
         ];
+    }
+
+    // Cantidades ya reclamadas por recepciones registradas pero todavía sin
+    // confirmar (movimiento_inventario en estado PENDIENTE). Deben restarse
+    // también: de lo contrario, si existen varias recepciones pendientes de
+    // confirmar al mismo tiempo para el mismo pedido, se podría recibir más
+    // de lo solicitado en cuanto un Encargado/Administrador las confirme todas.
+    $reservado = db()->prepare("
+        SELECT dm.id_producto, SUM(dm.cantidad) AS total
+        FROM detalle_movimiento dm
+        JOIN movimiento_inventario m ON m.id_movimiento = dm.id_movimiento
+        WHERE m.id_pedido = :id AND m.tipo_movimiento = 'ENTRADA' AND m.estado = 'PENDIENTE'
+        GROUP BY dm.id_producto
+    ");
+    $reservado->execute([':id' => $idPedido]);
+
+    foreach ($reservado->fetchAll() as $fila) {
+        $idProducto = (int)$fila['id_producto'];
+        if (isset($detalle[$idProducto])) {
+            $detalle[$idProducto]['cantidad_reservada_pendiente'] = (int)$fila['total'];
+        }
     }
 
     return $detalle;
@@ -225,7 +247,8 @@ function leerItemsRecepcion(array $in, array $detallePendiente): array
         }
 
         $pendiente = $detallePendiente[$idProducto]['cantidad_solicitada']
-            - $detallePendiente[$idProducto]['cantidad_recibida'];
+            - $detallePendiente[$idProducto]['cantidad_recibida']
+            - $detallePendiente[$idProducto]['cantidad_reservada_pendiente'];
 
         if ($cantidad > $pendiente) {
             respuesta(false, null, "La cantidad recibida no puede superar lo pendiente ($pendiente).", 400);

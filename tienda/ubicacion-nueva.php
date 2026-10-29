@@ -94,7 +94,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
             <a href="../compras/compras.php">
                 <i class="fa-solid fa-cart-shopping"></i>
-                Compras
+                Pedidos
             </a>
 
             <a href="../ventas/ventas.html">
