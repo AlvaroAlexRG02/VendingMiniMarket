@@ -2433,21 +2433,7 @@ function crearFilaVenta(venta) {
         '<i class="fa-solid fa-eye"></i>';
 
     boton.addEventListener("click", () => {
-        const detalleProductos = Array.isArray(venta.productos)
-            ? venta.productos.map((producto) =>
-                `${producto.cantidad} x ${producto.nombre}`
-            ).join("\n")
-            : `${venta.cantidad || 0} x ${venta.productoNombre || "Producto"}`;
-
-        window.alert(
-            [
-                `Venta: ${venta.numero}`,
-                `Productos:\n${detalleProductos}`,
-                `Tienda: ${venta.tienda}`,
-                `Método: ${venta.metodoPago}`,
-                `Total: ${formatearMonedaCRC(venta.total)}`
-            ].join("\n")
-        );
+        mostrarDetalleVentaVending(venta);
     });
 
     celdaAcciones.appendChild(boton);
@@ -3014,6 +3000,9 @@ async function procesarInicioSesionVending(evento) {
     const campoContrasena =
         document.getElementById("contrasena");
 
+    const campoRecordarme =
+        document.getElementById("recordarme");
+
     const mensaje =
         document.getElementById("mensajeLogin");
 
@@ -3056,7 +3045,8 @@ async function procesarInicioSesionVending(evento) {
                 },
                 body: JSON.stringify({
                     correo: correo,
-                    contrasena: contrasena
+                    contrasena: contrasena,
+                    recordarme: campoRecordarme?.checked || false
                 })
             }
         );
@@ -3243,6 +3233,270 @@ function mostrarModalConfirmarCerrarSesionVending() {
 
         modal.hidden = false;
     });
+}
+
+
+/*=========================================================
+  POPUPS GENÉRICOS CON EL ESTILO DE VENDING
+  (reemplazan a los window.alert()/confirm() nativos del
+  navegador, que rompen el estilo visual de la aplicación)
+=========================================================*/
+
+function confirmarVending({
+    titulo = "Confirmar acción",
+    mensaje = "¿Deseas continuar?",
+    icono = "fa-solid fa-circle-question",
+    textoConfirmar = "Confirmar",
+    textoCancelar = "Cancelar",
+    claseBotonConfirmar = "boton-azul"
+} = {}) {
+
+    return new Promise((resolve) => {
+
+        let modal = document.getElementById("modalConfirmacionVending");
+
+        if (!modal) {
+
+            modal = document.createElement("div");
+            modal.id = "modalConfirmacionVending";
+            modal.className = "modal-producto";
+            modal.hidden = true;
+
+            modal.innerHTML = `
+                <div class="modal-producto-fondo" data-cerrar-modal-confirmacion-vending></div>
+
+                <section
+                    class="modal-producto-contenido"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="tituloModalConfirmacionVending"
+                >
+
+                    <div class="modal-producto-icono" id="iconoModalConfirmacionVending">
+                        <i></i>
+                    </div>
+
+                    <h2 id="tituloModalConfirmacionVending"></h2>
+
+                    <p id="mensajeModalConfirmacionVending"></p>
+
+                    <div class="acciones-modal-producto">
+
+                        <button
+                            type="button"
+                            id="botonCancelarConfirmacionVending"
+                            class="boton boton-borde"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="button"
+                            id="botonConfirmarConfirmacionVending"
+                            class="boton boton-azul"
+                        >
+                            Confirmar
+                        </button>
+
+                    </div>
+
+                </section>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        modal.querySelector("#iconoModalConfirmacionVending i").className = icono;
+        modal.querySelector("#tituloModalConfirmacionVending").textContent = titulo;
+        modal.querySelector("#mensajeModalConfirmacionVending").textContent = mensaje;
+
+        const botonCancelar = modal.querySelector("#botonCancelarConfirmacionVending");
+        const botonConfirmar = modal.querySelector("#botonConfirmarConfirmacionVending");
+
+        botonCancelar.textContent = textoCancelar;
+        botonConfirmar.textContent = textoConfirmar;
+        botonConfirmar.className = `boton ${claseBotonConfirmar}`;
+
+        const cerrar = (resultado) => {
+            modal.hidden = true;
+            resolve(resultado);
+        };
+
+        modal.querySelector("[data-cerrar-modal-confirmacion-vending]").onclick = () => cerrar(false);
+        botonCancelar.onclick = () => cerrar(false);
+        botonConfirmar.onclick = () => cerrar(true);
+
+        modal.hidden = false;
+    });
+}
+
+function mostrarAlertaVending({
+    titulo = "Aviso",
+    mensaje = "",
+    icono = "fa-solid fa-circle-info"
+} = {}) {
+
+    return new Promise((resolve) => {
+
+        let modal = document.getElementById("modalAlertaVending");
+
+        if (!modal) {
+
+            modal = document.createElement("div");
+            modal.id = "modalAlertaVending";
+            modal.className = "modal-producto";
+            modal.hidden = true;
+
+            modal.innerHTML = `
+                <div class="modal-producto-fondo" data-cerrar-modal-alerta-vending></div>
+
+                <section
+                    class="modal-producto-contenido"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="tituloModalAlertaVending"
+                >
+
+                    <div class="modal-producto-icono" id="iconoModalAlertaVending">
+                        <i></i>
+                    </div>
+
+                    <h2 id="tituloModalAlertaVending"></h2>
+
+                    <p id="mensajeModalAlertaVending"></p>
+
+                    <div class="acciones-modal-producto">
+
+                        <button
+                            type="button"
+                            id="botonAceptarAlertaVending"
+                            class="boton boton-azul"
+                        >
+                            Entendido
+                        </button>
+
+                    </div>
+
+                </section>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        modal.querySelector("#iconoModalAlertaVending i").className = icono;
+        modal.querySelector("#tituloModalAlertaVending").textContent = titulo;
+        modal.querySelector("#mensajeModalAlertaVending").textContent = mensaje;
+
+        const cerrar = () => {
+            modal.hidden = true;
+            resolve();
+        };
+
+        modal.querySelector("[data-cerrar-modal-alerta-vending]").onclick = cerrar;
+        modal.querySelector("#botonAceptarAlertaVending").onclick = cerrar;
+
+        modal.hidden = false;
+    });
+}
+
+function mostrarDetalleVentaVending(venta) {
+
+    let modal = document.getElementById("modalDetalleVentaVending");
+
+    if (!modal) {
+
+        modal = document.createElement("div");
+        modal.id = "modalDetalleVentaVending";
+        modal.className = "modal-producto";
+        modal.hidden = true;
+
+        modal.innerHTML = `
+            <div class="modal-producto-fondo" data-cerrar-modal-detalle-venta-vending></div>
+
+            <section
+                class="modal-producto-contenido modal-pedido-contenido"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tituloModalDetalleVentaVending"
+            >
+
+                <div class="encabezado-modal-venta">
+
+                    <div>
+                        <h2 id="tituloModalDetalleVentaVending">Detalle de venta</h2>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="boton-cerrar-modal"
+                        data-cerrar-modal-detalle-venta-vending
+                        aria-label="Cerrar"
+                    >
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+
+                </div>
+
+                <div class="cuadricula-formulario" id="datosModalDetalleVentaVending"></div>
+
+                <div class="seccion-productos-compra">
+                    <div class="encabezado-productos-compra">
+                        <div><h3>Productos</h3></div>
+                    </div>
+                    <div id="listaProductosModalDetalleVentaVending" class="lista-productos-compra"></div>
+                </div>
+
+                <div class="acciones-modal-producto">
+                    <button
+                        type="button"
+                        class="boton boton-azul"
+                        data-cerrar-modal-detalle-venta-vending
+                    >
+                        Cerrar
+                    </button>
+                </div>
+
+            </section>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.querySelectorAll("[data-cerrar-modal-detalle-venta-vending]").forEach((el) => {
+            el.addEventListener("click", () => { modal.hidden = true; });
+        });
+    }
+
+    const campo = (etiqueta, valor) => `
+        <div class="grupo-formulario">
+            <label>${etiqueta}</label>
+            <input type="text" value="${valor}" readonly>
+        </div>
+    `;
+
+    modal.querySelector("#datosModalDetalleVentaVending").innerHTML =
+        campo("Venta", venta.numero || "-") +
+        campo("Tienda", venta.tienda || "-") +
+        campo("Método de pago", venta.metodoPago || "-") +
+        campo("Total", formatearMonedaCRC(venta.total));
+
+    const productos = Array.isArray(venta.productos)
+        ? venta.productos
+        : [{ cantidad: venta.cantidad || 0, nombre: venta.productoNombre || "Producto" }];
+
+    modal.querySelector("#listaProductosModalDetalleVentaVending").innerHTML = productos.map((producto) => `
+        <div class="fila-producto-compra">
+            <div class="grupo-formulario">
+                <label>Producto</label>
+                <input type="text" value="${producto.nombre}" readonly>
+            </div>
+            <div class="grupo-formulario">
+                <label>Cantidad</label>
+                <input type="text" value="${producto.cantidad}" readonly>
+            </div>
+        </div>
+    `).join("");
+
+    modal.hidden = false;
 }
 
 async function cerrarSesionVending(evento) {
@@ -4727,9 +4981,11 @@ async function cambiarEstadoUsuarioVending(id) {
         return;
     }
 
-    const confirmar = confirm(
-        "¿Desea cambiar el estado de este usuario?"
-    );
+    const confirmar = await confirmarVending({
+        titulo: "Cambiar estado",
+        mensaje: "¿Desea cambiar el estado de este usuario?",
+        icono: "fa-solid fa-user-pen"
+    });
 
     if (!confirmar) {
         return;
@@ -5778,7 +6034,12 @@ async function manejarAccionConciliacionVending(evento) {
             campoAjuste?.focus();
             return;
         }
-        if (!window.confirm(`¿Autoriza el ajuste de ${cantidad > 0 ? "+" : ""}${cantidad} unidades?`)) {
+        if (!await confirmarVending({
+            titulo: "Autorizar ajuste",
+            mensaje: `¿Autoriza el ajuste de ${cantidad > 0 ? "+" : ""}${cantidad} unidades?`,
+            icono: "fa-solid fa-triangle-exclamation",
+            textoConfirmar: "Autorizar"
+        })) {
             return;
         }
         body.cantidad_ajuste = cantidad;

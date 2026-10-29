@@ -228,6 +228,7 @@
         fila.querySelector('button').addEventListener('click', () => {
             fila.remove();
             mostrarElemento('mensajeSinProductosPedido', !lista.children.length);
+            actualizarDisponibilidadProductos();
             calcularTotales();
         });
 
@@ -247,7 +248,20 @@
         fila.querySelector('.item-costo').value = moneda(costo);
         fila.querySelector('.item-subtotal').value = moneda(costo * cantidad);
 
+        actualizarDisponibilidadProductos();
         calcularTotales();
+    }
+
+    function actualizarDisponibilidadProductos() {
+        const selects = [...document.querySelectorAll('#listaProductosPedido .item-producto')];
+        const seleccionados = selects.map((s) => s.value).filter((v) => v !== '');
+
+        selects.forEach((select) => {
+            [...select.options].forEach((opcion) => {
+                if (opcion.value === '') return;
+                opcion.disabled = opcion.value !== select.value && seleccionados.includes(opcion.value);
+            });
+        });
     }
 
     function leerItemsFormulario() {
@@ -329,6 +343,12 @@
 
         if (!items.length || items.some((i) => !i.id_producto || i.cantidad <= 0)) {
             $('mensajeFormularioPedido').textContent = 'Agrega al menos un producto válido.';
+            return;
+        }
+
+        const idsUnicos = new Set(items.map((i) => i.id_producto));
+        if (idsUnicos.size !== items.length) {
+            $('mensajeFormularioPedido').textContent = 'No puedes agregar el mismo producto dos veces en el pedido.';
             return;
         }
 

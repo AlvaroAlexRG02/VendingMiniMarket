@@ -253,6 +253,10 @@ function leerItemsFactura(string $json): array
             respuesta(false, null, 'Hay productos con datos inválidos en la factura.', 400);
         }
 
+        if (isset($limpios[$idProducto])) {
+            respuesta(false, null, 'No se puede agregar el mismo producto dos veces en la factura.', 400);
+        }
+
         $limpios[$idProducto] = ['cantidad' => $cantidad, 'costo_unitario' => $costo];
     }
 

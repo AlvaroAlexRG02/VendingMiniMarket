@@ -20,6 +20,7 @@ $datos = json_decode(file_get_contents("php://input"), true);
 
 $correo = trim($datos["correo"] ?? "");
 $contrasena = $datos["contrasena"] ?? "";
+$recordarme = !empty($datos["recordarme"]);
 
 if ($correo === "" || $contrasena === "") {
     http_response_code(400);
@@ -204,6 +205,26 @@ try {
      * después de una autenticación exitosa.
      */
     session_regenerate_id(true);
+
+    /*
+     * HU de login: si el usuario marcó "Recordarme", la sesión
+     * debe sobrevivir al cierre del navegador por un tiempo más
+     * largo (30 días). Por defecto la cookie de sesión expira al
+     * cerrar el navegador (ver config/session.php), así que aquí
+     * reenviamos la misma cookie con un vencimiento extendido.
+     */
+    if ($recordarme) {
+        $parametrosCookie = session_get_cookie_params();
+
+        setcookie(session_name(), session_id(), [
+            "expires" => time() + 60 * 60 * 24 * 30,
+            "path" => $parametrosCookie["path"],
+            "domain" => $parametrosCookie["domain"],
+            "secure" => $parametrosCookie["secure"],
+            "httponly" => $parametrosCookie["httponly"],
+            "samesite" => $parametrosCookie["samesite"],
+        ]);
+    }
 
     /*
      * Guardar información mínima del usuario

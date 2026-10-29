@@ -303,6 +303,10 @@ function leerItemsPedido(array $in): array
             respuesta(false, null, 'Hay productos con datos inválidos en el pedido.', 400);
         }
 
+        if (isset($limpios[$idProducto])) {
+            respuesta(false, null, 'No se puede agregar el mismo producto dos veces en el pedido.', 400);
+        }
+
         $limpios[$idProducto] = $cantidad;
     }
 
