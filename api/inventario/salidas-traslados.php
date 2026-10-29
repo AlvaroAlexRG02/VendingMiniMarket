@@ -104,7 +104,54 @@ try {
             'id_producto' => (int)$r['id_producto'],
             'cantidad' => (int)$r['cantidad'],
         ], $st->fetchAll(PDO::FETCH_ASSOC));
-        responderMovimiento2322(true, ['stock' => $stock], 'Stock de origen consultado correctamente.');
+        // Consulta opcional del destino para la vista previa (sin modificar existencias).
+        // La comprobación definitiva se repite dentro de la transacción POST.
+        $idDestino = numeroPositivo2322($_GET['id_ubicacion_destino'] ?? null);
+        $vistaDestino = null;
+        if ($idDestino > 0) {
+            $vistaDestino = [
+                'id_ubicacion' => $idDestino,
+                'permitido' => false,
+                'tipo' => null,
+                'mensaje' => '',
+                'stock' => [],
+            ];
+            if ($idDestino === $idOrigen) {
+                $vistaDestino['mensaje'] = 'Origen y destino deben ser diferentes.';
+            } else {
+                $destino = cargarUbicacion2322($pdo, $idDestino);
+                if (!$destino || !activo2322($destino['estado']) || !activo2322($destino['tienda_activa'])) {
+                    $vistaDestino['mensaje'] = 'La ubicación de destino no existe o está inactiva.';
+                } else {
+                    // No revelar stock de ubicaciones sin autorización.
+                    exigirOperarEnUbicacion($pdo, (int)$destino['id_tienda']);
+                    try {
+                        $idRelacion = relacionDestino2322($pdo, $origen, $destino);
+                        if ($idRelacion !== null && !usuarioTieneRol([1, 2, 3])) {
+                            $vistaDestino['mensaje'] = 'Este rol no puede hacer traslados entre tiendas o hacia máquinas.';
+                        } else {
+                            $vistaDestino['permitido'] = true;
+                            $vistaDestino['tipo'] = $idRelacion === null ? 'INTERNA' : 'ABASTECIMIENTO';
+                            $vistaDestino['mensaje'] = $idRelacion === null
+                                ? 'Transferencia interna autorizada.'
+                                : 'Relación de abastecimiento activa.';
+                        }
+                    } catch (DomainException $errorRelacion) {
+                        $vistaDestino['mensaje'] = $errorRelacion->getMessage();
+                    }
+                    if ($vistaDestino['permitido']) {
+                        $stDestino = $pdo->prepare('SELECT id_producto, cantidad FROM existencia
+                            WHERE id_ubicacion = :destino ORDER BY id_producto');
+                        $stDestino->execute([':destino' => $idDestino]);
+                        $vistaDestino['stock'] = array_map(static fn(array $r): array => [
+                            'id_producto' => (int)$r['id_producto'],
+                            'cantidad' => (int)$r['cantidad'],
+                        ], $stDestino->fetchAll(PDO::FETCH_ASSOC));
+                    }
+                }
+            }
+        }
+        responderMovimiento2322(true, ['stock' => $stock, 'destino' => $vistaDestino], 'Existencias consultadas correctamente.');
     }
 
     $datos = json_decode(file_get_contents('php://input') ?: '', true, 512, JSON_THROW_ON_ERROR);

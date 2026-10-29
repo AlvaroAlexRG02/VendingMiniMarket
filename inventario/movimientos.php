@@ -92,6 +92,39 @@ header('Expires: 0');
         rel="stylesheet"
         href="../css/estilos.css?v=20261007-1">
 
+    <!-- HU-22 / HU-23: vista previa específica de salida y traslado. -->
+    <style>
+        #panelVisualHU22HU23[hidden] { display:none !important; }
+        #panelVisualHU22HU23 { margin:18px 0; padding:18px; border:1px solid #dfe6f0; border-radius:12px; background:#f8faff; }
+        #panelVisualHU22HU23 .vis-header { display:flex; gap:10px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px; }
+        #panelVisualHU22HU23 h3 { margin:0 0 4px; font-size:1.05rem; color:#172b4d; }
+        #panelVisualHU22HU23 .vis-muted { margin:0; font-size:.83rem; color:#5b6980; }
+        #panelVisualHU22HU23 .vis-estado { padding:6px 10px; border-radius:999px; background:#e6eaf0; color:#39475c; font-size:.82rem; font-weight:600; }
+        #panelVisualHU22HU23 .vis-estado[data-estado="permitida"] { background:#e4f6ea; color:#176334; }
+        #panelVisualHU22HU23 .vis-estado[data-estado="error"] { background:#fde9e8; color:#a52624; }
+        #panelVisualHU22HU23 .vis-estado[data-estado="cargando"] { background:#fff3da; color:#895509; }
+        #panelVisualHU22HU23 .vis-sitios { display:grid; grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr); gap:12px; align-items:stretch; }
+        #panelVisualHU22HU23 .vis-sitio { border:1px solid #dfe6f0; background:white; padding:14px; border-radius:10px; min-width:0; }
+        #panelVisualHU22HU23 .vis-etiqueta { color:#64748b; font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+        #panelVisualHU22HU23 .vis-nombre { display:block; margin:6px 0; font-size:.94rem; font-weight:700; color:#1f2d46; overflow-wrap:anywhere; }
+        #panelVisualHU22HU23 .vis-indicacion { color:#4b5e79; font-size:.8rem; }
+        #panelVisualHU22HU23 .vis-flecha { display:flex; align-items:center; justify-content:center; color:#2858d6; font-size:1.35rem; }
+        #panelVisualHU22HU23 .vis-solo-salida { display:none; }
+        #panelVisualHU22HU23[data-tipo="salida"] .vis-sitios { grid-template-columns:minmax(0,1fr); }
+        #panelVisualHU22HU23[data-tipo="salida"] .vis-destino, #panelVisualHU22HU23[data-tipo="salida"] .vis-flecha { display:none; }
+        #panelVisualHU22HU23[data-tipo="salida"] .vis-solo-salida { display:inline; }
+        #panelVisualHU22HU23 .vis-resultado { border-top:1px solid #e0e6ef; margin-top:12px; padding-top:12px; }
+        #panelVisualHU22HU23 .vis-tabla-scroll { overflow:auto; max-width:100%; }
+        #panelVisualHU22HU23 table { width:100%; min-width:600px; border-collapse:collapse; font-size:.85rem; }
+        #panelVisualHU22HU23 th, #panelVisualHU22HU23 td { padding:8px 10px; text-align:left; border-bottom:1px solid #e4e9f1; }
+        #panelVisualHU22HU23 th { color:#53647b; font-size:.75rem; text-transform:uppercase; }
+        #panelVisualHU22HU23 .vis-detalle { padding-top:9px; color:#5b6980; font-size:.8rem; }
+        @media(max-width:700px) {
+            #panelVisualHU22HU23 .vis-sitios { grid-template-columns:minmax(0,1fr); }
+            #panelVisualHU22HU23 .vis-flecha { transform:rotate(90deg); min-height:20px; }
+        }
+    </style>
+
     <!-- Font Awesome -->
     <link
         rel="stylesheet"
@@ -649,11 +682,15 @@ header('Expires: 0');
                     </div>
 
 
-                    <div class="tarjeta-estadistica-icono">
-
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
-
-                    </div>
+                    <!-- Acceso a HU-24/HU-25: visible solo al seleccionar Ajuste.
+                         No modifica el formulario ni sus eventos existentes. -->
+                    <a id="botonAccesoConteoFisico"
+                       class="boton boton-borde"
+                       href="conteos-ajustes.php"
+                       hidden>
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        Conteo físico
+                    </a>
 
                 </div>
 
@@ -1157,6 +1194,40 @@ header('Expires: 0');
                         </p>
                     </section>
 
+                    <!-- HU-22 / HU-23: vista previa de saldos, por producto y ubicación. -->
+                    <section id="panelVisualHU22HU23" data-tipo="salida" aria-live="polite" hidden>
+                        <div class="vis-header">
+                            <div>
+                                <h3 id="visTituloHU22HU23">Vista previa del movimiento</h3>
+                                <p class="vis-muted">Comprueba las ubicaciones y las existencias antes de guardar.</p>
+                            </div>
+                            <span id="visEstadoHU22HU23" class="vis-estado" data-estado="cargando">Seleccione una ubicación</span>
+                        </div>
+                        <div class="vis-sitios">
+                            <div class="vis-sitio">
+                                <span class="vis-etiqueta">Ubicación de origen</span>
+                                <strong class="vis-nombre" id="visOrigenHU22HU23">Seleccione origen</strong>
+                                <span class="vis-indicacion" id="visOrigenDetalleHU22HU23">Aquí se descontarán los productos.</span>
+                            </div>
+                            <div class="vis-flecha" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="vis-sitio vis-destino">
+                                <span class="vis-etiqueta">Ubicación de destino</span>
+                                <strong class="vis-nombre" id="visDestinoHU22HU23">Seleccione destino</strong>
+                                <span class="vis-indicacion">Aquí ingresarán los productos.</span>
+                            </div>
+                        </div>
+                        <div class="vis-resultado">
+                            <p class="vis-muted">Unidades del movimiento: <strong id="visUnidadesHU22HU23">0</strong>. <span class="vis-solo-salida">Salida sin destino.</span></p>
+                            <div class="vis-tabla-scroll">
+                                <table aria-label="Previsualización de existencias del movimiento">
+                                    <thead id="visCabeceraHU22HU23"></thead>
+                                    <tbody id="visFilasHU22HU23"></tbody>
+                                </table>
+                            </div>
+                            <p class="vis-detalle" id="visDetalleHU22HU23">Los saldos se verifican nuevamente al registrar.</p>
+                        </div>
+                    </section>
+
                     <!-- ==============================================
                          RESUMEN DE ENTRADA
                     =============================================== -->
@@ -1595,6 +1666,23 @@ header('Expires: 0');
     <script src="../js/app.js"></script>
 
     <script src="../js/movimientos.js"></script>
+    <!-- Solo lectura: paneles de Salida y Traslado (HU-22/HU-23) -->
+    <script src="../js/movimientos-visual.js?v=20261029-integrado"></script>
+
+    <!-- Solo muestra el enlace de conteo en el movimiento Ajuste. -->
+    <style>#botonAccesoConteoFisico[hidden]{display:none!important}</style>
+    <script>
+    (() => {
+        const tipo = document.getElementById('tipoMovimiento');
+        const enlace = document.getElementById('botonAccesoConteoFisico');
+        if (!tipo || !enlace) return;
+        const actualizar = () => { enlace.hidden = tipo.value !== 'ajuste'; };
+        tipo.addEventListener('change', actualizar);
+        document.getElementById('formularioMovimientoInventario')?.addEventListener('reset',
+            () => setTimeout(actualizar, 0));
+        actualizar();
+    })();
+    </script>
 
 
 </body>
