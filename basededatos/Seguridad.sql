@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.usuario (
     correo VARCHAR(150) NOT NULL UNIQUE,
 
     password_hash TEXT NOT NULL,
+    debe_cambiar_contrasena BOOLEAN NOT NULL DEFAULT FALSE,
 
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     ultimo_acceso TIMESTAMPTZ,

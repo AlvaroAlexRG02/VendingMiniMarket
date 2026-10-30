@@ -82,7 +82,7 @@
 
             <a href="../compras/compras.php">
                 <i class="fa-solid fa-cart-shopping"></i>
-                Compras
+                Pedidos
             </a>
 
             <a href="../ventas/ventas.html">
@@ -241,8 +241,8 @@
                     <h1>Alertas</h1>
 
                     <p>
-                        Consulta avisos de inventario, ventas,
-                        cierres de caja e importaciones pendientes.
+                        Alertas activas de stock bajo, agotado o negativo
+                        según las existencias registradas.
                     </p>
 
                 </div>
@@ -287,7 +287,7 @@
                         <div>
 
                             <div class="tarjeta-estadistica-titulo">
-                                Total de alertas
+                                Alertas activas
                             </div>
 
                             <div
@@ -302,7 +302,7 @@
                     </div>
 
                     <div class="tarjeta-estadistica-cambio">
-                        Avisos registrados
+                        Productos y ubicaciones que requieren atención
                     </div>
 
                 </article>
@@ -318,7 +318,7 @@
                         <div>
 
                             <div class="tarjeta-estadistica-titulo">
-                                Alertas críticas
+                                Stock cero o negativo
                             </div>
 
                             <div
@@ -333,7 +333,7 @@
                     </div>
 
                     <div class="tarjeta-estadistica-cambio">
-                        Requieren atención inmediata
+                        Prioridad inmediata
                     </div>
 
                 </article>
@@ -349,7 +349,7 @@
                         <div>
 
                             <div class="tarjeta-estadistica-titulo">
-                                Alertas pendientes
+                                Stock bajo
                             </div>
 
                             <div
@@ -364,38 +364,7 @@
                     </div>
 
                     <div class="tarjeta-estadistica-cambio">
-                        Avisos sin atender
-                    </div>
-
-                </article>
-
-                <article class="tarjeta-estadistica borde-verde">
-
-                    <div class="tarjeta-estadistica-encabezado">
-
-                        <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </div>
-
-                        <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Alertas atendidas
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="alertasAtendidas"
-                            >
-                                0
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        Avisos revisados
+                        Por debajo del stock mínimo configurado
                     </div>
 
                 </article>
@@ -412,22 +381,13 @@
 
                     <div>
 
-                        <h2>Alertas del sistema</h2>
+                        <h2>Alertas activas de inventario</h2>
 
                         <p class="descripcion-panel">
-                            Revisa los eventos que requieren atención.
+                            Las alertas se actualizan con las existencias actuales.
                         </p>
 
                     </div>
-
-                    <button
-                        type="button"
-                        id="botonMarcarTodasAlertas"
-                        class="boton boton-borde"
-                    >
-                        <i class="fa-solid fa-check-double"></i>
-                        Marcar todas como atendidas
-                    </button>
 
                 </div>
 
@@ -443,13 +403,13 @@
                             for="buscarAlerta"
                             class="texto-solo-lectores"
                         >
-                            Buscar alerta
+                            Buscar producto
                         </label>
 
                         <input
                             type="search"
                             id="buscarAlerta"
-                            placeholder="Buscar por producto, tienda o descripción..."
+                            placeholder="Filtrar por producto..."
                             autocomplete="off"
                         >
 
@@ -458,33 +418,25 @@
                     <div class="selector-filtro">
 
                         <label for="filtroTipoAlerta">
-                            Tipo
+                            Nivel de stock
                         </label>
 
                         <select id="filtroTipoAlerta">
 
                             <option value="">
-                                Todos los tipos
+                                Todos los niveles
                             </option>
 
-                            <option value="Inventario">
-                                Inventario
+                            <option value="negativo">
+                                Stock negativo
                             </option>
 
-                            <option value="Venta">
-                                Venta
+                            <option value="cero">
+                                Stock en cero
                             </option>
 
-                            <option value="Cierre de caja">
-                                Cierre de caja
-                            </option>
-
-                            <option value="Nayax">
-                                Nayax
-                            </option>
-
-                            <option value="Movimiento">
-                                Movimiento
+                            <option value="bajo">
+                                Stock bajo
                             </option>
 
                         </select>
@@ -493,30 +445,38 @@
 
                     <div class="selector-filtro">
 
-                        <label for="filtroPrioridadAlerta">
-                            Prioridad
+                        <label for="filtroEstadoAlerta">
+                            Estado
                         </label>
 
-                        <select id="filtroPrioridadAlerta">
+                        <select id="filtroEstadoAlerta">
 
                             <option value="">
-                                Todas las prioridades
+                                Alertas activas
                             </option>
 
-                            <option value="Crítica">
-                                Crítica
+                            <option value="TODAS">
+                                Todos los estados
                             </option>
 
-                            <option value="Alta">
-                                Alta
+                            <option value="PENDIENTE">
+                                Pendiente
                             </option>
 
-                            <option value="Media">
-                                Media
+                            <option value="ATENDIDA">
+                                Atendida
                             </option>
 
-                            <option value="Baja">
-                                Baja
+                            <option value="CERRADA">
+                                Cerrada
+                            </option>
+
+                            <option value="DESCARTADA">
+                                Descartada
+                            </option>
+
+                            <option value="RESUELTA">
+                                Resuelta
                             </option>
 
                         </select>
@@ -533,42 +493,6 @@
 
                             <option value="">
                                 Todas las tiendas
-                            </option>
-
-                            <option value="Ultrapark 1">
-                                Ultrapark 1
-                            </option>
-
-                            <option value="Ultrapark 2">
-                                Ultrapark 2
-                            </option>
-
-                            <option value="Ultralag">
-                                Ultralag
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <div class="selector-filtro">
-
-                        <label for="filtroEstadoAlerta">
-                            Estado
-                        </label>
-
-                        <select id="filtroEstadoAlerta">
-
-                            <option value="">
-                                Todos los estados
-                            </option>
-
-                            <option value="Pendiente">
-                                Pendiente
-                            </option>
-
-                            <option value="Atendida">
-                                Atendida
                             </option>
 
                         </select>
@@ -612,12 +536,11 @@
                     <i class="fa-regular fa-bell-slash"></i>
 
                     <h3>
-                        No hay alertas registradas
+                        No hay alertas activas
                     </h3>
 
                     <p>
-                        Los avisos del sistema aparecerán aquí
-                        cuando exista una situación que requiera atención.
+                        No hay productos con stock bajo, cero o negativo.
                     </p>
 
                 </div>
@@ -646,6 +569,82 @@
 
         </main>
 
+    </div>
+
+    <div
+        class="modal-producto"
+        id="modalGestionAlerta"
+        hidden
+    >
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-alerta
+        ></div>
+
+        <div
+            class="modal-gestion-alerta-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloGestionAlerta"
+        >
+            <form id="formularioGestionAlerta">
+                <input type="hidden" id="idAlertaGestion">
+
+                <h2 id="tituloGestionAlerta">Gestionar alerta</h2>
+                <p>La gestión se registrará con el usuario y la fecha del sistema.</p>
+
+                <input type="hidden" id="accionGestionAlerta">
+
+                <div id="grupoEvidenciaGestionAlerta">
+                    <label for="evidenciaGestionAlerta">Evidencia (URL, referencia o descripción)</label>
+                    <input
+                        type="text"
+                        id="evidenciaGestionAlerta"
+                        maxlength="1000"
+                        required
+                    >
+                </div>
+
+                <div id="grupoObservacionesGestionAlerta">
+                    <label for="observacionesGestionAlerta">Observaciones</label>
+                    <textarea
+                        id="observacionesGestionAlerta"
+                        maxlength="1000"
+                        rows="3"
+                        required
+                    ></textarea>
+                </div>
+
+                <div id="grupoJustificacionGestionAlerta" hidden>
+                    <label for="justificacionGestionAlerta">Justificación</label>
+                    <textarea
+                        id="justificacionGestionAlerta"
+                        maxlength="1000"
+                        rows="3"
+                    ></textarea>
+                </div>
+
+                <div
+                    id="mensajeGestionAlerta"
+                    class="mensaje-producto"
+                    aria-live="polite"
+                    hidden
+                ></div>
+
+                <div class="acciones-modal-gestion-alerta">
+                    <button
+                        type="button"
+                        id="botonCancelarGestionAlerta"
+                        class="boton boton-borde"
+                    >
+                        Cancelar
+                    </button>
+                    <button type="submit" class="boton boton-azul">
+                        Guardar gestión
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="../js/app.js"></script>

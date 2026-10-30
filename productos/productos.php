@@ -118,7 +118,7 @@ $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 
                 <i class="fa-solid fa-cart-shopping"></i>
 
-                Compras
+                Pedidos
 
             </a>
 

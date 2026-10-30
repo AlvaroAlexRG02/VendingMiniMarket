@@ -121,7 +121,7 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
            class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
            <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-cart-shopping"></i>
-            Compras
+            Pedidos
         </a>
 
         <a href="/VendingMiniMarket/ventas/ventas.html"
@@ -862,7 +862,7 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
 
                     <div class="grupo-formulario">
 
-                        <label for="contrasenaUsuario">
+                        <label id="etiquetaContrasenaUsuario" for="contrasenaUsuario">
                             Contraseña
                         </label>
 

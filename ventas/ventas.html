@@ -94,7 +94,7 @@
            class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
            <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-cart-shopping"></i>
-            Compras
+            Pedidos
         </a>
 
         <a href="/VendingMiniMarket/ventas/ventas.html"
@@ -505,18 +505,6 @@
                                 Todas las tiendas
                             </option>
 
-                            <option value="Ultrapark 1">
-                                Ultrapark 1
-                            </option>
-
-                            <option value="Ultrapark 2">
-                                Ultrapark 2
-                            </option>
-
-                            <option value="Ultralag">
-                                Ultralag
-                            </option>
-
                         </select>
 
                     </div>
@@ -784,18 +772,6 @@
                                 Seleccione una tienda
                             </option>
 
-                            <option value="Ultrapark 1">
-                                Ultrapark 1
-                            </option>
-
-                            <option value="Ultrapark 2">
-                                Ultrapark 2
-                            </option>
-
-                            <option value="Ultralag">
-                                Ultralag
-                            </option>
-
                         </select>
 
                     </div>
@@ -830,36 +806,22 @@
 
                     </div>
 
-                    <!-- Producto -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="productoVenta">
-                            Producto
-                        </label>
-
-                        <select
+                    <div class="grupo-formulario campo-completo">
+                        <label for="productoVenta">Buscar o escanear producto</label>
+                        <input
+                            type="search"
                             id="productoVenta"
                             name="productoVenta"
-                            required
+                            list="productosDisponiblesVenta"
+                            placeholder="Nombre o código de barras"
+                            autocomplete="off"
                         >
-
-                            <option value="">
-                                Seleccione un producto
-                            </option>
-
-                        </select>
-
+                        <datalist id="productosDisponiblesVenta"></datalist>
+                        <span id="ubicacionPredeterminadaVenta" class="descripcion-panel"></span>
                     </div>
 
-                    <!-- Cantidad -->
-
                     <div class="grupo-formulario">
-
-                        <label for="cantidadVenta">
-                            Cantidad
-                        </label>
-
+                        <label for="cantidadVenta">Cantidad</label>
                         <input
                             type="number"
                             id="cantidadVenta"
@@ -867,47 +829,32 @@
                             min="1"
                             step="1"
                             value="1"
-                            required
                         >
-
                     </div>
 
-                    <!-- Precio -->
-
                     <div class="grupo-formulario">
-
-                        <label for="precioUnitarioVenta">
-                            Precio unitario
-                        </label>
-
-                        <input
-                            type="number"
-                            id="precioUnitarioVenta"
-                            name="precioUnitarioVenta"
-                            min="0"
-                            step="0.01"
-                            readonly
-                        >
-
+                        <label>&nbsp;</label>
+                        <button type="button" id="botonAgregarProductoVenta" class="boton boton-borde">
+                            <i class="fa-solid fa-cart-plus"></i>
+                            Agregar producto
+                        </button>
                     </div>
 
-                    <!-- Impuesto -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="impuestoVenta">
-                            Impuesto
-                        </label>
-
-                        <input
-                            type="number"
-                            id="impuestoVenta"
-                            name="impuestoVenta"
-                            min="0"
-                            step="0.01"
-                            readonly
-                        >
-
+                    <div class="grupo-formulario campo-completo">
+                        <div class="contenedor-tabla">
+                            <table class="tabla-datos tabla-carrito-venta">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Producto</th>
+                                        <th scope="col">Cantidad</th>
+                                        <th scope="col">Precio unitario</th>
+                                        <th scope="col">Total con impuesto</th>
+                                        <th scope="col">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoCarritoVenta"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Referencia SINPE -->
@@ -1080,18 +1027,6 @@
 
                             <option value="">
                                 Seleccione una tienda
-                            </option>
-
-                            <option value="Ultrapark 1">
-                                Ultrapark 1
-                            </option>
-
-                            <option value="Ultrapark 2">
-                                Ultrapark 2
-                            </option>
-
-                            <option value="Ultralag">
-                                Ultralag
                             </option>
 
                         </select>

@@ -20,9 +20,9 @@ $nombreUsuario = trim(
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
-$puedeRevisarFactura = esAdministrador() || esEncargado();
-$puedeValidarFactura = esAdministrador();
-$puedeAnularFactura = esAdministrador();
+$puedeRevisarFactura = esAdministrador() || esGerenteGeneral() || esEncargado();
+$puedeValidarFactura = esAdministrador() || esGerenteGeneral();
+$puedeAnularFactura = esAdministrador() || esGerenteGeneral();
 $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
 ?>
@@ -122,7 +122,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
            class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
            <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
             <i class="fa-solid fa-cart-shopping"></i>
-            Compras
+            Pedidos
         </a>
 
         <a href="/VendingMiniMarket/ventas/ventas.html"
@@ -283,7 +283,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-file-circle-plus"></i>
-                        Nuevo pedido
+                        Sección de Pedidos
                     </a>
 
                     <?php if ($puedeExportarHistorial): ?>
@@ -302,7 +302,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                         class="boton boton-azul"
                     >
                         <i class="fa-solid fa-file-invoice"></i>
-                        Nueva factura
+                        Sección de Facturas
                     </a>
 
                 </div>

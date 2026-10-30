@@ -69,24 +69,24 @@ function exigirSesion(): array
     return $_SESSION['usuario'];
 }
 
-/** HU-32: Dependiente, Encargado o Administrador pueden registrar una recepción. */
+/** HU-32: Dependiente, Encargado, Gerente General o Administrador pueden registrar una recepción. */
 function exigirPuedeRegistrarRecepcion(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado() && !esDependiente()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado() && !esDependiente()) {
         respuesta(false, null, 'No tiene permisos para registrar recepciones.', 403);
     }
 
     return $usuario;
 }
 
-/** HU-32: solo Encargado o Administrador finalizan (confirman) una recepción. */
+/** HU-32: Encargado, Gerente General o Administrador finalizan (confirman) una recepción. */
 function exigirPuedeConfirmarRecepcion(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
         respuesta(false, null, 'No tiene permisos para confirmar recepciones.', 403);
     }
 
@@ -226,9 +226,31 @@ function pedidoDetallePendiente(int $idPedido): array
     $detalle = [];
     foreach ($st->fetchAll() as $fila) {
         $detalle[(int)$fila['id_producto']] = [
-            'cantidad_solicitada' => (int)$fila['cantidad_solicitada'],
-            'cantidad_recibida'   => (int)$fila['cantidad_recibida'],
+            'cantidad_solicitada'          => (int)$fila['cantidad_solicitada'],
+            'cantidad_recibida'            => (int)$fila['cantidad_recibida'],
+            'cantidad_reservada_pendiente' => 0,
         ];
+    }
+
+    // Cantidades ya reclamadas por recepciones registradas pero todavía sin
+    // confirmar (movimiento_inventario en estado PENDIENTE). Deben restarse
+    // también: de lo contrario, si existen varias recepciones pendientes de
+    // confirmar al mismo tiempo para el mismo pedido, se podría recibir más
+    // de lo solicitado en cuanto un Encargado/Administrador las confirme todas.
+    $reservado = db()->prepare("
+        SELECT dm.id_producto, SUM(dm.cantidad) AS total
+        FROM detalle_movimiento dm
+        JOIN movimiento_inventario m ON m.id_movimiento = dm.id_movimiento
+        WHERE m.id_pedido = :id AND m.tipo_movimiento = 'ENTRADA' AND m.estado = 'PENDIENTE'
+        GROUP BY dm.id_producto
+    ");
+    $reservado->execute([':id' => $idPedido]);
+
+    foreach ($reservado->fetchAll() as $fila) {
+        $idProducto = (int)$fila['id_producto'];
+        if (isset($detalle[$idProducto])) {
+            $detalle[$idProducto]['cantidad_reservada_pendiente'] = (int)$fila['total'];
+        }
     }
 
     return $detalle;
@@ -298,7 +320,8 @@ function accionRegistrarRecepcion(array $in): void
     $pedido = obtenerPedidoParaRecepcion($idPedido);
     exigirOperarEnUbicacion(db(), (int)$pedido['id_tienda']);
 
-    $autoConfirmar = esAdministrador() || esEncargado();
+
+    $autoConfirmar = esAdministrador() || esGerenteGeneral() || esEncargado();
 
     $resultado = enTransaccion(function () use (
         $in,
@@ -653,7 +676,9 @@ function accionListarRecepcionesPendientes(array $in): void
             'PED-' || LPAD(m.id_pedido::text, 6, '0') AS numero_pedido,
             m.fecha_movimiento, m.observaciones,
             u.nombre AS registrado_por_nombre, u.apellido AS registrado_por_apellido,
-            prov.nombre AS proveedor_nombre, ubi.nombre AS ubicacion_nombre
+            prov.nombre AS proveedor_nombre, ubi.nombre AS ubicacion_nombre,
+            (SELECT COUNT(*) FROM detalle_movimiento dm WHERE dm.id_movimiento = m.id_movimiento) AS total_productos,
+            (SELECT COALESCE(SUM(dm.cantidad), 0) FROM detalle_movimiento dm WHERE dm.id_movimiento = m.id_movimiento) AS total_unidades
         FROM movimiento_inventario m
         JOIN usuario u ON u.id_usuario = m.id_usuario
         JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = m.id_ubicacion_destino

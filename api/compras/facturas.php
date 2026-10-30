@@ -69,36 +69,36 @@ function exigirPuedeCrearFactura(): array
     return exigirSesion();
 }
 
-/** HU-33: solo Encargado o Administrador validan (envían a revisión) una factura. */
+/** HU-33: Encargado, Gerente General o Administrador validan (envían a revisión) una factura. */
 function exigirPuedeRevisarFactura(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esEncargado()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
         respuesta(false, null, 'No tiene permisos para revisar facturas.', 403);
     }
 
     return $usuario;
 }
 
-/** HU-34: solo el Administrador aprueba o rechaza una factura en revisión. */
+/** HU-34: el Administrador o el Gerente General aprueban o rechazan una factura en revisión. */
 function exigirPuedeValidarFactura(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador()) {
+    if (!esAdministrador() && !esGerenteGeneral()) {
         respuesta(false, null, 'No tiene permisos para validar facturas.', 403);
     }
 
     return $usuario;
 }
 
-/** HU-36: solo el Administrador anula una factura (cancelación definitiva, con trazabilidad). */
+/** HU-36: el Administrador o el Gerente General anulan una factura (cancelación definitiva, con trazabilidad). */
 function exigirPuedeAnularFactura(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador()) {
+    if (!esAdministrador() && !esGerenteGeneral()) {
         respuesta(false, null, 'No tiene permisos para anular facturas.', 403);
     }
 
@@ -253,6 +253,10 @@ function leerItemsFactura(string $json): array
             respuesta(false, null, 'Hay productos con datos inválidos en la factura.', 400);
         }
 
+        if (isset($limpios[$idProducto])) {
+            respuesta(false, null, 'No se puede agregar el mismo producto dos veces en la factura.', 400);
+        }
+
         $limpios[$idProducto] = ['cantidad' => $cantidad, 'costo_unitario' => $costo];
     }
 
@@ -315,6 +319,26 @@ function accionCrearFactura(array $in): void
     }
 
     exigirOperarEnUbicacion(db(), (int)$ubicacion['id_tienda']);
+
+    // El pedido relacionado (si se indicó) no puede estar Pendiente ni Cancelado:
+    // una factura representa una compra que ya fue enviada/recibida por el proveedor.
+    if ($idPedido !== null) {
+        $pedido = db()->prepare('SELECT estado FROM pedido WHERE id_pedido = :id');
+        $pedido->execute([':id' => $idPedido]);
+        $estadoPedido = $pedido->fetchColumn();
+
+        if ($estadoPedido === false) {
+            respuesta(false, null, 'El pedido relacionado no existe.', 404);
+        }
+
+        if ($estadoPedido === 'PENDIENTE') {
+            respuesta(false, null, 'No se puede relacionar una factura con un pedido que aún está Pendiente.', 400);
+        }
+
+        if ($estadoPedido === 'CANCELADO') {
+            respuesta(false, null, 'No se puede relacionar una factura con un pedido Cancelado.', 400);
+        }
+    }
 
     // Impuesto activo, para calcular el monto.
     $impuesto = db()->prepare('SELECT porcentaje FROM impuesto WHERE id_impuesto = :id AND estado = TRUE');
@@ -488,7 +512,7 @@ function accionActualizarFactura(array $in): void
 
     $factura = obtenerFacturaParaEditar($idFactura);
 
-    $esRevisor = esAdministrador() || esEncargado();
+    $esRevisor = esAdministrador() || esGerenteGeneral() || esEncargado();
     $esCreador = (int)$usuario['id_usuario'] === (int)$factura['id_usuario_registra'];
 
     if (!$esRevisor && !$esCreador) {
@@ -697,7 +721,7 @@ function accionAprobarFactura(array $in): void
 
 function accionRechazarFactura(array $in): void
 {
-    $usuario = exigirPuedeRevisarFactura();
+    $usuario = exigirPuedeValidarFactura();
     exigirPost();
 
     $idFactura = (int)($in['id_factura'] ?? 0);
@@ -808,7 +832,10 @@ function accionListarPedidosDisponibles(array $in): void
     $usuario = exigirSesion();
     $idRol   = (int)($usuario['id_rol'] ?? 0);
 
-    $where  = ["ped.id_pedido NOT IN (SELECT id_pedido FROM factura_proveedor WHERE id_pedido IS NOT NULL)"];
+    $where  = [
+        "ped.id_pedido NOT IN (SELECT id_pedido FROM factura_proveedor WHERE id_pedido IS NOT NULL)",
+        "ped.estado NOT IN ('PENDIENTE', 'CANCELADO')"
+    ];
     $params = [];
 
     if (!in_array($idRol, [1, 2], true)) {

@@ -18,9 +18,9 @@ $nombreUsuario = trim(
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
-$puedeRevisarFactura = esAdministrador() || esEncargado();
-$puedeValidarFactura = esAdministrador();
-$puedeAnularFactura = esAdministrador();
+$puedeRevisarFactura = esAdministrador() || esGerenteGeneral() || esEncargado();
+$puedeValidarFactura = esAdministrador() || esGerenteGeneral();
+$puedeAnularFactura = esAdministrador() || esGerenteGeneral();
 $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
 ?>
@@ -108,7 +108,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                 class="activo"
             >
                 <i class="fa-solid fa-cart-shopping"></i>
-                Compras
+                Pedidos
             </a>
 
             <a href="../ventas/ventas.html">

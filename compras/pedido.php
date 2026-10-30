@@ -25,7 +25,8 @@ $nombreUsuario = trim(
     ($_SESSION["usuario"]["apellido"] ?? "")
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
-$puedeActualizarEstado = esAdministrador() || esEncargado();
+$puedeActualizarEstado = esAdministrador() || esGerenteGeneral() || esEncargado();
+$puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
 
 ?>
 
@@ -54,7 +55,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
     >
 </head>
 
-<body class="pagina-app" data-puede-actualizar-estado="<?= $puedeActualizarEstado ? '1' : '0' ?>">
+<body class="pagina-app" data-puede-actualizar-estado="<?= $puedeActualizarEstado ? '1' : '0' ?>" data-puede-editar-pedido="<?= $puedeEditarPedido ? '1' : '0' ?>">
 
     <!-- ==========================================
          BARRA LATERAL
@@ -112,7 +113,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                 class="activo"
             >
                 <i class="fa-solid fa-cart-shopping"></i>
-                Compras
+                Pedidos
             </a>
 
             <a href="../ventas/ventas.html">
@@ -350,7 +351,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                         <div>
 
                             <div class="tarjeta-estadistica-titulo">
-                                Requieren aprobación
+                                Por aprobar
                             </div>
 
                             <div
@@ -415,11 +416,12 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
 
                     <div>
 
-                        <h2>Recepciones pendientes de confirmar</h2>
+                        <h2>Entregas por confirmar</h2>
 
                         <p class="descripcion-panel">
-                            Registradas por un Dependiente; requieren tu
-                            confirmación para actualizar el inventario.
+                            Un empleado ya registró lo que llegó del proveedor.
+                            Revisa las cantidades y confirma para que se sumen
+                            al inventario de la tienda.
                         </p>
 
                     </div>
@@ -434,7 +436,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                     <table class="tabla-datos">
 
                         <caption class="texto-solo-lectores">
-                            Recepciones pendientes de confirmar
+                            Entregas por confirmar
                         </caption>
 
                         <thead>
@@ -443,7 +445,8 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                                 <th scope="col">Fecha</th>
                                 <th scope="col">Proveedor</th>
                                 <th scope="col">Tienda</th>
-                                <th scope="col">Registrado por</th>
+                                <th scope="col">Productos</th>
+                                <th scope="col">Quién lo registró</th>
                                 <th scope="col">Acciones</th>
                             </tr>
                         </thead>
@@ -469,11 +472,11 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
 
                     <div>
 
-                        <h2>Pedidos registrados</h2>
+                        <h2>Historial de pedidos</h2>
 
                         <p class="descripcion-panel">
-                            Consulta las solicitudes enviadas
-                            y su estado actual.
+                            Aquí puedes ver todos los pedidos que se han
+                            hecho a los proveedores y en qué estado está cada uno.
                         </p>
 
                     </div>
@@ -537,7 +540,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                             <option value="">Todos los estados</option>
                             <option value="PENDIENTE">Pendiente</option>
                             <option value="EN_CAMINO">En camino</option>
-                            <option value="PARCIAL">Parcial</option>
+                            <option value="PARCIAL">Recibido parcial</option>
                             <option value="RECIBIDO">Recibido</option>
                             <option value="CANCELADO">Cancelado</option>
 
@@ -584,7 +587,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                     <table class="tabla-datos tabla-pedidos">
 
                         <caption class="texto-solo-lectores">
-                            Pedidos registrados
+                            Historial de pedidos
                         </caption>
 
                         <thead>
@@ -620,7 +623,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                     <i class="fa-solid fa-file-circle-xmark"></i>
 
                     <h3>
-                        No hay pedidos registrados
+                        Todavía no hay pedidos
                     </h3>
 
                     <p>
@@ -984,6 +987,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
 
                     <button
                         type="submit"
+                        id="botonGuardarRecepcion"
                         class="boton boton-azul"
                     >
                         <i class="fa-solid fa-truck-ramp-box"></i>
@@ -1065,7 +1069,7 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                 </div>
 
                 <div class="grupo-formulario">
-                    <label for="registradoPorVerRecepcion">Registrado por</label>
+                    <label for="registradoPorVerRecepcion">Quién lo registró</label>
                     <input type="text" id="registradoPorVerRecepcion" disabled>
                 </div>
 
@@ -1107,6 +1111,119 @@ $puedeActualizarEstado = esAdministrador() || esEncargado();
                 >
                     <i class="fa-solid fa-check"></i>
                     Confirmar recepción
+                </button>
+
+            </div>
+
+        </section>
+
+    </div>
+
+    <!-- ==========================================
+         MODAL: VER PEDIDO (HU-31)
+    =========================================== -->
+
+    <div
+        id="modalVerPedido"
+        class="modal-producto"
+        hidden
+    >
+
+        <div
+            class="modal-producto-fondo"
+            data-cerrar-modal-ver-pedido
+        ></div>
+
+        <section
+            class="modal-producto-contenido modal-pedido-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalVerPedido"
+        >
+
+            <div class="encabezado-modal-venta">
+
+                <div>
+
+                    <h2 id="tituloModalVerPedido">
+                        Detalle del pedido
+                    </h2>
+
+                    <p>
+                        Información completa de la solicitud enviada al proveedor.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="botonCerrarModalVerPedido"
+                    class="boton-cerrar-modal"
+                    aria-label="Cerrar"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+            <div class="cuadricula-formulario">
+
+                <div class="grupo-formulario">
+                    <label for="numeroVerPedido">Pedido</label>
+                    <input type="text" id="numeroVerPedido" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="proveedorVerPedido">Proveedor</label>
+                    <input type="text" id="proveedorVerPedido" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="ubicacionVerPedido">Tienda</label>
+                    <input type="text" id="ubicacionVerPedido" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="solicitaVerPedido">Solicitado por</label>
+                    <input type="text" id="solicitaVerPedido" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="fechaVerPedido">Fecha</label>
+                    <input type="text" id="fechaVerPedido" disabled>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="estadoVerPedido">Estado</label>
+                    <input type="text" id="estadoVerPedido" disabled>
+                </div>
+
+            </div>
+
+            <div class="seccion-productos-compra">
+                <div class="encabezado-productos-compra">
+                    <div>
+                        <h3>Productos solicitados</h3>
+                    </div>
+                </div>
+                <div id="listaProductosVerPedido" class="lista-productos-compra"></div>
+            </div>
+
+            <div class="grupo-formulario">
+                <label for="observacionesVerPedido">Observaciones</label>
+                <textarea id="observacionesVerPedido" rows="3" disabled></textarea>
+            </div>
+
+            <p id="totalVerPedido" class="total-estimado-pedido"></p>
+
+            <div class="acciones-modal-producto">
+
+                <button
+                    type="button"
+                    id="botonCerrarVerPedido"
+                    class="boton boton-borde"
+                >
+                    Cerrar
                 </button>
 
             </div>

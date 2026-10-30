@@ -15,6 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaUsuariosVending();
     inicializarPaginaAlertasVending();
     inicializarPaginaReportesVending();
+    inicializarResumenInventarioVending();
+    inicializarCambioContrasenaInicialVending();
 });
 
 function inicializarNavegacionLateral() {
@@ -87,7 +89,7 @@ function inicializarNavegacionLateral() {
             rutasActivas: ["inventario/inventario.php", "inventario/movimientos.html"]
         },
         {
-            nombre: "Compras",
+            nombre: "Pedidos",
             ruta: "compras/compras.php",
             icono: "fa-cart-shopping",
             rutasActivas: [
@@ -1463,7 +1465,8 @@ function inicializarPaginaVentas() {
     inicializarCierreCaja();
     inicializarFiltrosVentas();
 
-    cargarProductosEnVenta();
+    cargarTiendasVenta();
+    cargarVentasServidor();
     mostrarVentas();
     establecerFechaCierreActual();
 }
@@ -1720,16 +1723,92 @@ function obtenerVentasGuardadas() {
             ) || "[]"
         );
 
-        return Array.isArray(datos)
-            ? datos
-            : [];
+        return [
+            ...ventasServidor,
+            ...(Array.isArray(datos) ? datos : [])
+        ];
     } catch (error) {
         console.error(
             "No se pudieron leer las ventas:",
             error
         );
 
-        return [];
+        return ventasServidor;
+    }
+}
+
+let ventasServidor = [];
+let productosVenta = [];
+let carritoVenta = [];
+
+async function solicitarApiVentas(accion, opciones = {}) {
+    const [nombreAccion, parametros] = accion.split("&", 2);
+    const query = `accion=${encodeURIComponent(nombreAccion)}` +
+        (parametros ? `&${parametros}` : "");
+    const respuesta = await fetch(
+        `../api/ventas/ventas.php?${query}`,
+        {
+            credentials: "same-origin",
+            cache: "no-store",
+            ...opciones
+        }
+    );
+    const resultado = await respuesta.json();
+
+    if (!respuesta.ok || !resultado.success) {
+        throw new Error(resultado.message || "No fue posible completar la operación.");
+    }
+
+    return resultado.data;
+}
+
+async function cargarTiendasVenta() {
+    try {
+        const tiendas = await solicitarApiVentas("tiendas");
+        const selectores = [
+            document.getElementById("tiendaVenta"),
+            document.getElementById("filtroTiendaVenta")
+        ];
+
+        selectores.forEach((selector) => {
+            if (!selector) {
+                return;
+            }
+
+            const opcionInicial = selector.options[0];
+            selector.replaceChildren(opcionInicial);
+
+            tiendas.forEach((tienda) => {
+                const opcion = document.createElement("option");
+                opcion.value = String(tienda.id_tienda);
+                opcion.textContent = tienda.nombre;
+                selector.appendChild(opcion);
+            });
+        });
+
+        const tiendasCierre = document.getElementById("tiendaCierreCaja");
+        if (tiendasCierre) {
+            const opcionInicial = tiendasCierre.options[0];
+            tiendasCierre.replaceChildren(opcionInicial);
+            tiendas.forEach((tienda) => {
+                const opcion = document.createElement("option");
+                opcion.value = tienda.nombre;
+                opcion.textContent = tienda.nombre;
+                tiendasCierre.appendChild(opcion);
+            });
+        }
+    } catch (error) {
+        mostrarMensajeVentas(error.message, "error");
+    }
+}
+
+async function cargarVentasServidor() {
+    try {
+        ventasServidor = await solicitarApiVentas("listar");
+        mostrarVentas();
+        actualizarCantidadImportacionesPendientes();
+    } catch (error) {
+        mostrarMensajeVentas(error.message, "error");
     }
 }
 
@@ -1805,11 +1884,14 @@ function inicializarRegistroVenta() {
         );
     });
 
-    document.getElementById(
-        "productoVenta"
-    )?.addEventListener(
-        "change",
-        actualizarProductoSeleccionadoVenta
+    document.getElementById("productoVenta")?.addEventListener(
+        "keydown",
+        (evento) => {
+            if (evento.key === "Enter") {
+                evento.preventDefault();
+                agregarProductoCarritoVenta();
+            }
+        }
     );
 
     document.getElementById(
@@ -1817,6 +1899,16 @@ function inicializarRegistroVenta() {
     )?.addEventListener(
         "input",
         calcularFormularioVenta
+    );
+
+    document.getElementById("botonAgregarProductoVenta")?.addEventListener(
+        "click",
+        agregarProductoCarritoVenta
+    );
+
+    document.getElementById("tiendaVenta")?.addEventListener(
+        "change",
+        cargarProductosEnVenta
     );
 
     document.getElementById(
@@ -1843,17 +1935,13 @@ function abrirModalVenta() {
         return;
     }
 
-    cargarProductosEnVenta();
-
     modal.hidden = false;
 
     document.body.classList.add(
         "modal-producto-abierto"
     );
 
-    document.getElementById(
-        "tiendaVenta"
-    )?.focus();
+    document.getElementById("tiendaVenta")?.focus();
 }
 
 function cerrarModalVenta() {
@@ -1875,6 +1963,14 @@ function cerrarModalVenta() {
         "formularioVenta"
     )?.reset();
 
+    carritoVenta = [];
+    renderizarCarritoVenta();
+    productosVenta = [];
+    const listado = document.getElementById("productosDisponiblesVenta");
+    if (listado) {
+        listado.replaceChildren();
+    }
+
     document.getElementById(
         "grupoReferenciaSinpe"
     ).hidden = true;
@@ -1887,133 +1983,165 @@ function cerrarModalVenta() {
     limpiarMensajeFormularioVenta();
 }
 
-function cargarProductosEnVenta() {
-    const selector = document.getElementById(
-        "productoVenta"
-    );
+async function cargarProductosEnVenta() {
+    const idTienda = document.getElementById("tiendaVenta")?.value;
+    const listado = document.getElementById("productosDisponiblesVenta");
+    const ubicacion = document.getElementById("ubicacionPredeterminadaVenta");
 
-    if (!selector) {
+    productosVenta = [];
+    carritoVenta = [];
+    renderizarCarritoVenta();
+    listado?.replaceChildren();
+
+    if (!idTienda) {
+        if (ubicacion) {
+            ubicacion.textContent = "";
+        }
         return;
     }
 
-    const productos = obtenerProductosGuardados().filter(
-        (producto) =>
-            producto.estado !== "Inactivo" &&
-            Number(producto.stock) > 0
-    );
+    try {
+        const resultado = await solicitarApiVentas(
+            `productos&id_tienda=${encodeURIComponent(idTienda)}`
+        );
+        productosVenta = resultado.productos;
 
-    selector.innerHTML = `
-        <option value="">
-            Seleccione un producto
-        </option>
-    `;
+        productosVenta.forEach((producto) => {
+            const opcion = document.createElement("option");
+            opcion.value = producto.nombre;
+            opcion.label = [
+                producto.codigo_barras,
+                producto.codigo_articulo_retail,
+                `Stock: ${producto.stock}`
+            ].filter(Boolean).join(" · ");
+            listado?.appendChild(opcion);
+        });
 
-    productos.forEach((producto) => {
-        const opcion = document.createElement("option");
-
-        opcion.value = producto.id;
-
-        opcion.textContent =
-            `${producto.nombre} - Stock: ${producto.stock}`;
-
-        selector.appendChild(opcion);
-    });
+        if (ubicacion) {
+            ubicacion.textContent =
+                `Inventario: ${resultado.ubicacion.nombre}`;
+        }
+    } catch (error) {
+        if (ubicacion) {
+            ubicacion.textContent = "";
+        }
+        mostrarMensajeFormularioVenta(error.message, "error");
+    }
 }
 
-function actualizarProductoSeleccionadoVenta() {
-    const selector = document.getElementById(
-        "productoVenta"
-    );
-
-    const precioCampo = document.getElementById(
-        "precioUnitarioVenta"
-    );
-
-    const impuestoCampo = document.getElementById(
-        "impuestoVenta"
-    );
-
-    if (
-        !selector ||
-        !precioCampo ||
-        !impuestoCampo
-    ) {
-        return;
+function buscarProductoVenta(valor) {
+    const busqueda = normalizarTexto(valor);
+    if (!busqueda) {
+        return null;
     }
 
-    const producto = obtenerProductosGuardados().find(
-        (elemento) =>
-            elemento.id === selector.value
+    const porCodigo = productosVenta.find((producto) =>
+        [producto.codigo_barras, producto.codigo_articulo_retail]
+            .some((codigo) => codigo && String(codigo).trim() === String(valor).trim())
     );
+
+    return porCodigo || productosVenta.find(
+        (producto) => normalizarTexto(producto.nombre) === busqueda
+    );
+}
+
+function agregarProductoCarritoVenta() {
+    const entrada = document.getElementById("productoVenta");
+    const cantidadCampo = document.getElementById("cantidadVenta");
+    const cantidad = Number(cantidadCampo?.value);
+    const producto = buscarProductoVenta(entrada?.value || "");
 
     if (!producto) {
-        precioCampo.value = "";
-        impuestoCampo.value = "";
-        limpiarTotalesFormularioVenta();
+        mostrarMensajeFormularioVenta(
+            "Busque un producto activo con precio configurado para esta tienda.",
+            "error"
+        );
         return;
     }
 
-    precioCampo.value =
-        Number(producto.precioVenta) || 0;
+    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+        mostrarMensajeFormularioVenta("La cantidad debe ser un entero mayor que cero.", "error");
+        return;
+    }
 
-    impuestoCampo.value =
-        Number(producto.impuesto) || 0;
+    const existente = carritoVenta.find(
+        (item) => item.id_producto === producto.id_producto
+    );
+    const cantidadNueva = cantidad + (existente?.cantidad || 0);
+
+    if (cantidadNueva > producto.stock) {
+        mostrarMensajeFormularioVenta(
+            `Existencias insuficientes para ${producto.nombre}. Disponible: ${producto.stock}.`,
+            "error"
+        );
+        return;
+    }
+
+    if (existente) {
+        existente.cantidad = cantidadNueva;
+    } else {
+        carritoVenta.push({ ...producto, cantidad });
+    }
+
+    entrada.value = "";
+    cantidadCampo.value = "1";
+    limpiarMensajeFormularioVenta();
+    renderizarCarritoVenta();
+}
+
+function renderizarCarritoVenta() {
+    const cuerpo = document.getElementById("cuerpoCarritoVenta");
+    if (!cuerpo) {
+        return;
+    }
+
+    cuerpo.replaceChildren();
+    carritoVenta.forEach((producto) => {
+        const fila = document.createElement("tr");
+        const subtotal = Number(producto.precio_venta) * producto.cantidad;
+        const total = subtotal * (1 + Number(producto.impuesto_porcentaje) / 100);
+        const valores = [
+            producto.nombre,
+            String(producto.cantidad),
+            formatearMonedaCRC(producto.precio_venta),
+            formatearMonedaCRC(total)
+        ];
+
+        valores.forEach((valor) => {
+            const celda = document.createElement("td");
+            celda.textContent = valor;
+            fila.appendChild(celda);
+        });
+
+        const celdaAccion = document.createElement("td");
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "boton-accion-producto";
+        boton.setAttribute("aria-label", `Quitar ${producto.nombre}`);
+        boton.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        boton.addEventListener("click", () => {
+            carritoVenta = carritoVenta.filter(
+                (item) => item.id_producto !== producto.id_producto
+            );
+            renderizarCarritoVenta();
+        });
+        celdaAccion.appendChild(boton);
+        fila.appendChild(celdaAccion);
+        cuerpo.appendChild(fila);
+    });
 
     calcularFormularioVenta();
 }
 
 function obtenerCalculoVenta() {
-    const productoId = document.getElementById(
-        "productoVenta"
-    )?.value;
-
-    const cantidad = Number(
-        document.getElementById(
-            "cantidadVenta"
-        )?.value
-    );
-
-    const producto = obtenerProductosGuardados().find(
-        (elemento) =>
-            elemento.id === productoId
-    );
-
-    if (
-        !producto ||
-        !Number.isInteger(cantidad) ||
-        cantidad <= 0
-    ) {
-        return {
-            producto: null,
-            cantidad: 0,
-            subtotal: 0,
-            impuestoMonto: 0,
-            total: 0
-        };
-    }
-
-    const precioUnitario =
-        Number(producto.precioVenta) || 0;
-
-    const porcentajeImpuesto =
-        Number(producto.impuesto) || 0;
-
-    const subtotal =
-        precioUnitario * cantidad;
-
-    const impuestoMonto =
-        subtotal *
-        (porcentajeImpuesto / 100);
-
-    return {
-        producto,
-        cantidad,
-        precioUnitario,
-        porcentajeImpuesto,
-        subtotal,
-        impuestoMonto,
-        total: subtotal + impuestoMonto
-    };
+    return carritoVenta.reduce((resumen, producto) => {
+        const subtotal = Number(producto.precio_venta) * producto.cantidad;
+        const total = subtotal * (1 + Number(producto.impuesto_porcentaje) / 100);
+        resumen.subtotal += subtotal;
+        resumen.total += total;
+        resumen.impuestoMonto += total - subtotal;
+        return resumen;
+    }, { subtotal: 0, impuestoMonto: 0, total: 0 });
 }
 
 function calcularFormularioVenta() {
@@ -2026,10 +2154,7 @@ function calcularFormularioVenta() {
 
     document.getElementById(
         "impuestoFormularioVenta"
-    ).textContent =
-        formatearMonedaCRC(
-            calculo.impuestoMonto
-        );
+    ).textContent = formatearMonedaCRC(calculo.impuestoMonto);
 
     document.getElementById(
         "totalFormularioVenta"
@@ -2086,10 +2211,10 @@ function actualizarCampoSinpe() {
     }
 }
 
-function registrarVentaManual(evento) {
+async function registrarVentaManual(evento) {
     evento.preventDefault();
 
-    const tienda = document.getElementById(
+    const idTienda = document.getElementById(
         "tiendaVenta"
     )?.value;
 
@@ -2105,27 +2230,13 @@ function registrarVentaManual(evento) {
         "observacionesVenta"
     )?.value.trim();
 
-    const calculo = obtenerCalculoVenta();
-
     if (
-        !tienda ||
+        !idTienda ||
         !metodoPago ||
-        !calculo.producto
+        carritoVenta.length === 0
     ) {
         mostrarMensajeFormularioVenta(
-            "Complete todos los campos obligatorios.",
-            "error"
-        );
-
-        return;
-    }
-
-    if (
-        calculo.cantidad >
-        Number(calculo.producto.stock)
-    ) {
-        mostrarMensajeFormularioVenta(
-            "La cantidad supera el stock disponible.",
+            "Seleccione una tienda, un método de pago y agregue productos.",
             "error"
         );
 
@@ -2144,51 +2255,45 @@ function registrarVentaManual(evento) {
         return;
     }
 
-    const venta = {
-        id: generarIdVenta(),
-        numero: generarNumeroVenta(),
-        fecha: new Date().toISOString(),
-        tienda,
-        origen: "Manual",
-        metodoPago,
-        referenciaSinpe:
-            metodoPago === "SINPE"
-                ? referenciaSinpe
-                : "",
-        productoId: calculo.producto.id,
-        productoNombre:
-            calculo.producto.nombre,
-        cantidad: calculo.cantidad,
-        precioUnitario:
-            calculo.precioUnitario,
-        subtotal: calculo.subtotal,
-        impuesto: calculo.impuestoMonto,
-        total: calculo.total,
-        estado: "Confirmada",
-        usuario: "Administrador",
-        observaciones: observaciones || ""
-    };
-
-    const ventas = obtenerVentasGuardadas();
-
-    ventas.push(venta);
-
-    if (!guardarVentas(ventas)) {
-        mostrarMensajeFormularioVenta(
-            "No fue posible guardar la venta.",
-            "error"
-        );
-
-        return;
+    const formulario = document.getElementById("formularioVenta");
+    const botonConfirmar = formulario?.querySelector('[type="submit"]');
+    if (botonConfirmar) {
+        botonConfirmar.disabled = true;
     }
 
-    cerrarModalVenta();
-    mostrarVentas();
+    try {
+        const venta = await solicitarApiVentas("registrar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id_tienda: Number(idTienda),
+                metodo_pago: metodoPago,
+                referencia_sinpe: metodoPago === "SINPE" ? referenciaSinpe : "",
+                observaciones: observaciones || "",
+                items: carritoVenta.map((item) => ({
+                    id_producto: item.id_producto,
+                    cantidad: item.cantidad
+                }))
+            })
+        });
 
-    mostrarMensajeVentas(
-        `La venta ${venta.numero} fue registrada correctamente.`,
-        "exito"
-    );
+        ventasServidor = [venta, ...ventasServidor];
+        cerrarModalVenta();
+        mostrarVentas();
+        mostrarMensajeVentas(
+            `La venta ${venta.numero} fue registrada correctamente.`,
+            "exito"
+        );
+    } catch (error) {
+        mostrarMensajeFormularioVenta(
+            error.message,
+            "error"
+        );
+    } finally {
+        if (botonConfirmar) {
+            botonConfirmar.disabled = false;
+        }
+    }
 }
 
 /*=========================================================
@@ -2328,16 +2433,7 @@ function crearFilaVenta(venta) {
         '<i class="fa-solid fa-eye"></i>';
 
     boton.addEventListener("click", () => {
-        window.alert(
-            [
-                `Venta: ${venta.numero}`,
-                `Producto: ${venta.productoNombre}`,
-                `Cantidad: ${venta.cantidad}`,
-                `Tienda: ${venta.tienda}`,
-                `Método: ${venta.metodoPago}`,
-                `Total: ${formatearMonedaCRC(venta.total)}`
-            ].join("\n")
-        );
+        mostrarDetalleVentaVending(venta);
     });
 
     celdaAcciones.appendChild(boton);
@@ -2419,12 +2515,15 @@ function filtrarVentas(ventas) {
     const estado = document.getElementById(
         "filtroEstadoVenta"
     )?.value;
+    const selectorTienda = document.getElementById("filtroTiendaVenta");
+    const nombreTienda = selectorTienda?.selectedOptions[0]?.textContent || "";
 
     return ventas.filter((venta) => {
         const texto = normalizarTexto(
             [
                 venta.numero,
-                venta.productoNombre,
+                venta.productoNombre ||
+                    (venta.productos || []).map((producto) => producto.nombre).join(" "),
                 venta.tienda,
                 venta.usuario
             ].join(" ")
@@ -2439,7 +2538,8 @@ function filtrarVentas(ventas) {
             (!desde || fecha >= desde) &&
             (!hasta || fecha <= hasta) &&
             (!tienda ||
-                venta.tienda === tienda) &&
+                String(venta.id_tienda || "") === tienda ||
+                (!venta.id_tienda && venta.tienda === nombreTienda)) &&
             (!origen ||
                 venta.origen === origen) &&
             (!metodo ||
@@ -2900,6 +3000,9 @@ async function procesarInicioSesionVending(evento) {
     const campoContrasena =
         document.getElementById("contrasena");
 
+    const campoRecordarme =
+        document.getElementById("recordarme");
+
     const mensaje =
         document.getElementById("mensajeLogin");
 
@@ -2942,7 +3045,8 @@ async function procesarInicioSesionVending(evento) {
                 },
                 body: JSON.stringify({
                     correo: correo,
-                    contrasena: contrasena
+                    contrasena: contrasena,
+                    recordarme: campoRecordarme?.checked || false
                 })
             }
         );
@@ -2969,8 +3073,9 @@ async function procesarInicioSesionVending(evento) {
          * la sesión en localStorage.
          */
 
-        window.location.href =
-            "../dashboard/dashboard.php";
+        window.location.href = resultado.debe_cambiar_contrasena
+            ? "cambiar-contrasena.php"
+            : "../dashboard/dashboard.php";
 
     } catch (error) {
 
@@ -2990,6 +3095,69 @@ async function procesarInicioSesionVending(evento) {
             botonIngresar.disabled = false;
         }
     }
+}
+
+function inicializarCambioContrasenaInicialVending() {
+    const formulario = document.getElementById("formularioCambioContrasenaInicial");
+    if (!formulario) return;
+
+    formulario.addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const boton = formulario.querySelector('button[type="submit"]');
+        const mensaje = document.getElementById("mensajeCambioContrasenaInicial");
+        const datos = {
+            contrasena_actual: document.getElementById("contrasenaActualInicial").value,
+            contrasena_nueva: document.getElementById("contrasenaNuevaInicial").value,
+            confirmar_contrasena: document.getElementById("confirmarContrasenaInicial").value
+        };
+        if (mensaje) mensaje.textContent = "";
+        boton.disabled = true;
+
+        try {
+            const respuesta = await fetch("../api/auth/cambiar_contrasena_inicial.php", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(datos)
+            });
+            const resultado = await respuesta.json();
+            if (!respuesta.ok || !resultado.exito) {
+                throw new Error(resultado.mensaje || "No fue posible actualizar la contraseña.");
+            }
+            if (mensaje) mensaje.textContent = resultado.mensaje;
+            formulario.reset();
+            window.setTimeout(() => {
+                window.location.href = "../dashboard/dashboard.php";
+            }, 900);
+        } catch (error) {
+            if (mensaje) mensaje.textContent = error.message;
+        } finally {
+            boton.disabled = false;
+        }
+    });
+
+    document.getElementById("botonCerrarSesionCambioInicial")
+        ?.addEventListener("click", async (evento) => {
+            evento.preventDefault();
+            try {
+                const respuesta = await fetch("../api/auth/logout.php", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { Accept: "application/json" }
+                });
+                const resultado = await respuesta.json();
+                if (!respuesta.ok || !resultado.exito) {
+                    throw new Error(resultado.mensaje || "No fue posible cerrar sesión.");
+                }
+                window.location.href = "index.html";
+            } catch (error) {
+                const mensaje = document.getElementById("mensajeCambioContrasenaInicial");
+                if (mensaje) mensaje.textContent = error.message;
+            }
+        });
 }
 
 
@@ -3065,6 +3233,270 @@ function mostrarModalConfirmarCerrarSesionVending() {
 
         modal.hidden = false;
     });
+}
+
+
+/*=========================================================
+  POPUPS GENÉRICOS CON EL ESTILO DE VENDING
+  (reemplazan a los window.alert()/confirm() nativos del
+  navegador, que rompen el estilo visual de la aplicación)
+=========================================================*/
+
+function confirmarVending({
+    titulo = "Confirmar acción",
+    mensaje = "¿Deseas continuar?",
+    icono = "fa-solid fa-circle-question",
+    textoConfirmar = "Confirmar",
+    textoCancelar = "Cancelar",
+    claseBotonConfirmar = "boton-azul"
+} = {}) {
+
+    return new Promise((resolve) => {
+
+        let modal = document.getElementById("modalConfirmacionVending");
+
+        if (!modal) {
+
+            modal = document.createElement("div");
+            modal.id = "modalConfirmacionVending";
+            modal.className = "modal-producto";
+            modal.hidden = true;
+
+            modal.innerHTML = `
+                <div class="modal-producto-fondo" data-cerrar-modal-confirmacion-vending></div>
+
+                <section
+                    class="modal-producto-contenido"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="tituloModalConfirmacionVending"
+                >
+
+                    <div class="modal-producto-icono" id="iconoModalConfirmacionVending">
+                        <i></i>
+                    </div>
+
+                    <h2 id="tituloModalConfirmacionVending"></h2>
+
+                    <p id="mensajeModalConfirmacionVending"></p>
+
+                    <div class="acciones-modal-producto">
+
+                        <button
+                            type="button"
+                            id="botonCancelarConfirmacionVending"
+                            class="boton boton-borde"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="button"
+                            id="botonConfirmarConfirmacionVending"
+                            class="boton boton-azul"
+                        >
+                            Confirmar
+                        </button>
+
+                    </div>
+
+                </section>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        modal.querySelector("#iconoModalConfirmacionVending i").className = icono;
+        modal.querySelector("#tituloModalConfirmacionVending").textContent = titulo;
+        modal.querySelector("#mensajeModalConfirmacionVending").textContent = mensaje;
+
+        const botonCancelar = modal.querySelector("#botonCancelarConfirmacionVending");
+        const botonConfirmar = modal.querySelector("#botonConfirmarConfirmacionVending");
+
+        botonCancelar.textContent = textoCancelar;
+        botonConfirmar.textContent = textoConfirmar;
+        botonConfirmar.className = `boton ${claseBotonConfirmar}`;
+
+        const cerrar = (resultado) => {
+            modal.hidden = true;
+            resolve(resultado);
+        };
+
+        modal.querySelector("[data-cerrar-modal-confirmacion-vending]").onclick = () => cerrar(false);
+        botonCancelar.onclick = () => cerrar(false);
+        botonConfirmar.onclick = () => cerrar(true);
+
+        modal.hidden = false;
+    });
+}
+
+function mostrarAlertaVending({
+    titulo = "Aviso",
+    mensaje = "",
+    icono = "fa-solid fa-circle-info"
+} = {}) {
+
+    return new Promise((resolve) => {
+
+        let modal = document.getElementById("modalAlertaVending");
+
+        if (!modal) {
+
+            modal = document.createElement("div");
+            modal.id = "modalAlertaVending";
+            modal.className = "modal-producto";
+            modal.hidden = true;
+
+            modal.innerHTML = `
+                <div class="modal-producto-fondo" data-cerrar-modal-alerta-vending></div>
+
+                <section
+                    class="modal-producto-contenido"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="tituloModalAlertaVending"
+                >
+
+                    <div class="modal-producto-icono" id="iconoModalAlertaVending">
+                        <i></i>
+                    </div>
+
+                    <h2 id="tituloModalAlertaVending"></h2>
+
+                    <p id="mensajeModalAlertaVending"></p>
+
+                    <div class="acciones-modal-producto">
+
+                        <button
+                            type="button"
+                            id="botonAceptarAlertaVending"
+                            class="boton boton-azul"
+                        >
+                            Entendido
+                        </button>
+
+                    </div>
+
+                </section>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        modal.querySelector("#iconoModalAlertaVending i").className = icono;
+        modal.querySelector("#tituloModalAlertaVending").textContent = titulo;
+        modal.querySelector("#mensajeModalAlertaVending").textContent = mensaje;
+
+        const cerrar = () => {
+            modal.hidden = true;
+            resolve();
+        };
+
+        modal.querySelector("[data-cerrar-modal-alerta-vending]").onclick = cerrar;
+        modal.querySelector("#botonAceptarAlertaVending").onclick = cerrar;
+
+        modal.hidden = false;
+    });
+}
+
+function mostrarDetalleVentaVending(venta) {
+
+    let modal = document.getElementById("modalDetalleVentaVending");
+
+    if (!modal) {
+
+        modal = document.createElement("div");
+        modal.id = "modalDetalleVentaVending";
+        modal.className = "modal-producto";
+        modal.hidden = true;
+
+        modal.innerHTML = `
+            <div class="modal-producto-fondo" data-cerrar-modal-detalle-venta-vending></div>
+
+            <section
+                class="modal-producto-contenido modal-pedido-contenido"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tituloModalDetalleVentaVending"
+            >
+
+                <div class="encabezado-modal-venta">
+
+                    <div>
+                        <h2 id="tituloModalDetalleVentaVending">Detalle de venta</h2>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="boton-cerrar-modal"
+                        data-cerrar-modal-detalle-venta-vending
+                        aria-label="Cerrar"
+                    >
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+
+                </div>
+
+                <div class="cuadricula-formulario" id="datosModalDetalleVentaVending"></div>
+
+                <div class="seccion-productos-compra">
+                    <div class="encabezado-productos-compra">
+                        <div><h3>Productos</h3></div>
+                    </div>
+                    <div id="listaProductosModalDetalleVentaVending" class="lista-productos-compra"></div>
+                </div>
+
+                <div class="acciones-modal-producto">
+                    <button
+                        type="button"
+                        class="boton boton-azul"
+                        data-cerrar-modal-detalle-venta-vending
+                    >
+                        Cerrar
+                    </button>
+                </div>
+
+            </section>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.querySelectorAll("[data-cerrar-modal-detalle-venta-vending]").forEach((el) => {
+            el.addEventListener("click", () => { modal.hidden = true; });
+        });
+    }
+
+    const campo = (etiqueta, valor) => `
+        <div class="grupo-formulario">
+            <label>${etiqueta}</label>
+            <input type="text" value="${valor}" readonly>
+        </div>
+    `;
+
+    modal.querySelector("#datosModalDetalleVentaVending").innerHTML =
+        campo("Venta", venta.numero || "-") +
+        campo("Tienda", venta.tienda || "-") +
+        campo("Método de pago", venta.metodoPago || "-") +
+        campo("Total", formatearMonedaCRC(venta.total));
+
+    const productos = Array.isArray(venta.productos)
+        ? venta.productos
+        : [{ cantidad: venta.cantidad || 0, nombre: venta.productoNombre || "Producto" }];
+
+    modal.querySelector("#listaProductosModalDetalleVentaVending").innerHTML = productos.map((producto) => `
+        <div class="fila-producto-compra">
+            <div class="grupo-formulario">
+                <label>Producto</label>
+                <input type="text" value="${producto.nombre}" readonly>
+            </div>
+            <div class="grupo-formulario">
+                <label>Cantidad</label>
+                <input type="text" value="${producto.cantidad}" readonly>
+            </div>
+        </div>
+    `).join("");
+
+    modal.hidden = false;
 }
 
 async function cerrarSesionVending(evento) {
@@ -3857,6 +4289,7 @@ function inicializarDashboardVending() {
         ?.addEventListener("change", mostrarDashboardVending);
 
     mostrarDashboardVending();
+    cargarAlertasDashboardVending();
 }
 
 function mostrarDashboardVending() {
@@ -3890,12 +4323,6 @@ function mostrarDashboardVending() {
 
     const valores = {
         totalProductosDashboard: productosFiltrados.length,
-        totalStockCriticoDashboard: productosFiltrados.filter(
-            (producto) =>
-                ["critico", "stock-bajo", "agotado"].includes(
-                    obtenerEstadoStockVending(producto).valor
-                )
-        ).length,
         totalVentasDashboard: formatearMonedaCRC(
             ventasFiltradas.reduce(
                 (total, venta) => total + Number(venta.total || 0),
@@ -3911,7 +4338,6 @@ function mostrarDashboardVending() {
     });
 
     mostrarMovimientosDashboardVending(movimientosFiltrados);
-    mostrarAlertasDashboardVending(productosFiltrados);
 }
 
 function mostrarMovimientosDashboardVending(movimientos) {
@@ -3965,19 +4391,16 @@ function mostrarMovimientosDashboardVending(movimientos) {
     });
 }
 
-function mostrarAlertasDashboardVending(productos) {
+function mostrarAlertasDashboardVending(alertas) {
     const lista = document.getElementById("listaAlertasDashboard");
 
     if (!lista) {
         return;
     }
 
-    const alertas = productos.filter(
-        (producto) =>
-            obtenerEstadoStockVending(producto).valor !== "normal"
-    );
-
     lista.innerHTML = "";
+    const contador = document.getElementById("totalStockCriticoDashboard");
+    if (contador) contador.textContent = alertas.length;
 
     if (alertas.length === 0) {
         const vacio = document.createElement("div");
@@ -3987,38 +4410,112 @@ function mostrarAlertasDashboardVending(productos) {
         icono.className = "fa-regular fa-bell";
 
         const titulo = document.createElement("strong");
-        titulo.textContent = "No hay alertas registradas";
+        titulo.textContent = "No hay alertas de inventario activas";
 
         const texto = document.createElement("span");
-        texto.textContent = "Las alertas del sistema aparecerán aquí.";
+        texto.textContent = "El stock se encuentra por encima de los mínimos configurados.";
 
         vacio.append(icono, titulo, texto);
         lista.appendChild(vacio);
     } else {
-        alertas.slice(0, 6).forEach((producto) => {
-            const alerta = document.createElement("div");
-            alerta.className = "alerta-dashboard";
-            alerta.textContent =
-                `${producto.nombre}: ${obtenerEstadoStockVending(producto).texto} (${producto.stock} unidades)`;
-            lista.appendChild(alerta);
+        alertas.slice(0, 6).forEach((datoAlerta) => {
+            const tarjeta = document.createElement("div");
+            tarjeta.className = "alerta-dashboard";
+            const titulo = document.createElement("strong");
+            titulo.textContent = `${datoAlerta.producto} · ${datoAlerta.tipo_alerta}`;
+            const detalle = document.createElement("span");
+            detalle.textContent =
+                `${datoAlerta.tienda} / ${datoAlerta.ubicacion}: ${datoAlerta.stock_actual} disponibles (mínimo ${datoAlerta.stock_minimo})`;
+            tarjeta.append(titulo, detalle);
+            lista.appendChild(tarjeta);
         });
     }
 }
 
-function actualizarContadoresNotificacionVending() {
-    const cantidad = obtenerProductosGuardados().filter(
-        (producto) =>
-            obtenerEstadoStockVending(producto).valor !== "normal"
-    ).length;
+async function cargarAlertasDashboardVending() {
+    try {
+        const alertas = await obtenerAlertasInventarioVending();
+        mostrarAlertasDashboardVending(alertas);
+        actualizarContadoresNotificacionVending(alertas);
+    } catch (error) {
+        console.error("No se pudieron cargar las alertas del dashboard:", error);
+        const lista = document.getElementById("listaAlertasDashboard");
+        if (lista) lista.textContent = "No fue posible cargar las alertas de inventario.";
+    }
+}
 
-    document.querySelectorAll(".boton-notificacion .contador")
-        .forEach((elemento) => {
-            elemento.textContent = cantidad;
-            elemento.setAttribute(
-                "aria-label",
-                `${cantidad} notificaciones`
-            );
+let alertasInventarioMostradas = [];
+let promesaAlertasInventarioVending = null;
+let secuenciaCargaAlertasVending = 0;
+
+async function obtenerAlertasInventarioVending() {
+    if (!promesaAlertasInventarioVending) {
+        const parametros = new URLSearchParams({ accion: "listar", estado: "ACTIVAS" });
+        promesaAlertasInventarioVending = fetch(urlApiAlertasInventarioVending(parametros), {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" }
+        }).then(async (respuesta) => {
+            const resultado = await respuesta.json();
+            if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+                throw new Error(resultado.message || "No fue posible consultar las alertas.");
+            }
+            return resultado.data;
+        }).catch((error) => {
+            promesaAlertasInventarioVending = null;
+            throw error;
         });
+    }
+    return promesaAlertasInventarioVending;
+}
+
+function invalidarAlertasInventarioVending() {
+    promesaAlertasInventarioVending = null;
+}
+
+function urlApiAlertasInventarioVending(parametros = new URLSearchParams()) {
+    const scriptAplicacion = Array.from(document.scripts).find((script) => {
+        return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+    });
+    if (!scriptAplicacion) {
+        throw new Error("No se pudo determinar la ruta de la API de alertas.");
+    }
+
+    const urlApi = new URL("../api/inventario/alertas.php", scriptAplicacion.src);
+    urlApi.search = parametros.toString();
+    return urlApi;
+}
+
+async function solicitarApiAlertasInventarioVending(accion, datos = {}) {
+    const respuesta = await fetch(urlApiAlertasInventarioVending(), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ...datos, accion })
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success) {
+        throw new Error(resultado.message || "No fue posible guardar la gestión de alerta.");
+    }
+    return resultado.data;
+}
+
+function actualizarContadoresNotificacionVending(alertas) {
+    const contadores = document.querySelectorAll(".boton-notificacion .contador");
+    if (contadores.length === 0) return;
+
+    if (!alertas) {
+        obtenerAlertasInventarioVending()
+            .then(actualizarContadoresNotificacionVending)
+            .catch((error) => console.error("No se pudieron actualizar las alertas:", error));
+        return;
+    }
+    contadores.forEach((elemento) => {
+        elemento.textContent = alertas.length;
+        elemento.setAttribute("aria-label", `${alertas.length} alertas de inventario`);
+    });
 }
 
 
@@ -4027,7 +4524,6 @@ function actualizarContadoresNotificacionVending() {
   PEDIDOS Y FACTURAS
 =========================================================*/
 
-const CLAVE_ALERTAS_VENDING = "alertasVending";
 const CLAVE_COMPRAS_VENDING = "comprasVending";
 const CLAVE_PEDIDOS_VENDING = "pedidosVending";
 const CLAVE_FACTURAS_VENDING = "facturasVending";
@@ -4184,6 +4680,10 @@ async function prepararFormularioUsuarioVending(id = "") {
     // Si es un usuario nuevo
     if (!id) {
 
+        textoVending(
+            "etiquetaContrasenaUsuario",
+            "Contraseña temporal (deberá cambiarla al iniciar sesión)"
+        );
         document.getElementById("contrasenaUsuario").required = true;
         document.getElementById("confirmarContrasenaUsuario").required = true;
 
@@ -4242,6 +4742,7 @@ async function prepararFormularioUsuarioVending(id = "") {
                 : "Inactivo";
 
         // Al editar, la contraseña no es obligatoria.
+        textoVending("etiquetaContrasenaUsuario", "Nueva contraseña (opcional)");
         document.getElementById("contrasenaUsuario").required = false;
 
         document.getElementById("confirmarContrasenaUsuario").required = false;
@@ -4480,9 +4981,11 @@ async function cambiarEstadoUsuarioVending(id) {
         return;
     }
 
-    const confirmar = confirm(
-        "¿Desea cambiar el estado de este usuario?"
-    );
+    const confirmar = await confirmarVending({
+        titulo: "Cambiar estado",
+        mensaje: "¿Desea cambiar el estado de este usuario?",
+        icono: "fa-solid fa-user-pen"
+    });
 
     if (!confirmar) {
         return;
@@ -4820,31 +5323,337 @@ async function renderUsuariosVending() {
 }
 
 /* ALERTAS */
-function obtenerAlertasVending(){
-    const guardadas=leerListaVending(CLAVE_ALERTAS_VENDING); const mapa=new Map(guardadas.map(a=>[a.id,a]));
-    obtenerProductosGuardados().forEach(p=>{
-        const estado=obtenerEstadoStockVending(p); if(estado.valor==="normal")return;
-        const id=`stock-${p.id||p.codigo}`; mapa.set(id,{...(mapa.get(id)||{}),id,tipo:"Inventario",prioridad:estado.valor==="agotado"?"Crítica":"Alta",titulo:estado.valor==="agotado"?"Producto agotado":"Stock bajo",descripcion:`${p.nombre} tiene ${Number(p.stock)||0} unidades disponibles.`,tienda:p.ubicacion||"Sin asignar",fecha:fechaHoyVending(),estado:mapa.get(id)?.estado||"Pendiente"});
+function prioridadAlertaInventarioVending(tipo) {
+    if (tipo === "negativo") return "Crítica";
+    if (tipo === "cero") return "Alta";
+    return "Media";
+}
+
+function inicializarPaginaAlertasVending() {
+    const lista = document.getElementById("listaAlertas");
+    if (!lista) return;
+
+    ["filtroTipoAlerta", "filtroEstadoAlerta", "filtroTiendaAlerta"]
+        .forEach((id) => document.getElementById(id)?.addEventListener("change", refrescarAlertasPaginaVending));
+    let temporizadorBusqueda;
+    document.getElementById("buscarAlerta")?.addEventListener("input", () => {
+        window.clearTimeout(temporizadorBusqueda);
+        temporizadorBusqueda = window.setTimeout(refrescarAlertasPaginaVending, 250);
     });
-    const lista=[...mapa.values()]; guardarListaVending(CLAVE_ALERTAS_VENDING,lista); return lista;
+
+    document.getElementById("botonActualizarAlertas")?.addEventListener("click", async () => {
+        const boton = document.getElementById("botonActualizarAlertas");
+        boton.disabled = true;
+        try {
+            invalidarAlertasInventarioVending();
+            await cargarAlertasPaginaVending();
+            mostrarMensajeModuloVending("mensajeAlertas", "Alertas actualizadas.");
+        } catch (error) {
+            console.error("No se pudieron actualizar las alertas:", error);
+            mostrarMensajeModuloVending("mensajeAlertas", error.message, "error");
+        } finally {
+            boton.disabled = false;
+        }
+    });
+
+    document.getElementById("botonLimpiarFiltrosAlertas")?.addEventListener("click", () => {
+        ["buscarAlerta", "filtroTipoAlerta", "filtroEstadoAlerta", "filtroTiendaAlerta"]
+            .forEach((id) => {
+                const campo = document.getElementById(id);
+                if (campo) campo.value = "";
+            });
+        refrescarAlertasPaginaVending();
+    });
+
+    document.getElementById("formularioGestionAlerta")?.addEventListener("submit", gestionarAlertaVending);
+    document.getElementById("botonCancelarGestionAlerta")?.addEventListener("click", () => cerrarModalVending("modalGestionAlerta"));
+    document.querySelector("[data-cerrar-modal-alerta]")?.addEventListener("click", () => cerrarModalVending("modalGestionAlerta"));
+    lista.addEventListener("click", manejarAccionListaAlertasVending);
+    lista.addEventListener("toggle", cargarHistorialAlertaVending, true);
+
+    cargarTiendasAlertaVending().catch((error) => {
+        console.error("No se pudieron cargar las tiendas de alertas:", error);
+        mostrarMensajeModuloVending("mensajeAlertas", error.message, "error");
+    });
+    refrescarAlertasPaginaVending();
 }
-function inicializarPaginaAlertasVending(){
-    if(!document.getElementById("listaAlertas"))return;
-    ["buscarAlerta","filtroTipoAlerta","filtroPrioridadAlerta","filtroTiendaAlerta","filtroEstadoAlerta"].forEach(id=>document.getElementById(id)?.addEventListener(id==="buscarAlerta"?"input":"change",renderAlertasVending));
-    document.getElementById("botonActualizarAlertas")?.addEventListener("click",()=>{renderAlertasVending();mostrarMensajeModuloVending("mensajeAlertas","Alertas actualizadas.");});
-    document.getElementById("botonMarcarTodasAlertas")?.addEventListener("click",()=>{const a=obtenerAlertasVending();a.forEach(x=>x.estado="Atendida");guardarListaVending(CLAVE_ALERTAS_VENDING,a);renderAlertasVending();});
-    document.getElementById("botonLimpiarFiltrosAlertas")?.addEventListener("click",()=>{["buscarAlerta","filtroTipoAlerta","filtroPrioridadAlerta","filtroTiendaAlerta","filtroEstadoAlerta"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});renderAlertasVending();});
-    document.getElementById("listaAlertas")?.addEventListener("click",e=>{const b=e.target.closest("button[data-alerta]");if(!b)return;const a=obtenerAlertasVending();const x=a.find(i=>i.id===b.dataset.alerta);if(x)x.estado=x.estado==="Atendida"?"Pendiente":"Atendida";guardarListaVending(CLAVE_ALERTAS_VENDING,a);renderAlertasVending();});
-    renderAlertasVending();
+
+async function cargarTiendasAlertaVending() {
+    const parametros = new URLSearchParams({ accion: "tiendas" });
+    const respuesta = await fetch(urlApiAlertasInventarioVending(parametros), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+        throw new Error(resultado.message || "No fue posible consultar las tiendas.");
+    }
+
+    const selector = document.getElementById("filtroTiendaAlerta");
+    selector.replaceChildren(new Option("Todas las tiendas", ""));
+    resultado.data.forEach((tienda) => {
+        selector.add(new Option(tienda.nombre, tienda.id_tienda));
+    });
 }
-function renderAlertasVending(){
-    const alertas=obtenerAlertasVending(); const q=normalizarTexto(document.getElementById("buscarAlerta")?.value||"");
-    const filtros=["Tipo","Prioridad","Tienda","Estado"].reduce((o,n)=>(o[n.toLowerCase()]=document.getElementById(`filtro${n}Alerta`)?.value||"",o),{});
-    const lista=alertas.filter(a=>(!q||normalizarTexto(`${a.titulo} ${a.descripcion} ${a.tienda}`).includes(q))&&(!filtros.tipo||a.tipo===filtros.tipo)&&(!filtros.prioridad||a.prioridad===filtros.prioridad)&&(!filtros.tienda||a.tienda===filtros.tienda)&&(!filtros.estado||a.estado===filtros.estado));
-    textoVending("totalAlertas",alertas.length);textoVending("alertasCriticas",alertas.filter(a=>a.prioridad==="Crítica").length);textoVending("alertasPendientes",alertas.filter(a=>a.estado!=="Atendida").length);textoVending("alertasAtendidas",alertas.filter(a=>a.estado==="Atendida").length);
-    document.getElementById("listaAlertas").innerHTML=lista.map(a=>`<article class="tarjeta-alerta alerta-${normalizarTexto(a.prioridad)} ${a.estado==="Atendida"?"alerta-atendida":""}"><div class="alerta-icono"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="alerta-contenido"><h3>${escaparHTMLVending(a.titulo)}</h3><p>${escaparHTMLVending(a.descripcion)}</p><div class="alerta-metadatos"><span>${escaparHTMLVending(a.tipo)}</span><span>${escaparHTMLVending(a.tienda)}</span><span>${escaparHTMLVending(a.fecha)}</span><span>${escaparHTMLVending(a.prioridad)}</span></div></div><div class="alerta-acciones"><button class="boton boton-borde boton-tabla" data-alerta="${a.id}">${a.estado==="Atendida"?"Reabrir":"Atender"}</button></div></article>`).join("");
-    mostrarElementoVending("mensajeSinAlertas",alertas.length===0);mostrarElementoVending("mensajeSinResultadosAlertas",alertas.length>0&&lista.length===0);textoVending("resultadoBusquedaAlertas",`${lista.length} resultado(s)`);
-    document.querySelectorAll(".boton-notificacion .contador").forEach(e=>e.textContent=alertas.filter(a=>a.estado!=="Atendida").length);
+
+function refrescarAlertasPaginaVending() {
+    cargarAlertasPaginaVending().catch((error) => {
+        console.error("No se pudieron cargar las alertas:", error);
+        mostrarMensajeModuloVending("mensajeAlertas", error.message, "error");
+    });
+}
+
+async function cargarAlertasPaginaVending() {
+    const secuenciaCarga = ++secuenciaCargaAlertasVending;
+    const filtros = {
+        producto: document.getElementById("buscarAlerta")?.value.trim() || "",
+        tipo: document.getElementById("filtroTipoAlerta")?.value || "",
+        estado: document.getElementById("filtroEstadoAlerta")?.value || "ACTIVAS",
+        tienda: document.getElementById("filtroTiendaAlerta")?.value || ""
+    };
+    if (!filtros.producto && !filtros.tipo && !filtros.tienda && filtros.estado === "ACTIVAS") {
+        const alertas = await obtenerAlertasInventarioVending();
+        if (secuenciaCarga !== secuenciaCargaAlertasVending) return alertas;
+        renderAlertasVending(alertas);
+        actualizarContadoresNotificacionVending(alertas);
+        return alertas;
+    }
+
+    const parametros = new URLSearchParams({ accion: "listar" });
+    Object.entries(filtros).forEach(([clave, valor]) => {
+        if (valor) parametros.set(clave, valor);
+    });
+
+    const respuesta = await fetch(urlApiAlertasInventarioVending(parametros), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+        throw new Error(resultado.message || "No fue posible consultar las alertas.");
+    }
+
+    if (secuenciaCarga !== secuenciaCargaAlertasVending) return resultado.data;
+    renderAlertasVending(resultado.data);
+    actualizarContadoresNotificacionVending(resultado.data);
+    return resultado.data;
+}
+
+function renderAlertasVending(alertas) {
+    const contenedor = document.getElementById("listaAlertas");
+    if (!contenedor) return;
+
+    alertasInventarioMostradas = alertas;
+    const todos = alertasInventarioMostradas;
+    textoVending("totalAlertas", todos.length);
+    textoVending("alertasCriticas", todos.filter((alerta) => ["negativo", "cero"].includes(alerta.tipo_alerta)).length);
+    textoVending("alertasPendientes", todos.filter((alerta) => alerta.tipo_alerta === "bajo").length);
+
+    contenedor.replaceChildren(...todos.map((alerta) => {
+        const prioridadAlerta = prioridadAlertaInventarioVending(alerta.tipo_alerta);
+        const tarjeta = document.createElement("article");
+        tarjeta.className = `tarjeta-alerta alerta-${normalizarTexto(prioridadAlerta)}`;
+        tarjeta.dataset.alerta = alerta.id_alerta;
+
+        const icono = document.createElement("div");
+        icono.className = "alerta-icono";
+        const imagen = document.createElement("i");
+        imagen.className = "fa-solid fa-triangle-exclamation";
+        icono.appendChild(imagen);
+
+        const contenido = document.createElement("div");
+        contenido.className = "alerta-contenido";
+        const encabezado = document.createElement("h3");
+        encabezado.textContent = alerta.producto;
+        const detalle = document.createElement("p");
+        detalle.textContent = `${alerta.tienda} / ${alerta.ubicacion} · Stock: ${alerta.stock_actual ?? "No disponible"} · Mínimo: ${alerta.stock_minimo ?? alerta.stock_minimo_generacion}`;
+        const metadatos = document.createElement("div");
+        metadatos.className = "alerta-metadatos";
+        [
+            `Stock ${alerta.tipo_alerta}`,
+            alerta.ultimo_tipo_movimiento
+                ? `Último movimiento: ${alerta.ultimo_tipo_movimiento} (${alerta.ultimo_estado_movimiento || "sin estado"})`
+                : "Sin movimientos registrados",
+            `Fecha del último movimiento: ${alerta.ultimo_movimiento ? formatearFechaHoraVenta(alerta.ultimo_movimiento) : "Fecha no disponible"}`,
+            `Generada: ${formatearFechaHoraVenta(alerta.fecha_generacion)}`,
+            `Estado: ${alerta.estado}`,
+            `Prioridad: ${prioridadAlerta}`
+        ].forEach((dato) => {
+            const elemento = document.createElement("span");
+            elemento.textContent = dato;
+            metadatos.appendChild(elemento);
+        });
+        contenido.append(encabezado, detalle, metadatos);
+
+        if (alerta.responsable || alerta.ultimas_observaciones || alerta.ultima_justificacion) {
+            const gestion = document.createElement("p");
+            gestion.className = "alerta-ultima-gestion";
+            gestion.textContent = [
+                alerta.ultima_accion ? `Última acción: ${alerta.ultima_accion}` : "",
+                alerta.responsable ? `Responsable: ${alerta.responsable}` : "",
+                alerta.fecha_ultima_gestion ? `Fecha: ${formatearFechaHoraVenta(alerta.fecha_ultima_gestion)}` : "",
+                alerta.ultimas_observaciones ? `Observaciones: ${alerta.ultimas_observaciones}` : "",
+                alerta.ultima_justificacion ? `Justificación: ${alerta.ultima_justificacion}` : "",
+                alerta.ultima_evidencia ? `Evidencia: ${alerta.ultima_evidencia}` : ""
+            ].filter(Boolean).join(" · ");
+            contenido.appendChild(gestion);
+        }
+
+        const acciones = document.createElement("div");
+        acciones.className = "alerta-acciones";
+        if (["PENDIENTE", "ATENDIDA"].includes(alerta.estado)) {
+            [
+                ["ATENDIDA", "Atender", "fa-check"],
+                ["CERRADA", "Cerrar", "fa-lock"],
+                ["DESCARTADA", "Descartar", "fa-ban"]
+            ].forEach(([estado, etiqueta, claseIcono]) => {
+                const boton = document.createElement("button");
+                boton.type = "button";
+                boton.className = "boton boton-borde boton-tabla";
+                boton.dataset.gestionAlerta = estado;
+                boton.dataset.idAlerta = alerta.id_alerta;
+                const iconoAccion = document.createElement("i");
+                iconoAccion.className = `fa-solid ${claseIcono}`;
+                boton.append(iconoAccion, document.createTextNode(` ${etiqueta}`));
+                acciones.appendChild(boton);
+            });
+        }
+        [
+            ["../compras/pedido.php", "Reabastecer", "fa-cart-plus"],
+            ["../inventario/inventario.php", "Inventario", "fa-clipboard-check"]
+        ].forEach(([url, etiqueta, claseIcono]) => {
+            const enlace = document.createElement("a");
+            enlace.className = "boton boton-borde boton-tabla";
+            enlace.href = url;
+            const iconoAccion = document.createElement("i");
+            iconoAccion.className = `fa-solid ${claseIcono}`;
+            enlace.append(iconoAccion, document.createTextNode(` ${etiqueta}`));
+            acciones.appendChild(enlace);
+        });
+
+        const historial = document.createElement("details");
+        historial.className = "alerta-historial";
+        const resumenHistorial = document.createElement("summary");
+        resumenHistorial.textContent = "Ver historial de gestión";
+        const cuerpoHistorial = document.createElement("div");
+        cuerpoHistorial.dataset.historialAlerta = alerta.id_alerta;
+        cuerpoHistorial.textContent = "Abre para consultar el historial.";
+        historial.append(resumenHistorial, cuerpoHistorial);
+
+        tarjeta.append(icono, contenido, acciones, historial);
+        return tarjeta;
+    }));
+
+    const estado = document.getElementById("filtroEstadoAlerta")?.value || "ACTIVAS";
+    const hayFiltros = Boolean(
+        document.getElementById("buscarAlerta")?.value.trim()
+        || document.getElementById("filtroTipoAlerta")?.value
+        || document.getElementById("filtroTiendaAlerta")?.value
+        || (estado && estado !== "ACTIVAS")
+    );
+    mostrarElementoVending("mensajeSinAlertas", todos.length === 0 && !hayFiltros);
+    mostrarElementoVending("mensajeSinResultadosAlertas", todos.length === 0 && hayFiltros);
+    textoVending("resultadoBusquedaAlertas", `Mostrando ${todos.length} alerta(s)`);
+}
+
+function actualizarCamposGestionAlertaVending() {
+    const accion = document.getElementById("accionGestionAlerta")?.value || "";
+    const requiereAtencion = accion === "ATENDIDA";
+    const evidencia = document.getElementById("evidenciaGestionAlerta");
+    const observaciones = document.getElementById("observacionesGestionAlerta");
+    const justificacion = document.getElementById("justificacionGestionAlerta");
+
+    document.getElementById("grupoEvidenciaGestionAlerta").hidden = !requiereAtencion;
+    document.getElementById("grupoObservacionesGestionAlerta").hidden = !requiereAtencion;
+    document.getElementById("grupoJustificacionGestionAlerta").hidden = requiereAtencion;
+    evidencia.required = requiereAtencion;
+    observaciones.required = requiereAtencion;
+    justificacion.required = !requiereAtencion;
+}
+
+function abrirGestionAlertaVending(idAlerta, accion) {
+    const formulario = document.getElementById("formularioGestionAlerta");
+    formulario.reset();
+    const mensaje = document.getElementById("mensajeGestionAlerta");
+    mensaje.hidden = true;
+    mensaje.textContent = "";
+    document.getElementById("idAlertaGestion").value = idAlerta;
+    document.getElementById("accionGestionAlerta").value = accion;
+    document.getElementById("tituloGestionAlerta").textContent =
+        accion === "ATENDIDA" ? "Atender alerta" : accion === "CERRADA" ? "Cerrar alerta" : "Descartar alerta";
+    actualizarCamposGestionAlertaVending();
+    abrirModalVending("modalGestionAlerta");
+}
+
+function manejarAccionListaAlertasVending(evento) {
+    const boton = evento.target.closest("button[data-gestion-alerta]");
+    if (boton) {
+        abrirGestionAlertaVending(boton.dataset.idAlerta, boton.dataset.gestionAlerta);
+    }
+}
+
+async function gestionarAlertaVending(evento) {
+    evento.preventDefault();
+    const formulario = evento.currentTarget;
+    const boton = formulario.querySelector('[type="submit"]');
+    boton.disabled = true;
+    try {
+        await solicitarApiAlertasInventarioVending("gestionar", {
+            id_alerta: Number(document.getElementById("idAlertaGestion").value),
+            estado: document.getElementById("accionGestionAlerta").value,
+            evidencia: document.getElementById("evidenciaGestionAlerta").value.trim(),
+            observaciones: document.getElementById("observacionesGestionAlerta").value.trim(),
+            justificacion: document.getElementById("justificacionGestionAlerta").value.trim()
+        });
+        invalidarAlertasInventarioVending();
+    } catch (error) {
+        console.error("No se pudo guardar la gestión de la alerta:", error);
+        mostrarMensajeModuloVending("mensajeGestionAlerta", error.message, "error");
+        boton.disabled = false;
+        return;
+    } finally {
+        boton.disabled = false;
+    }
+    cerrarModalVending("modalGestionAlerta");
+    mostrarMensajeModuloVending("mensajeAlertas", "Gestión de alerta registrada.");
+    refrescarAlertasPaginaVending();
+}
+
+async function cargarHistorialAlertaVending(evento) {
+    const detalles = evento.target;
+    if (!(detalles instanceof HTMLDetailsElement) || !detalles.open) return;
+    const contenedor = detalles.querySelector("[data-historial-alerta]");
+    if (!contenedor || contenedor.dataset.cargado === "true") return;
+
+    const parametros = new URLSearchParams({
+        accion: "historial",
+        id_alerta: contenedor.dataset.historialAlerta
+    });
+    try {
+        const respuesta = await fetch(urlApiAlertasInventarioVending(parametros), {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" }
+        });
+        const resultado = await respuesta.json();
+        if (!respuesta.ok || !resultado.success || !Array.isArray(resultado.data)) {
+            throw new Error(resultado.message || "No fue posible cargar el historial.");
+        }
+        contenedor.replaceChildren(...resultado.data.map((eventoGestion) => {
+            const registro = document.createElement("p");
+            registro.textContent = [
+                `${formatearFechaHoraVenta(eventoGestion.fecha)} · ${eventoGestion.accion}`,
+                eventoGestion.responsable ? `Responsable: ${eventoGestion.responsable}` : "Sistema",
+                eventoGestion.evidencia ? `Evidencia: ${eventoGestion.evidencia}` : "",
+                eventoGestion.observaciones ? `Observaciones: ${eventoGestion.observaciones}` : "",
+                eventoGestion.justificacion ? `Justificación: ${eventoGestion.justificacion}` : ""
+            ].filter(Boolean).join(" · ");
+            return registro;
+        }));
+        contenedor.dataset.cargado = "true";
+    } catch (error) {
+        console.error("No se pudo cargar el historial de la alerta:", error);
+        contenedor.textContent = error.message;
+    }
 }
 
 /* REPORTES */
@@ -4855,7 +5664,139 @@ function inicializarPaginaReportesVending(){
     document.getElementById("botonLimpiarReporte")?.addEventListener("click",()=>{form.reset();document.getElementById("fechaInicioReporte").value=fechaHoyVending();document.getElementById("fechaFinReporte").value=fechaHoyVending();});
     document.getElementById("botonImprimirReporte")?.addEventListener("click",()=>window.print());
     document.getElementById("botonExportarReporte")?.addEventListener("click",exportarReporteVending);
+    inicializarConciliacionVending();
 }
+
+function urlApiResumenInventarioVending() {
+    const scriptAplicacion = Array.from(document.scripts).find((script) => {
+        return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+    });
+    if (!scriptAplicacion) {
+        throw new Error("No se pudo determinar la ruta de la API del resumen.");
+    }
+    return new URL("../api/inventario/resumen.php", scriptAplicacion.src);
+}
+
+function mostrarMensajeResumenInventarioVending(mensaje, error = false) {
+    const contenedor = document.getElementById("mensajeResumenInventario");
+    if (!contenedor) return;
+    contenedor.hidden = !mensaje;
+    contenedor.textContent = mensaje;
+    contenedor.classList.toggle("mensaje-error", error);
+    contenedor.classList.toggle("mensaje-exito", !error && Boolean(mensaje));
+}
+
+function mostrarHistorialResumenInventarioVending(registros) {
+    const cuerpo = document.getElementById("historialResumenInventario");
+    if (!cuerpo) return;
+    if (!registros.length) {
+        const fila = document.createElement("tr");
+        const celda = document.createElement("td");
+        celda.colSpan = 6;
+        celda.textContent = "Todavía no hay ejecuciones registradas.";
+        fila.appendChild(celda);
+        cuerpo.replaceChildren(fila);
+        return;
+    }
+
+    cuerpo.replaceChildren(...registros.map((registro) => {
+        const fila = document.createElement("tr");
+        const valores = [
+            registro.fecha_ejecucion ? formatearFechaHoraVenta(registro.fecha_ejecucion) : "—",
+            `${registro.periodo_inicio} al ${registro.periodo_fin}`,
+            registro.responsable || "No disponible",
+            registro.correo_destino,
+            registro.estado_envio,
+            registro.error || "—"
+        ];
+        valores.forEach((valor) => {
+            const celda = document.createElement("td");
+            celda.textContent = valor;
+            fila.appendChild(celda);
+        });
+        return fila;
+    }));
+}
+
+async function cargarResumenInventarioVending() {
+    const respuesta = await fetch(`${urlApiResumenInventarioVending()}?accion=configuracion`, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+    });
+    const resultado = await respuesta.json();
+    if (!respuesta.ok || !resultado.success || !resultado.data?.configuracion) {
+        throw new Error(resultado.message || "No fue posible cargar la configuración del resumen.");
+    }
+
+    const config = resultado.data.configuracion;
+    document.getElementById("correoResumenInventario").value = config.correo_destino || "";
+    document.getElementById("frecuenciaResumenInventario").value = config.frecuencia || "DIARIA";
+    document.getElementById("diaResumenInventario").value = String(config.dia_semana || 1);
+    document.getElementById("horaResumenInventario").value = config.hora || "07:00";
+    document.getElementById("habilitadoResumenInventario").checked =
+        config.habilitado === true || config.habilitado === "t" || config.habilitado === "1";
+    actualizarDiaResumenInventarioVending();
+    document.getElementById("proximaEjecucionResumenInventario").textContent =
+        config.proxima_ejecucion
+            ? formatearFechaHoraVenta(config.proxima_ejecucion)
+            : "Sin programar";
+    mostrarHistorialResumenInventarioVending(resultado.data.historial || []);
+}
+
+function actualizarDiaResumenInventarioVending() {
+    const grupo = document.getElementById("grupoDiaResumenInventario");
+    const semanal = document.getElementById("frecuenciaResumenInventario")?.value === "SEMANAL";
+    if (grupo) grupo.hidden = !semanal;
+}
+
+function inicializarResumenInventarioVending() {
+    const formulario = document.getElementById("formularioResumenInventario");
+    if (!formulario) return;
+
+    document.getElementById("frecuenciaResumenInventario")
+        ?.addEventListener("change", actualizarDiaResumenInventarioVending);
+    formulario.addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const boton = formulario.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        mostrarMensajeResumenInventarioVending("");
+        const datos = {
+            habilitado: document.getElementById("habilitadoResumenInventario").checked,
+            frecuencia: document.getElementById("frecuenciaResumenInventario").value,
+            dia_semana: Number(document.getElementById("diaResumenInventario").value),
+            hora: document.getElementById("horaResumenInventario").value,
+            correo_destino: document.getElementById("correoResumenInventario").value.trim()
+        };
+        try {
+            const respuesta = await fetch(urlApiResumenInventarioVending(), {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ accion: "guardar", ...datos })
+            });
+            const resultado = await respuesta.json();
+            if (!respuesta.ok || !resultado.success) {
+                throw new Error(resultado.message || "No fue posible guardar la configuración.");
+            }
+            mostrarMensajeResumenInventarioVending(resultado.message || "Configuración guardada.");
+            await cargarResumenInventarioVending();
+        } catch (error) {
+            mostrarMensajeResumenInventarioVending(error.message, true);
+        } finally {
+            boton.disabled = false;
+        }
+    });
+
+    cargarResumenInventarioVending().catch((error) => {
+        console.error("No se pudo cargar el resumen periódico:", error);
+        mostrarMensajeResumenInventarioVending(error.message, true);
+        mostrarHistorialResumenInventarioVending([]);
+    });
+}
+
 function datosReporteVending(tipo){
     if(tipo==="Ventas")return leerListaVending("ventasVending"); if(tipo==="Inventario"||tipo==="Productos")return obtenerProductosGuardados();
     if(tipo==="Movimientos")return obtenerMovimientosVending(); if(tipo==="Compras")return leerListaVending(CLAVE_COMPRAS_VENDING); if(tipo==="Cierres de caja")return leerListaVending("cierresCajaVending"); return [];
@@ -4879,6 +5820,267 @@ function exportarReporteVending(){
     const blob=new Blob(["\ufeff"+filas.join("\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="reporte-vending.csv";a.click();URL.revokeObjectURL(a.href);
 }
 
+let resultadosConciliacionVending = [];
+let idConciliacionVending = null;
+
+function solicitarApiConciliacionVending(accion, opciones = {}) {
+    return fetch(`../api/ventas/conciliacion.php?accion=${encodeURIComponent(accion)}`, {
+        credentials: "same-origin",
+        cache: "no-store",
+        ...opciones
+    }).then(async respuesta => {
+        const resultado = await respuesta.json();
+        if (!respuesta.ok || !resultado.success) {
+            throw new Error(resultado.message || "No fue posible completar la conciliación.");
+        }
+        return resultado.data;
+    });
+}
+
+function inicializarConciliacionVending() {
+    const formulario = document.getElementById("formularioConciliacion");
+    if (!formulario) return;
+
+    const hoy = fechaHoyVending();
+    document.getElementById("fechaInicioConciliacion").value = hoy;
+    document.getElementById("fechaFinConciliacion").value = hoy;
+
+    solicitarApiConciliacionVending("tiendas")
+        .then(tiendas => {
+            const selector = document.getElementById("tiendaConciliacion");
+            tiendas.forEach(tienda => {
+                const opcion = document.createElement("option");
+                opcion.value = String(tienda.id_tienda);
+                opcion.textContent = tienda.nombre;
+                selector.appendChild(opcion);
+            });
+        })
+        .catch(error => mostrarMensajeConciliacionVending(error.message, "error"));
+
+    formulario.addEventListener("submit", generarConciliacionVending);
+    document.getElementById("botonExportarConciliacion")?.addEventListener(
+        "click",
+        exportarConciliacionVending
+    );
+    document.getElementById("cuerpoConciliacion").addEventListener(
+        "click",
+        manejarAccionConciliacionVending
+    );
+}
+
+async function generarConciliacionVending(evento) {
+    evento.preventDefault();
+    const formulario = document.getElementById("formularioConciliacion");
+    const boton = formulario.querySelector('[type="submit"]');
+    const fechaInicio = document.getElementById("fechaInicioConciliacion").value;
+    const fechaFin = document.getElementById("fechaFinConciliacion").value;
+
+    if (fechaInicio > fechaFin) {
+        mostrarMensajeConciliacionVending("La fecha inicial no puede ser posterior a la fecha final.", "error");
+        return;
+    }
+
+    boton.disabled = true;
+    try {
+        const resultado = await solicitarApiConciliacionVending("generar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                fecha_inicio: fechaInicio,
+                fecha_fin: fechaFin,
+                id_tienda: Number(document.getElementById("tiendaConciliacion").value || 0)
+            })
+        });
+        idConciliacionVending = resultado.id_conciliacion;
+        resultadosConciliacionVending = resultado.resultados;
+        renderizarConciliacionVending();
+        mostrarMensajeConciliacionVending(
+            `Conciliación ${resultado.id_conciliacion} guardada. Fuente: ${resultado.fuente}.`,
+            "exito"
+        );
+    } catch (error) {
+        mostrarMensajeConciliacionVending(error.message, "error");
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+function renderizarConciliacionVending() {
+    const cuerpo = document.getElementById("cuerpoConciliacion");
+    const contenedor = document.getElementById("contenedorConciliacion");
+    const vacio = document.getElementById("mensajeSinDatosConciliacion");
+    const resumen = document.getElementById("resumenConciliacion");
+    if (!cuerpo || !contenedor || !vacio || !resumen) return;
+
+    cuerpo.innerHTML = resultadosConciliacionVending.map(fila => {
+        const diferenciaStock = fila.diferencia_existencia === null
+            ? "Sin saldo registrado"
+            : String(fila.diferencia_existencia);
+        const utilidad = fila.utilidad_estimada === null ||
+            Number(fila.lineas_sin_costo) > 0
+            ? "Costo histórico no disponible"
+            : monedaVending(fila.utilidad_estimada);
+        const discrepancia = Number(fila.diferencia_venta_movimiento) !== 0 ||
+            Number(fila.diferencia_existencia || 0) !== 0;
+
+        return `<tr class="${discrepancia ? "fila-conciliacion-diferencia" : ""}">
+            <td>${escaparHTMLVending(fila.producto)}</td>
+            <td>${escaparHTMLVending(`${fila.tienda} / ${fila.ubicacion}`)}</td>
+            <td>${fila.cantidad_vendida}</td>
+            <td>${fila.cantidad_movimiento}</td>
+            <td>${fila.diferencia_venta_movimiento}</td>
+            <td>${fila.existencia_actual}</td>
+            <td>${fila.saldo_ultimo_movimiento === null ? "—" : fila.saldo_ultimo_movimiento}</td>
+            <td>${escaparHTMLVending(diferenciaStock)}</td>
+            <td>${escaparHTMLVending(utilidad)}</td>
+            <td>
+                <div class="acciones-fila-conciliacion">
+                    <input type="text" maxlength="500" value="${escaparHTMLVending(fila.observacion || "")}"
+                        aria-label="Observación para ${escaparHTMLVending(fila.producto)}"
+                        data-observacion-conciliacion="${fila.id_detalle}">
+                    <button type="button" class="boton boton-borde"
+                        data-accion-conciliacion="observacion" data-id-detalle="${fila.id_detalle}">
+                        Guardar observación
+                    </button>
+                    <div class="campo-ajuste-conciliacion">
+                        <label for="ajusteConciliacion${fila.id_detalle}">Ajuste (+/- unidades)</label>
+                        <input type="number" step="1" id="ajusteConciliacion${fila.id_detalle}"
+                            data-ajuste-conciliacion="${fila.id_detalle}">
+                        <button type="button" class="boton boton-borde"
+                            data-accion-conciliacion="ajustar" data-id-detalle="${fila.id_detalle}">
+                            Aplicar ajuste
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    }).join("");
+
+    const diferencias = resultadosConciliacionVending.filter(fila =>
+        Number(fila.diferencia_venta_movimiento) !== 0 ||
+        Number(fila.diferencia_existencia || 0) !== 0
+    );
+    const utilidadDisponible = resultadosConciliacionVending
+        .filter(fila => fila.utilidad_estimada !== null && Number(fila.lineas_sin_costo) === 0)
+        .reduce((total, fila) => total + Number(fila.utilidad_estimada), 0);
+
+    document.getElementById("periodoConciliacion").textContent =
+        `Periodo: ${document.getElementById("fechaInicioConciliacion").value} al ${document.getElementById("fechaFinConciliacion").value}`;
+    document.getElementById("cantidadDiferenciasConciliacion").textContent =
+        `${diferencias.length} producto(s) con diferencias`;
+    document.getElementById("utilidadConciliacion").textContent =
+        `Utilidad estimada: ${monedaVending(utilidadDisponible)}`;
+    resumen.hidden = resultadosConciliacionVending.length === 0;
+    contenedor.hidden = resultadosConciliacionVending.length === 0;
+    vacio.hidden = resultadosConciliacionVending.length > 0;
+}
+
+function exportarConciliacionVending() {
+    if (!resultadosConciliacionVending.length) {
+        mostrarMensajeConciliacionVending("Primero genera una conciliación.", "error");
+        return;
+    }
+
+    const columnas = [
+        ["Tienda", "tienda"],
+        ["Ubicación", "ubicacion"],
+        ["Producto", "producto"],
+        ["Cantidad vendida", "cantidad_vendida"],
+        ["Cantidad salida", "cantidad_movimiento"],
+        ["Diferencia ventas y salida", "diferencia_venta_movimiento"],
+        ["Existencia actual", "existencia_actual"],
+        ["Saldo último movimiento", "saldo_ultimo_movimiento"],
+        ["Diferencia de existencia", "diferencia_existencia"],
+        ["Utilidad estimada", "utilidad_estimada"],
+        ["Observación", "observacion"]
+    ];
+    const csv = [
+        columnas.map(([titulo]) => titulo),
+        ...resultadosConciliacionVending.map(fila =>
+            columnas.map(([, clave]) => fila[clave] ?? "")
+        )
+    ].map(fila => fila.map(valor =>
+        `"${String(valor).replace(/"/g, '""')}"`
+    ).join(",")).join("\r\n");
+    const archivo = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
+    const enlace = document.createElement("a");
+    enlace.href = URL.createObjectURL(archivo);
+    enlace.download = `conciliacion-${idConciliacionVending}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
+}
+
+async function manejarAccionConciliacionVending(evento) {
+    const boton = evento.target.closest("button[data-accion-conciliacion]");
+    if (!boton) return;
+
+    const idDetalle = Number(boton.dataset.idDetalle);
+    const accion = boton.dataset.accionConciliacion;
+    const campoObservacion = document.querySelector(`[data-observacion-conciliacion="${idDetalle}"]`);
+    const observacion = campoObservacion?.value.trim() || "";
+
+    if (!observacion) {
+        mostrarMensajeConciliacionVending("Agregue una observación antes de guardar o ajustar.", "error");
+        campoObservacion?.focus();
+        return;
+    }
+
+    const body = { id_detalle: idDetalle, observacion };
+    if (accion === "ajustar") {
+        const campoAjuste = document.querySelector(`[data-ajuste-conciliacion="${idDetalle}"]`);
+        const cantidad = Number(campoAjuste?.value);
+        if (!Number.isInteger(cantidad) || cantidad === 0) {
+            mostrarMensajeConciliacionVending("Indique una cantidad de ajuste entera distinta de cero.", "error");
+            campoAjuste?.focus();
+            return;
+        }
+        if (!await confirmarVending({
+            titulo: "Autorizar ajuste",
+            mensaje: `¿Autoriza el ajuste de ${cantidad > 0 ? "+" : ""}${cantidad} unidades?`,
+            icono: "fa-solid fa-triangle-exclamation",
+            textoConfirmar: "Autorizar"
+        })) {
+            return;
+        }
+        body.cantidad_ajuste = cantidad;
+    }
+
+    boton.disabled = true;
+    try {
+        const resultado = await solicitarApiConciliacionVending(accion, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        const fila = resultadosConciliacionVending.find(item => item.id_detalle === idDetalle);
+        if (fila) {
+            fila.observacion = observacion;
+            if (accion === "ajustar") {
+                fila.existencia_actual = resultado.cantidad_despues;
+                fila.saldo_ultimo_movimiento = resultado.cantidad_despues;
+                fila.diferencia_existencia = 0;
+            }
+        }
+        renderizarConciliacionVending();
+        mostrarMensajeConciliacionVending(
+            accion === "ajustar" ? "Ajuste autorizado y registrado en el inventario." : "Observación guardada.",
+            "exito"
+        );
+    } catch (error) {
+        mostrarMensajeConciliacionVending(error.message, "error");
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+function mostrarMensajeConciliacionVending(mensaje, tipo) {
+    const elemento = document.getElementById("mensajeConciliacion");
+    if (!elemento) return;
+    elemento.textContent = mensaje;
+    elemento.className = `mensaje-producto mensaje-${tipo}`;
+    elemento.hidden = false;
+}
+
 /* CRUD GENÉRICO DE COMPRAS, PEDIDOS Y FACTURAS */
 function configurarModuloListadoVending(config){
     if(!document.getElementById(config.cuerpo))return;
@@ -4896,4 +6098,3 @@ function agregarFilaProductoVending(listaId,mensajeId,preset=null){const lista=d
 function extraerLineasVending(listaId){return [...document.querySelectorAll(`#${listaId} .fila-producto-compra`)].map(f=>({nombre:f.querySelector(".item-nombre").value.trim(),cantidad:Number(f.querySelector(".item-cantidad").value)||0,precio:Number(f.querySelector(".item-precio").value)||0,iva:Number(f.querySelector(".item-iva")?.value)||0}));}
 function calcularTotalesLineasVending(listaId){const items=extraerLineasVending(listaId);const sub=items.reduce((s,i)=>s+i.cantidad*i.precio,0);const iva=items.reduce((s,i)=>s+i.cantidad*i.precio*i.iva/100,0);if(listaId.includes("Compra")){textoVending("subtotalCompra",monedaVending(sub));textoVending("impuestoCompra",monedaVending(iva));textoVending("totalCompra",monedaVending(sub+iva));}else{textoVending("cantidadTotalPedido",items.reduce((s,i)=>s+i.cantidad,0));textoVending("subtotalPedido",monedaVending(sub));textoVending("totalPedido",monedaVending(sub+iva));}return{sub,iva,total:sub+iva,items};}
 function renderTablaSimpleVending(c){const todos=leerListaVending(c.clave);const q=normalizarTexto(document.getElementById(c.buscar)?.value||"");const lista=todos.filter(x=>(!q||normalizarTexto(JSON.stringify(x)).includes(q))&&Object.entries(c.filtros).every(([k,id])=>{const v=document.getElementById(id)?.value||"";return !v||String(x[k]||"")===v}));document.getElementById(c.cuerpo).innerHTML=lista.map(c.fila).join("");c.resumen.forEach(([id,fn])=>textoVending(id,fn(todos)));mostrarElementoVending(c.contenedor,lista.length>0);mostrarElementoVending(c.vacio,todos.length===0);mostrarElementoVending(c.sinResultados,todos.length>0&&lista.length===0);textoVending(c.resultado,`${lista.length} resultado(s)`);}
-
