@@ -320,6 +320,26 @@ function accionCrearFactura(array $in): void
 
     exigirOperarEnUbicacion(db(), (int)$ubicacion['id_tienda']);
 
+    // El pedido relacionado (si se indicó) no puede estar Pendiente ni Cancelado:
+    // una factura representa una compra que ya fue enviada/recibida por el proveedor.
+    if ($idPedido !== null) {
+        $pedido = db()->prepare('SELECT estado FROM pedido WHERE id_pedido = :id');
+        $pedido->execute([':id' => $idPedido]);
+        $estadoPedido = $pedido->fetchColumn();
+
+        if ($estadoPedido === false) {
+            respuesta(false, null, 'El pedido relacionado no existe.', 404);
+        }
+
+        if ($estadoPedido === 'PENDIENTE') {
+            respuesta(false, null, 'No se puede relacionar una factura con un pedido que aún está Pendiente.', 400);
+        }
+
+        if ($estadoPedido === 'CANCELADO') {
+            respuesta(false, null, 'No se puede relacionar una factura con un pedido Cancelado.', 400);
+        }
+    }
+
     // Impuesto activo, para calcular el monto.
     $impuesto = db()->prepare('SELECT porcentaje FROM impuesto WHERE id_impuesto = :id AND estado = TRUE');
     $impuesto->execute([':id' => $idImpuesto]);
@@ -812,7 +832,10 @@ function accionListarPedidosDisponibles(array $in): void
     $usuario = exigirSesion();
     $idRol   = (int)($usuario['id_rol'] ?? 0);
 
-    $where  = ["ped.id_pedido NOT IN (SELECT id_pedido FROM factura_proveedor WHERE id_pedido IS NOT NULL)"];
+    $where  = [
+        "ped.id_pedido NOT IN (SELECT id_pedido FROM factura_proveedor WHERE id_pedido IS NOT NULL)",
+        "ped.estado NOT IN ('PENDIENTE', 'CANCELADO')"
+    ];
     $params = [];
 
     if (!in_array($idRol, [1, 2], true)) {
