@@ -3,32 +3,77 @@
 require_once __DIR__ . "/../config/session.php";
 require_once __DIR__ . "/../config/permisos.php";
 
+/*
+|--------------------------------------------------------------------------
+| Validar sesión
+|--------------------------------------------------------------------------
+| Si el usuario no ha iniciado sesión, no puede acceder al inventario.
+*/
+
 if (!isset($_SESSION["usuario"])) {
     header("Location: ../index/index.html");
     exit;
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| Ubicaciones permitidas
+|--------------------------------------------------------------------------
+| Administrador y Gerente pueden consultar todas.
+| Encargado y Dependiente solamente las tiendas asignadas.
+*/
+
+$ubicacionUsuario = resumenUbicacionUsuario($pdo);
+
+/*
+|--------------------------------------------------------------------------
+| Página actual
+|--------------------------------------------------------------------------
+| Permite marcar correctamente la opción activa del menú.
+*/
+
 $paginaActual = basename($_SERVER["PHP_SELF"]);
+
+
+/*
+|--------------------------------------------------------------------------
+| Evitar mostrar información después de cerrar sesión
+|--------------------------------------------------------------------------
+*/
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
 
+
+/*
+|--------------------------------------------------------------------------
+| Información del usuario para mostrar en pantalla
+|--------------------------------------------------------------------------
+*/
+
+$nombreUsuario = trim(
+    ($_SESSION["usuario"]["nombre"] ?? "") . " " .
+        ($_SESSION["usuario"]["apellido"] ?? "")
+);
+
+$correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        content="width=device-width, initial-scale=1.0">
 
     <meta
         name="description"
-        content="Gestión de inventario del sistema Vending Mini Market"
-    >
+        content="Gestión de inventario del sistema Vending Mini Market">
 
     <title>Inventario | Vending Mini Market</title>
 
@@ -38,8 +83,7 @@ header("Expires: 0");
     <!-- Biblioteca de iconos Font Awesome -->
     <link
         rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    >
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body class="pagina-app">
@@ -50,129 +94,146 @@ header("Expires: 0");
 
     <aside class="barra-lateral">
 
-    <!-- Logo del sistema -->
-    <div class="logo-sistema">
-        <a
-            href="/VendingMiniMarket/dashboard/dashboard.php"
-            aria-label="Ir al Dashboard"
-        >
-            <img
-                src="/VendingMiniMarket/img/logo/logo-vending.jpeg"
-                alt="Logo de Vending Mini Market"
-                class="imagen-logo-sistema"
-            >
-        </a>
-    </div>
+        <!-- Logo del sistema -->
+        <div class="logo-sistema">
+            <a
+                href="../dashboard/dashboard.php"
+                aria-label="Ir al Dashboard">
+                <img
+                    src="../img/logo/logo-vending.jpeg"
+                    alt="Logo de Vending Mini Market"
+                    class="imagen-logo-sistema">
+            </a>
+        </div>
 
-    <!-- Navegación principal -->
-    <nav class="nav-lateral" aria-label="Navegación principal">
+        <!-- Navegación principal -->
+        <nav class="nav-lateral" aria-label="Navegación principal">
 
-        <a href="/VendingMiniMarket/dashboard/dashboard.php"
-           class="<?= $paginaActual === 'dashboard.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'dashboard.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-pie"></i>
-            Dashboard
-        </a>
+            <a
+                href="../dashboard/dashboard.php"
+                class="<?= $paginaActual === 'dashboard.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'dashboard.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-chart-pie"></i>
+                Dashboard
+            </a>
 
-        <a href="/VendingMiniMarket/usuarios/usuarios.php"
-           class="<?= $paginaActual === 'usuarios.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'usuarios.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-users"></i>
-            Usuarios
-        </a>
+            <a
+                href="../usuarios/usuarios.php"
+                class="<?= $paginaActual === 'usuarios.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'usuarios.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-users"></i>
+                Usuarios
+            </a>
 
-        <a href="/VendingMiniMarket/catalogo/catalogo.php"
-           class="<?= $paginaActual === 'catalogo.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'catalogo.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-box"></i>
-            Catálogo
-        </a>
+            <a
+                href="../catalogo/catalogo.php"
+                class="<?= $paginaActual === 'catalogo.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'catalogo.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-box"></i>
+                Catálogo
+            </a>
 
-        <a href="/VendingMiniMarket/tienda/tienda.php"
-           class="<?= $paginaActual === 'tienda.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'tienda.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-shop"></i>
-            Tiendas
-        </a>
+            <a
+                href="../tienda/tienda.php"
+                class="<?= $paginaActual === 'tienda.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'tienda.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-shop"></i>
+                Tiendas
+            </a>
 
-        <a href="/VendingMiniMarket/maquinas/maquinas.php"
-           class="<?= $paginaActual === 'maquinas.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'maquinas.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-cash-register"></i>
-            Máquinas
-        </a>
+            <a
+                href="../maquinas/maquinas.php"
+                class="<?= $paginaActual === 'maquinas.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'maquinas.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-cash-register"></i>
+                Máquinas
+            </a>
 
-        <a href="/VendingMiniMarket/inventario/inventario.php"
-           class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-clipboard-list"></i>
-            Inventario
-        </a>
-
-        <a href="/VendingMiniMarket/compras/compras.php"
-           class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-cart-shopping"></i>
-            Pedidos
-        </a>
-
-        <a href="/VendingMiniMarket/ventas/ventas.php"
-           class="<?= $paginaActual === 'ventas.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'ventas.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-column"></i>
-            Ventas
-        </a>
-
-        <a href="/VendingMiniMarket/reportes/reportes.php"
-           class="<?= $paginaActual === 'reportes.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'reportes.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-line"></i>
-            Reportes
-        </a>
-
-        <?php if (esAdministradorOGerente()): ?>
-
-            <a href="/VendingMiniMarket/bitacora/bitacora.php"
-               class="<?= $paginaActual === 'bitacora.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'bitacora.php' ? 'aria-current="page"' : '' ?>>
+            <a
+                href="../inventario/inventario.php"
+                class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
                 <i class="fa-solid fa-clipboard-list"></i>
-                Bitácora
+                Inventario
             </a>
 
-            <a href="/VendingMiniMarket/respaldo/respaldo.php"
-               class="<?= $paginaActual === 'respaldo.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-database"></i>
-                Respaldos
+            <a
+                href="../compras/compras.php"
+                class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-cart-shopping"></i>
+                Compras
             </a>
 
-        <?php endif; ?>
-
-        <?php if (esAdministrador()): ?>
-
-            <a href="/VendingMiniMarket/incidencias/incidencias.php"
-               class="<?= $paginaActual === 'incidencias.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'incidencias.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Incidencias
+            <a
+                href="../ventas/ventas.php"
+                class="<?= $paginaActual === 'ventas.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'ventas.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-chart-column"></i>
+                Ventas
             </a>
 
-        <?php endif; ?>
+            <a
+                href="../alertas/alertas.php"
+                class="<?= $paginaActual === 'alertas.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'alertas.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-bell"></i>
+                Alertas
+            </a>
 
-    </nav>
+            <a
+                href="../reportes/reportes.php"
+                class="<?= $paginaActual === 'reportes.php' ? 'activo' : '' ?>"
+                <?= $paginaActual === 'reportes.php' ? 'aria-current="page"' : '' ?>>
+                <i class="fa-solid fa-chart-line"></i>
+                Reportes
+            </a>
 
-    <!-- Cerrar sesión -->
-    <div class="pie-barra-lateral">
+            <?php if (esAdministradorOGerente()): ?>
 
-        <a href="/VendingMiniMarket/index/index.html"
-           id="botonCerrarSesion">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            Cerrar sesión
-        </a>
+                <a
+                    href="../bitacora/bitacora.php"
+                    class="<?= $paginaActual === 'bitacora.php' ? 'activo' : '' ?>"
+                    <?= $paginaActual === 'bitacora.php' ? 'aria-current="page"' : '' ?>>
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    Bitácora
+                </a>
 
-    </div>
+                <a
+                    href="../respaldo/respaldo.php"
+                    class="<?= $paginaActual === 'respaldo.php' ? 'activo' : '' ?>"
+                    <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>>
+                    <i class="fa-solid fa-database"></i>
+                    Respaldos
+                </a>
 
-</aside>
+            <?php endif; ?>
+
+            <?php if (esAdministrador()): ?>
+
+                <a
+                    href="../incidencias/incidencias.php"
+                    class="<?= $paginaActual === 'incidencias.php' ? 'activo' : '' ?>"
+                    <?= $paginaActual === 'incidencias.php' ? 'aria-current="page"' : '' ?>>
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Incidencias
+                </a>
+
+            <?php endif; ?>
+
+        </nav>
+
+        <!-- Cerrar sesión -->
+        <div class="pie-barra-lateral">
+            <a
+                href="../index/index.html"
+                id="botonCerrarSesion">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+        </div>
+
+    </aside>
 
     <!-- ==========================================
          COLUMNA PRINCIPAL
@@ -189,8 +250,7 @@ header("Expires: 0");
             <button
                 type="button"
                 class="boton-menu"
-                aria-label="Abrir o cerrar el menú lateral"
-            >
+                aria-label="Abrir o cerrar el menú lateral">
                 <i class="fa-solid fa-bars"></i>
             </button>
 
@@ -205,8 +265,7 @@ header("Expires: 0");
                     id="buscadorGeneralInventario"
                     placeholder="Buscar en el sistema..."
                     aria-label="Buscar en el sistema"
-                    autocomplete="off"
-                >
+                    autocomplete="off">
 
             </div>
 
@@ -217,15 +276,13 @@ header("Expires: 0");
                 <button
                     type="button"
                     class="boton-notificacion"
-                    aria-label="Consultar notificaciones"
-                >
+                    aria-label="Consultar notificaciones">
                     <i class="fa-regular fa-bell"></i>
 
                     <span
                         class="contador"
                         id="contadorNotificacionesInventario"
-                        aria-label="0 notificaciones"
-                    >
+                        aria-label="0 notificaciones">
                         0
                     </span>
 
@@ -235,12 +292,14 @@ header("Expires: 0");
 
                     <div class="perfil-superior-texto">
 
+                        <!-- Nombre real del usuario que inició sesión -->
                         <strong id="nombreUsuarioSuperior">
-                            Administrador
+                            <?= htmlspecialchars($nombreUsuario, ENT_QUOTES, 'UTF-8') ?>
                         </strong>
 
+                        <!-- Correo real del usuario que inició sesión -->
                         <span id="correoUsuarioSuperior">
-                            admin@vending.com
+                            <?= htmlspecialchars($correoUsuario, ENT_QUOTES, 'UTF-8') ?>
                         </span>
 
                     </div>
@@ -277,9 +336,8 @@ header("Expires: 0");
                 </div>
 
                 <a
-                    href="movimientos.html"
-                    class="boton boton-azul"
-                >
+                    href="movimientos.php"
+                    class="boton boton-azul">
                     <i class="fa-solid fa-plus"></i>
                     Registrar movimiento
                 </a>
@@ -292,8 +350,7 @@ header("Expires: 0");
 
             <section
                 class="grilla-estadisticas"
-                aria-label="Resumen del inventario"
-            >
+                aria-label="Resumen del inventario">
 
                 <!-- Stock total -->
 
@@ -484,8 +541,7 @@ header("Expires: 0");
 
                         <label
                             for="buscarInventario"
-                            class="texto-solo-lectores"
-                        >
+                            class="texto-solo-lectores">
                             Buscar producto
                         </label>
 
@@ -493,8 +549,7 @@ header("Expires: 0");
                             type="search"
                             id="buscarInventario"
                             placeholder="Buscar por producto, código o proveedor..."
-                            autocomplete="off"
-                        >
+                            autocomplete="off">
 
                     </div>
 
@@ -609,8 +664,7 @@ header("Expires: 0");
                     <button
                         type="button"
                         id="botonLimpiarFiltrosInventario"
-                        class="boton boton-borde"
-                    >
+                        class="boton boton-borde">
                         <i class="fa-solid fa-filter-circle-xmark"></i>
                         Limpiar filtros
                     </button>
@@ -622,8 +676,7 @@ header("Expires: 0");
                 <p
                     id="resultadoBusquedaInventario"
                     class="resultado-busqueda-productos"
-                    aria-live="polite"
-                ></p>
+                    aria-live="polite"></p>
 
                 <!-- ==========================================
                      ACCIONES
@@ -632,43 +685,45 @@ header("Expires: 0");
                 <div class="acciones-inventario">
 
                     <a
-                        href="movimientos.html?tipo=entrada"
-                        class="boton boton-azul"
-                    >
+                        href="movimientos.php?tipo=entrada"
+                        class="boton boton-azul">
                         <i class="fa-solid fa-arrow-down"></i>
                         Entrada
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=salida"
-                        class="boton boton-borde"
-                    >
+                        href="movimientos.php?tipo=salida"
+                        class="boton boton-borde">
                         <i class="fa-solid fa-arrow-up"></i>
                         Salida
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=ajuste"
-                        class="boton boton-borde"
-                    >
+                        href="movimientos.php?tipo=ajuste"
+                        class="boton boton-borde">
                         <i class="fa-solid fa-sliders"></i>
                         Ajuste
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=merma"
-                        class="boton boton-borde"
-                    >
+                        href="movimientos.php?tipo=merma"
+                        class="boton boton-borde">
                         <i class="fa-solid fa-trash-can"></i>
                         Merma
                     </a>
 
                     <a
-                        href="movimientos.html?tipo=traslado"
-                        class="boton boton-borde"
-                    >
+                        href="movimientos.php?tipo=traslado"
+                        class="boton boton-borde">
                         <i class="fa-solid fa-right-left"></i>
                         Traslado
+                    </a>
+
+                    <a
+                        href="stock-minimos.php"
+                        class="boton boton-borde">
+                        <i class="fa-solid fa-bell"></i>
+                        Stock mínimo
                     </a>
 
                 </div>
@@ -680,9 +735,9 @@ header("Expires: 0");
                 <div
                     id="contenedorTablaInventario"
                     class="contenedor-tabla"
-                >
+                    style="overflow-x: auto;">
 
-                    <table class="tabla-datos">
+                    <table class="tabla-datos" style="min-width: 1200px; width: 100%;">
 
                         <caption class="texto-solo-lectores">
                             Inventario de productos por tienda
@@ -692,7 +747,8 @@ header("Expires: 0");
 
                             <tr>
                                 <th scope="col">Producto</th>
-                                <th scope="col">Código</th>
+                                <th scope="col">Código retail</th>
+                                <th scope="col">Código de barras</th>
                                 <th scope="col">Tienda</th>
                                 <th scope="col">Stock actual</th>
                                 <th scope="col">Stock mínimo</th>
@@ -723,8 +779,7 @@ header("Expires: 0");
                 <div
                     id="mensajeSinInventario"
                     class="estado-vacio-productos"
-                    hidden
-                >
+                    hidden>
 
                     <i class="fa-solid fa-box-open"></i>
 
@@ -738,9 +793,8 @@ header("Expires: 0");
                     </p>
 
                     <a
-                        href="../productos/producto-nuevo.html"
-                        class="boton boton-azul"
-                    >
+                        href="../productos/producto-nuevo.php"
+                        class="boton boton-azul">
                         <i class="fa-solid fa-plus"></i>
                         Registrar producto
                     </a>
@@ -754,8 +808,7 @@ header("Expires: 0");
                 <div
                     id="mensajeSinResultadosInventario"
                     class="estado-vacio-productos"
-                    hidden
-                >
+                    hidden>
 
                     <i class="fa-solid fa-magnifying-glass"></i>
 
@@ -785,8 +838,7 @@ header("Expires: 0");
                             type="button"
                             id="botonPaginaAnteriorInventario"
                             disabled
-                            aria-label="Página anterior"
-                        >
+                            aria-label="Página anterior">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
 
@@ -794,8 +846,7 @@ header("Expires: 0");
                             type="button"
                             id="botonPaginaSiguienteInventario"
                             disabled
-                            aria-label="Página siguiente"
-                        >
+                            aria-label="Página siguiente">
                             <i class="fa-solid fa-chevron-right"></i>
                         </button>
 
@@ -811,6 +862,8 @@ header("Expires: 0");
 
     <!-- JavaScript general -->
     <script src="../js/app.js"></script>
+    <script src="../js/inventario.js"></script>
 
 </body>
+
 </html>

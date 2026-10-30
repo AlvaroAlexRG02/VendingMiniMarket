@@ -123,18 +123,21 @@ function manejarErrorBD(PDOException $e, string $mensajeGeneral): void
 function enTransaccion(callable $accion, string $mensajeError)
 {
     $pdo = db();
-
     try {
         $pdo->beginTransaction();
         $resultado = $accion();
         $pdo->commit();
-
         return $resultado;
-    } catch (PDOException $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
+    } catch (DomainException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        respuesta(false, null, $e->getMessage(), 409);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($e instanceof PDOException) {
+            manejarErrorBD($e, $mensajeError);
         }
-        manejarErrorBD($e, $mensajeError);
+        error_log('[recepciones] ' . $e->getMessage());
+        respuesta(false, null, $mensajeError, 500);
     }
 }
 
@@ -163,14 +166,17 @@ function auditar(string $entidad, string $accion, ?array $antes, ?array $despues
 ========================================================== */
 
 /** Pedido + su ubicación/tienda, o responde 404 si no existe. */
-function obtenerPedidoParaRecepcion(int $idPedido): array
+function obtenerPedidoParaRecepcion(int $idPedido, bool $bloquear = false): array
 {
-    $st = db()->prepare("
-        SELECT ped.id_pedido, ped.estado, ped.id_ubicacion, ubi.id_tienda
+    $bloqueo = $bloquear ? ' FOR UPDATE OF ped' : '';
+    $st = db()->prepare(
+        "
+        SELECT ped.id_pedido, ped.estado, ped.requiere_aprobacion,
+               ped.id_ubicacion, ubi.id_tienda
         FROM pedido ped
         JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = ped.id_ubicacion
-        WHERE ped.id_pedido = :id
-    ");
+        WHERE ped.id_pedido = :id" . $bloqueo
+    );
     $st->execute([':id' => $idPedido]);
     $pedido = $st->fetch();
 
@@ -179,6 +185,32 @@ function obtenerPedidoParaRecepcion(int $idPedido): array
     }
 
     return $pedido;
+}
+
+/** Postgres puede devolver booleanos como bool o como 't' / 'f'. */
+function pedidoRequiereAprobacion(array $pedido): bool
+{
+    return in_array($pedido['requiere_aprobacion'], [true, 1, '1', 't', 'true'], true);
+}
+
+/** Cantidades de recepciones PENDIENTES todavía no confirmadas. */
+function cantidadesReservadasPedido(int $idPedido): array
+{
+    $st = db()->prepare("
+        SELECT dm.id_producto, SUM(dm.cantidad) AS reservada
+        FROM movimiento_inventario m
+        JOIN detalle_movimiento dm ON dm.id_movimiento = m.id_movimiento
+        WHERE m.id_pedido = :pedido
+          AND m.tipo_movimiento = 'ENTRADA'
+          AND m.estado = 'PENDIENTE'
+        GROUP BY dm.id_producto
+    ");
+    $st->execute([':pedido' => $idPedido]);
+    $reservadas = [];
+    foreach ($st->fetchAll() as $fila) {
+        $reservadas[(int)$fila['id_producto']] = (int)$fila['reservada'];
+    }
+    return $reservadas;
 }
 
 /** Cantidades solicitadas/recibidas por producto de un pedido, indexadas por id_producto. */
@@ -224,34 +256,41 @@ function pedidoDetallePendiente(int $idPedido): array
     return $detalle;
 }
 
-function leerItemsRecepcion(array $in, array $detallePendiente): array
+function leerItemsRecepcion(array $in, array $detallePendiente, array $reservadas = []): array
 {
     $items = $in['items'] ?? [];
 
     if (!is_array($items) || !$items) {
-        respuesta(false, null, 'Debe indicar al menos un producto recibido.', 400);
+        throw new DomainException('Debe indicar al menos un producto recibido.');
     }
 
     $limpios = [];
 
     foreach ($items as $item) {
-        $idProducto = (int)($item['id_producto'] ?? 0);
-        $cantidad   = (int)($item['cantidad'] ?? 0);
+        if (!is_array($item)) {
+            throw new DomainException('El detalle de la recepción no es válido.');
+        }
+        $idProducto = filter_var($item['id_producto'] ?? null, FILTER_VALIDATE_INT);
+        $cantidad = filter_var($item['cantidad'] ?? null, FILTER_VALIDATE_INT);
 
-        if ($idProducto <= 0 || $cantidad <= 0) {
-            respuesta(false, null, 'Hay productos con datos inválidos en la recepción.', 400);
+        if ($idProducto === false || $cantidad === false || $idProducto <= 0 || $cantidad <= 0) {
+            throw new DomainException('Hay productos con datos inválidos en la recepción.');
         }
 
         if (!isset($detallePendiente[$idProducto])) {
-            respuesta(false, null, 'Uno de los productos no pertenece a este pedido.', 400);
+            throw new DomainException('Uno de los productos no pertenece a este pedido.');
+        }
+
+        if (isset($limpios[$idProducto])) {
+            throw new DomainException('No repita el mismo producto dentro de una recepción.');
         }
 
         $pendiente = $detallePendiente[$idProducto]['cantidad_solicitada']
             - $detallePendiente[$idProducto]['cantidad_recibida']
-            - $detallePendiente[$idProducto]['cantidad_reservada_pendiente'];
+            - ($reservadas[$idProducto] ?? 0);
 
         if ($cantidad > $pendiente) {
-            respuesta(false, null, "La cantidad recibida no puede superar lo pendiente ($pendiente).", 400);
+            throw new DomainException("La cantidad recibida no puede superar lo pendiente ($pendiente).");
         }
 
         $limpios[$idProducto] = $cantidad;
@@ -270,38 +309,56 @@ function accionRegistrarRecepcion(array $in): void
     $usuario = exigirPuedeRegistrarRecepcion();
     exigirPost();
 
-    $idPedido      = (int)($in['id_pedido'] ?? 0);
+    $idPedido = (int)($in['id_pedido'] ?? 0);
     $observaciones = trim((string)($in['observaciones'] ?? ''));
 
-    if ($idPedido <= 0) {
-        respuesta(false, null, 'Pedido inválido.', 400);
+    if ($idPedido <= 0) respuesta(false, null, 'Pedido inválido.', 400);
+    if (mb_strlen($observaciones, 'UTF-8') > 500) {
+        respuesta(false, null, 'Las observaciones no pueden exceder 500 caracteres.', 400);
     }
 
     $pedido = obtenerPedidoParaRecepcion($idPedido);
-
-    if (in_array($pedido['estado'], ESTADOS_PEDIDO_FINALES_RECEPCION, true)) {
-        respuesta(false, null, 'Este pedido ya está cerrado y no admite más recepciones.', 409);
-    }
-
     exigirOperarEnUbicacion(db(), (int)$pedido['id_tienda']);
 
-    $detallePendiente = pedidoDetallePendiente($idPedido);
-    $items = leerItemsRecepcion($in, $detallePendiente);
 
     $autoConfirmar = esAdministrador() || esGerenteGeneral() || esEncargado();
 
-    $resultado = enTransaccion(function () use ($idPedido, $pedido, $usuario, $observaciones, $items, $autoConfirmar) {
+    $resultado = enTransaccion(function () use (
+        $in,
+        $idPedido,
+        $usuario,
+        $observaciones,
+        $autoConfirmar
+    ) {
         $pdo = db();
+
+        // Bloqueo por pedido: impide dos recepciones simultáneas que
+        // reserven o confirmen las mismas unidades.
+        $pedido = obtenerPedidoParaRecepcion($idPedido, true);
+        if (in_array($pedido['estado'], ESTADOS_PEDIDO_FINALES_RECEPCION, true)) {
+            throw new DomainException('Este pedido ya está cerrado y no admite más recepciones.');
+        }
+        if (pedidoRequiereAprobacion($pedido)) {
+            throw new DomainException('El pedido todavía requiere aprobación.');
+        }
+        if (!in_array($pedido['estado'], ['PENDIENTE', 'EN_CAMINO', 'PARCIAL'], true)) {
+            throw new DomainException('El estado del pedido no permite recibir mercadería.');
+        }
+
+        $detallePendiente = pedidoDetallePendiente($idPedido);
+        $reservadas = cantidadesReservadasPedido($idPedido);
+        $items = leerItemsRecepcion($in, $detallePendiente, $reservadas);
 
         $st = $pdo->prepare("
             INSERT INTO movimiento_inventario
                 (id_usuario, id_ubicacion_destino, id_pedido, tipo_movimiento,
-                 motivo, observaciones, estado, id_usuario_autoriza, fecha_confirmacion, fecha_autorizacion)
+                 motivo, observaciones, estado, id_usuario_autoriza,
+                 fecha_confirmacion, fecha_autorizacion)
             VALUES
                 (:id_usuario, :id_ubicacion, :id_pedido, 'ENTRADA',
                  'Recepción de pedido', :observaciones, :estado, :id_usuario_autoriza,
-                 CASE WHEN :estado2 = 'CONFIRMADO' THEN NOW() ELSE NULL END,
-                 CASE WHEN :estado3 = 'CONFIRMADO' THEN NOW() ELSE NULL END)
+                  CASE WHEN :estado2 = 'CONFIRMADO' THEN NOW() ELSE NULL END,
+                  CASE WHEN :estado3 = 'CONFIRMADO' THEN NOW() ELSE NULL END)
             RETURNING id_movimiento
         ");
         $estado = $autoConfirmar ? 'CONFIRMADO' : 'PENDIENTE';
@@ -315,33 +372,29 @@ function accionRegistrarRecepcion(array $in): void
             ':estado2'             => $estado,
             ':estado3'             => $estado,
         ]);
-
         $idMovimiento = (int)$st->fetchColumn();
 
         $detalle = $pdo->prepare("
             INSERT INTO detalle_movimiento (id_movimiento, id_producto, cantidad)
             VALUES (:id_movimiento, :id_producto, :cantidad)
         ");
-
         foreach ($items as $idProducto => $cantidad) {
             $detalle->execute([
                 ':id_movimiento' => $idMovimiento,
-                ':id_producto'   => $idProducto,
-                ':cantidad'      => $cantidad,
+                ':id_producto' => $idProducto,
+                ':cantidad' => $cantidad,
             ]);
         }
 
-        auditar('PEDIDO', 'REGISTRAR_RECEPCION', null, [
-            'id_pedido'     => $idPedido,
-            'id_movimiento' => $idMovimiento,
-            'items'         => $items,
-            'confirmado'    => $autoConfirmar,
-        ]);
-
         if ($autoConfirmar) {
-            aplicarRecepcion($idMovimiento, $usuario['id_usuario']);
+            aplicarRecepcion($idMovimiento, (int)$usuario['id_usuario']);
         }
-
+        auditar('PEDIDO', 'REGISTRAR_RECEPCION', null, [
+            'id_pedido' => $idPedido,
+            'id_movimiento' => $idMovimiento,
+            'items' => $items,
+            'confirmado' => $autoConfirmar,
+        ]);
         return ['id_movimiento' => $idMovimiento, 'confirmado' => $autoConfirmar];
     }, 'No se pudo registrar la recepción.');
 
@@ -350,7 +403,7 @@ function accionRegistrarRecepcion(array $in): void
         $resultado,
         $autoConfirmar
             ? 'Recepción registrada y confirmada correctamente.'
-            : 'Recepción registrada. Debe ser confirmada por un Encargado o Administrador.',
+            : 'Recepción registrada. Debe confirmarla un Encargado o Administrador.',
         201
     );
 }
@@ -396,6 +449,7 @@ function aplicarRecepcion(int $idMovimiento, int $idUsuarioAutoriza): void
             SELECT id_existencia, cantidad
             FROM existencia
             WHERE id_ubicacion = :ubicacion AND id_producto = :producto
+            FOR UPDATE
         ");
         $existencia->execute([':ubicacion' => $idUbicacion, ':producto' => $idProducto]);
         $existencia = $existencia->fetch();
@@ -462,35 +516,78 @@ function accionConfirmarRecepcion(array $in): void
     exigirPost();
 
     $idMovimiento = (int)($in['id_movimiento'] ?? 0);
+    if ($idMovimiento <= 0) respuesta(false, null, 'Movimiento inválido.', 400);
 
-    if ($idMovimiento <= 0) {
-        respuesta(false, null, 'Movimiento inválido.', 400);
-    }
-
-    $movimiento = db()->prepare("
-        SELECT m.id_movimiento, m.estado, m.tipo_movimiento, m.id_pedido, ubi.id_tienda
+    // Primera lectura para verificar permisos sin mantener una transacción.
+    $st = db()->prepare("
+        SELECT m.id_movimiento, m.estado, m.tipo_movimiento,
+               m.id_pedido, ubi.id_tienda
         FROM movimiento_inventario m
         JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = m.id_ubicacion_destino
         WHERE m.id_movimiento = :id
     ");
-    $movimiento->execute([':id' => $idMovimiento]);
-    $movimiento = $movimiento->fetch();
+    $st->execute([':id' => $idMovimiento]);
+    $movimiento = $st->fetch();
 
-    if (!$movimiento || $movimiento['tipo_movimiento'] !== 'ENTRADA' || !$movimiento['id_pedido']) {
-        respuesta(false, null, 'La recepción indicada no existe.', 404);
+    if (
+        !$movimiento || $movimiento['tipo_movimiento'] !== 'ENTRADA'
+        || !$movimiento['id_pedido'] || $movimiento['estado'] !== 'PENDIENTE'
+    ) {
+        respuesta(false, null, 'La recepción no existe o ya fue confirmada.', 409);
     }
-
-    if ($movimiento['estado'] !== 'PENDIENTE') {
-        respuesta(false, null, 'Esta recepción ya fue confirmada o anulada.', 409);
-    }
-
     exigirOperarEnUbicacion(db(), (int)$movimiento['id_tienda']);
 
     enTransaccion(function () use ($idMovimiento, $usuario, $movimiento) {
-        aplicarRecepcion($idMovimiento, $usuario['id_usuario']);
+        $pdo = db();
+        $idPedido = (int)$movimiento['id_pedido'];
 
+        // Siempre pedido primero, movimiento después: mismo orden de
+        // bloqueos que el registro para evitar carreras y duplicados.
+        $pedido = obtenerPedidoParaRecepcion($idPedido, true);
+        if (
+            pedidoRequiereAprobacion($pedido)
+            || !in_array($pedido['estado'], ['PENDIENTE', 'EN_CAMINO', 'PARCIAL'], true)
+        ) {
+            throw new DomainException('El pedido no está habilitado para confirmar recepciones.');
+        }
+
+        $st = $pdo->prepare("
+            SELECT estado, id_pedido, tipo_movimiento
+            FROM movimiento_inventario
+            WHERE id_movimiento = :id FOR UPDATE
+        ");
+        $st->execute([':id' => $idMovimiento]);
+        $actual = $st->fetch();
+        if (
+            !$actual || $actual['estado'] !== 'PENDIENTE'
+            || $actual['tipo_movimiento'] !== 'ENTRADA'
+            || (int)$actual['id_pedido'] !== $idPedido
+        ) {
+            throw new DomainException('La recepción ya fue confirmada o cambió de estado.');
+        }
+
+        // Antes de aplicar, verificar otra vez las unidades aún pendientes.
+        $detalles = pedidoDetallePendiente($idPedido);
+        $items = $pdo->prepare("
+            SELECT id_producto, SUM(cantidad) AS cantidad
+            FROM detalle_movimiento
+            WHERE id_movimiento = :id GROUP BY id_producto
+        ");
+        $items->execute([':id' => $idMovimiento]);
+        foreach ($items->fetchAll() as $item) {
+            $idProducto = (int)$item['id_producto'];
+            $pendiente = isset($detalles[$idProducto])
+                ? $detalles[$idProducto]['cantidad_solicitada']
+                - $detalles[$idProducto]['cantidad_recibida']
+                : 0;
+            if ((int)$item['cantidad'] > $pendiente) {
+                throw new DomainException('Una recepción supera las unidades disponibles del pedido.');
+            }
+        }
+
+        aplicarRecepcion($idMovimiento, (int)$usuario['id_usuario']);
         auditar('PEDIDO', 'CONFIRMAR_RECEPCION', null, [
-            'id_pedido'     => (int)$movimiento['id_pedido'],
+            'id_pedido' => $idPedido,
             'id_movimiento' => $idMovimiento,
         ]);
     }, 'No se pudo confirmar la recepción.');
