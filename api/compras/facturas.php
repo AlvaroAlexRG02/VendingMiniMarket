@@ -339,31 +339,22 @@ function accionCrearFactura(array $in): void
 
     exigirOperarEnUbicacion(db(), (int)$ubicacion['id_tienda']);
 
-    // El pedido relacionado (si se indicó) no puede estar Pendiente ni Cancelado,
-    // y debe estar ya aprobado: una factura representa una compra que ya fue
-    // enviada/recibida por el proveedor.
+    // Solo se factura un pedido que ya fue recibido por completo (y por lo tanto aprobado).
     if ($idPedido !== null) {
-        $pedido = db()->prepare('SELECT estado, requiere_aprobacion FROM pedido WHERE id_pedido = :id');
+        $pedido = db()->prepare('SELECT estado FROM pedido WHERE id_pedido = :id');
         $pedido->execute([':id' => $idPedido]);
-        $datosPedido = $pedido->fetch();
+        $estadoPedido = $pedido->fetchColumn();
 
-        if ($datosPedido === false) {
+        if ($estadoPedido === false) {
             respuesta(false, null, 'El pedido relacionado no existe.', 404);
-        }
-
-        $estadoPedido = $datosPedido['estado'];
-
-        if ($estadoPedido === 'PENDIENTE') {
-            respuesta(false, null, 'No se puede relacionar una factura con un pedido que aún está Pendiente.', 400);
         }
 
         if ($estadoPedido === 'CANCELADO') {
             respuesta(false, null, 'No se puede relacionar una factura con un pedido Cancelado.', 400);
         }
 
-        // Postgres puede devolver booleanos como bool o como 't' / 'f'.
-        if (in_array($datosPedido['requiere_aprobacion'], [true, 1, '1', 't', 'true'], true)) {
-            respuesta(false, null, 'No se puede relacionar una factura con un pedido que aún no ha sido aprobado.', 400);
+        if ($estadoPedido !== 'RECIBIDO') {
+            respuesta(false, null, 'Solo se puede facturar un pedido que ya fue recibido por completo.', 400);
         }
 
         // Un pedido solo puede tener una factura asociada (la lista de "pedidos
@@ -872,8 +863,7 @@ function accionListarPedidosDisponibles(array $in): void
 
     $where  = [
         "ped.id_pedido NOT IN (SELECT id_pedido FROM factura_proveedor WHERE id_pedido IS NOT NULL)",
-        "ped.estado NOT IN ('PENDIENTE', 'CANCELADO')",
-        "ped.requiere_aprobacion = FALSE"
+        "ped.estado = 'RECIBIDO'"
     ];
     $params = [];
 

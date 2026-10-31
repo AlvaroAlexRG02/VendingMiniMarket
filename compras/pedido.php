@@ -26,7 +26,9 @@ $nombreUsuario = trim(
 );
 $correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 $puedeActualizarEstado = esAdministrador() || esGerenteGeneral() || esEncargado();
-$puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
+$puedeAprobarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
+$puedeEditarPedido = $puedeAprobarPedido || esDependiente();
+$idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
 
 ?>
 
@@ -55,7 +57,7 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
     >
 </head>
 
-<body class="pagina-app" data-puede-actualizar-estado="<?= $puedeActualizarEstado ? '1' : '0' ?>" data-puede-editar-pedido="<?= $puedeEditarPedido ? '1' : '0' ?>">
+<body class="pagina-app" data-puede-actualizar-estado="<?= $puedeActualizarEstado ? '1' : '0' ?>" data-puede-editar-pedido="<?= $puedeEditarPedido ? '1' : '0' ?>" data-puede-aprobar-pedido="<?= $puedeAprobarPedido ? '1' : '0' ?>" data-id-usuario="<?= $idUsuarioActual ?>">
 
     <!-- ==========================================
          BARRA LATERAL
@@ -403,6 +405,61 @@ $puedeEditarPedido = esAdministrador() || esGerenteGeneral() || esEncargado();
                 </article>
 
             </section>
+
+            <?php if ($puedeAprobarPedido): ?>
+
+            <!-- ==========================================
+                 PEDIDOS POR APROBAR
+            =========================================== -->
+
+            <section class="panel" id="panelPedidosPorAprobar" hidden>
+
+                <div class="panel-encabezado">
+
+                    <div>
+
+                        <h2>Pedidos por aprobar</h2>
+
+                        <p class="descripcion-panel">
+                            Estos pedidos esperan tu aprobación. Al aprobarlos
+                            pasan a "En camino" y ya se puede recibir la mercadería.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div class="contenedor-tabla">
+
+                    <table class="tabla-datos">
+
+                        <caption class="texto-solo-lectores">
+                            Pedidos por aprobar
+                        </caption>
+
+                        <thead>
+                            <tr>
+                                <th scope="col">No. Pedido</th>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Proveedor</th>
+                                <th scope="col">Tienda</th>
+                                <th scope="col">Productos</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Quién lo solicitó</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="cuerpoTablaPedidosPorAprobar">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+            <?php endif; ?>
 
             <?php if ($puedeActualizarEstado): ?>
 

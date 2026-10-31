@@ -321,7 +321,8 @@ function accionRegistrarRecepcion(array $in): void
     exigirOperarEnUbicacion(db(), (int)$pedido['id_tienda']);
 
 
-    $autoConfirmar = esAdministrador() || esGerenteGeneral() || esEncargado();
+    // Cualquier rol que reciba la mercadería la confirma al registrarla (el pedido ya fue aprobado).
+    $autoConfirmar = true;
 
     $resultado = enTransaccion(function () use (
         $in,

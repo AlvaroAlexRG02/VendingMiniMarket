@@ -422,7 +422,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                                 <th scope="col">Subtotal</th>
                                 <th scope="col">Impuesto</th>
                                 <th scope="col">Total</th>
-                                <th scope="col">Movimientos</th>
+                                <th scope="col">Pedido</th>
                                 <th scope="col">Estado</th>
                                 <th scope="col">Acciones</th>
                             </tr>

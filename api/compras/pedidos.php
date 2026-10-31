@@ -85,16 +85,47 @@ function exigirPuedeActualizarEstado(): array
     return $usuario;
 }
 
-/** Editar un pedido ya registrado: Administrador, Gerente General o Encargado. */
+/** Editar un pedido ya registrado: todos los roles (el Dependiente solo sus propios pedidos, ver accionEditarPedido). */
 function exigirPuedeEditarPedido(): array
 {
     $usuario = exigirSesion();
 
-    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado() && !esDependiente()) {
         respuesta(false, null, 'No tiene permisos para editar pedidos.', 403);
     }
 
     return $usuario;
+}
+
+/** Aprobar pedidos: Administrador, Gerente General o Encargado (también los suyos). */
+function exigirPuedeAprobarPedido(): array
+{
+    $usuario = exigirSesion();
+
+    if (!esAdministrador() && !esGerenteGeneral() && !esEncargado()) {
+        respuesta(false, null, 'No tiene permisos para aprobar pedidos.', 403);
+    }
+
+    return $usuario;
+}
+
+/** Pedido + tienda + estado de aprobación, o responde 404 si no existe. */
+function obtenerPedidoParaAprobacion(int $idPedido): array
+{
+    $st = db()->prepare("
+        SELECT ped.id_pedido, ped.estado, ped.estado_aprobacion, ped.id_usuario_solicita, ubi.id_tienda
+        FROM pedido ped
+        JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = ped.id_ubicacion
+        WHERE ped.id_pedido = :id
+    ");
+    $st->execute([':id' => $idPedido]);
+    $pedido = $st->fetch();
+
+    if (!$pedido) {
+        respuesta(false, null, 'El pedido no existe.', 404);
+    }
+
+    return $pedido;
 }
 
 function exigirPost(): void
@@ -380,30 +411,24 @@ function accionCrearPedido(array $in): void
         respuesta(false, null, 'Uno o más productos no están asociados a ese proveedor.', 400);
     }
 
-    $montoTotal = 0.0;
-    foreach ($cantidades as $idProducto => $cantidad) {
-        $montoTotal += $cantidad * $costosPorProducto[$idProducto];
-    }
+    // El Dependiente guarda un borrador y lo envía a aprobar cuando quiera;
+    // Encargado/Administrador/Gerente lo dejan directamente por aprobar (pueden aprobar el suyo).
+    $estadoAprobacion = esDependiente() ? 'BORRADOR' : 'POR_APROBAR';
 
-    $umbral = (float)(db()->query('SELECT monto_aprobacion FROM configuracion_compras WHERE id_configuracion = 1')->fetchColumn());
-
-    // HU-30 criterio 3: requiere aprobación si lo crea personal operativo (Dependiente) o si supera el monto configurado.
-    $requiereAprobacion = esDependiente() || $montoTotal > $umbral;
-
-    $nuevo = enTransaccion(function () use ($idProveedor, $idUbicacion, $usuario, $observaciones, $cantidades, $costosPorProducto, $requiereAprobacion) {
+    $nuevo = enTransaccion(function () use ($idProveedor, $idUbicacion, $usuario, $observaciones, $cantidades, $costosPorProducto, $estadoAprobacion) {
         $pdo = db();
 
         $st = $pdo->prepare("
-            INSERT INTO pedido (id_proveedor, id_ubicacion, id_usuario_solicita, observaciones, requiere_aprobacion)
-            VALUES (:id_proveedor, :id_ubicacion, :id_usuario, :observaciones, :requiere_aprobacion)
+            INSERT INTO pedido (id_proveedor, id_ubicacion, id_usuario_solicita, observaciones, requiere_aprobacion, estado_aprobacion)
+            VALUES (:id_proveedor, :id_ubicacion, :id_usuario, :observaciones, TRUE, :estado_aprobacion)
             RETURNING id_pedido
         ");
         $st->execute([
-            ':id_proveedor'        => $idProveedor,
-            ':id_ubicacion'        => $idUbicacion,
-            ':id_usuario'          => $usuario['id_usuario'],
-            ':observaciones'       => $observaciones !== '' ? $observaciones : null,
-            ':requiere_aprobacion' => $requiereAprobacion,
+            ':id_proveedor'      => $idProveedor,
+            ':id_ubicacion'      => $idUbicacion,
+            ':id_usuario'        => $usuario['id_usuario'],
+            ':observaciones'     => $observaciones !== '' ? $observaciones : null,
+            ':estado_aprobacion' => $estadoAprobacion,
         ]);
 
         $idPedido = (int)$st->fetchColumn();
@@ -459,23 +484,33 @@ function accionEditarPedido(array $in): void
         respuesta(false, null, 'Las observaciones no pueden superar 500 caracteres.', 400);
     }
 
-    $actual = db()->prepare("
-        SELECT ped.id_pedido, ped.estado, ubi.id_tienda
-        FROM pedido ped
-        JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = ped.id_ubicacion
-        WHERE ped.id_pedido = :id
-    ");
-    $actual->execute([':id' => $idPedido]);
-    $actual = $actual->fetch();
-
-    if (!$actual) {
-        respuesta(false, null, 'El pedido no existe.', 404);
-    }
+    $actual = obtenerPedidoParaAprobacion($idPedido);
 
     exigirOperarEnUbicacion(db(), (int)$actual['id_tienda']);
 
-    if ($actual['estado'] !== 'PENDIENTE') {
-        respuesta(false, null, 'Solo se pueden editar pedidos en estado Pendiente.', 409);
+    if (!in_array($actual['estado'], ['PENDIENTE', 'EN_CAMINO'], true)) {
+        respuesta(false, null, 'Solo se pueden editar pedidos Pendientes o En camino (sin mercadería recibida).', 409);
+    }
+
+    if (esDependiente()) {
+        if ((int)$actual['id_usuario_solicita'] !== (int)$usuario['id_usuario']) {
+            respuesta(false, null, 'Solo puede editar los pedidos que usted registró.', 403);
+        }
+
+        if ($actual['estado_aprobacion'] === 'POR_APROBAR') {
+            respuesta(false, null, 'El pedido está pendiente de aprobación y no se puede editar hasta que sea aprobado.', 409);
+        }
+    }
+
+    // Editar reemplaza el detalle del pedido: no se puede con recepciones aún sin confirmar.
+    $recepcionesPendientes = db()->prepare("
+        SELECT 1 FROM movimiento_inventario
+        WHERE id_pedido = :id AND tipo_movimiento = 'ENTRADA' AND estado = 'PENDIENTE'
+        LIMIT 1
+    ");
+    $recepcionesPendientes->execute([':id' => $idPedido]);
+    if ($recepcionesPendientes->fetchColumn()) {
+        respuesta(false, null, 'El pedido tiene recepciones pendientes de confirmar y no se puede editar.', 409);
     }
 
     // La ubicación debe existir, ser de tipo TIENDA, y el usuario debe poder operar en su tienda (HU-19).
@@ -523,30 +558,24 @@ function accionEditarPedido(array $in): void
         respuesta(false, null, 'Uno o más productos no están asociados a ese proveedor.', 400);
     }
 
-    $montoTotal = 0.0;
-    foreach ($cantidades as $idProducto => $cantidad) {
-        $montoTotal += $cantidad * $costosPorProducto[$idProducto];
-    }
+    // Todo pedido editado vuelve a aprobación: el Dependiente debe enviarlo de nuevo;
+    // Encargado/Administrador/Gerente lo dejan por aprobar (pueden aprobar el suyo).
+    $estadoAprobacion = esDependiente() ? 'BORRADOR' : 'POR_APROBAR';
 
-    $umbral = (float)(db()->query('SELECT monto_aprobacion FROM configuracion_compras WHERE id_configuracion = 1')->fetchColumn());
-
-    // HU-30 criterio 3: requiere aprobación si lo crea personal operativo (Dependiente) o si supera el monto configurado.
-    $requiereAprobacion = esDependiente() || $montoTotal > $umbral;
-
-    $actualizado = enTransaccion(function () use ($idPedido, $idProveedor, $idUbicacion, $usuario, $observaciones, $cantidades, $costosPorProducto, $requiereAprobacion) {
+    $actualizado = enTransaccion(function () use ($idPedido, $idProveedor, $idUbicacion, $usuario, $observaciones, $cantidades, $costosPorProducto, $estadoAprobacion) {
         $pdo = db();
 
         $st = $pdo->prepare("
             UPDATE pedido
             SET id_proveedor = :id_proveedor, id_ubicacion = :id_ubicacion, observaciones = :observaciones,
-                requiere_aprobacion = :requiere_aprobacion, id_usuario_actualiza = :id_usuario, fecha_actualizacion = NOW()
+                estado = 'PENDIENTE', requiere_aprobacion = TRUE, estado_aprobacion = :estado_aprobacion, id_usuario_actualiza = :id_usuario, fecha_actualizacion = NOW()
             WHERE id_pedido = :id_pedido
         ");
         $st->execute([
             ':id_proveedor'        => $idProveedor,
             ':id_ubicacion'        => $idUbicacion,
             ':observaciones'       => $observaciones !== '' ? $observaciones : null,
-            ':requiere_aprobacion' => $requiereAprobacion,
+            ':estado_aprobacion'   => $estadoAprobacion,
             ':id_usuario'          => $usuario['id_usuario'],
             ':id_pedido'           => $idPedido,
         ]);
@@ -593,9 +622,12 @@ const SQL_PEDIDO_BASE = "
         ped.estado,
         ped.origen,
         ped.requiere_aprobacion,
+        ped.estado_aprobacion,
+        ped.id_usuario_solicita,
         ped.observaciones,
         ped.fecha_pedido,
         ped.fecha_actualizacion,
+        (SELECT f.numero_factura FROM factura_proveedor f WHERE f.id_pedido = ped.id_pedido LIMIT 1) AS numero_factura,
         u1.nombre AS solicita_nombre,
         u1.apellido AS solicita_apellido,
         u2.nombre AS actualiza_nombre,
@@ -769,29 +801,20 @@ function accionActualizarEstadoPedido(array $in): void
     $usuario = exigirPuedeActualizarEstado();
     exigirPost();
 
-    $idPedido   = (int)($in['id_pedido'] ?? 0);
+    $idPedido    = (int)($in['id_pedido'] ?? 0);
     $nuevoEstado = strtoupper(trim((string)($in['estado'] ?? '')));
 
     if ($idPedido <= 0) {
         respuesta(false, null, 'Pedido inválido.', 400);
     }
 
-    if (!in_array($nuevoEstado, ESTADOS_PEDIDO, true)) {
-        respuesta(false, null, 'El estado seleccionado no es válido.', 400);
+    // El estado avanza solo (aprobar -> En camino; recepciones -> Parcial/Recibido).
+    // Manualmente únicamente se puede cancelar.
+    if ($nuevoEstado !== 'CANCELADO') {
+        respuesta(false, null, 'El estado del pedido avanza automáticamente; solo se puede cancelar manualmente.', 400);
     }
 
-    $actual = db()->prepare("
-        SELECT ped.id_pedido, ped.estado, ubi.id_tienda
-        FROM pedido ped
-        JOIN ubicacion_inventario ubi ON ubi.id_ubicacion = ped.id_ubicacion
-        WHERE ped.id_pedido = :id
-    ");
-    $actual->execute([':id' => $idPedido]);
-    $actual = $actual->fetch();
-
-    if (!$actual) {
-        respuesta(false, null, 'El pedido no existe.', 404);
-    }
+    $actual = obtenerPedidoParaAprobacion($idPedido);
 
     exigirOperarEnUbicacion(db(), (int)$actual['id_tienda']);
 
@@ -799,26 +822,119 @@ function accionActualizarEstadoPedido(array $in): void
         respuesta(false, null, 'El pedido ya está en un estado final y no se puede modificar.', 409);
     }
 
-    $nuevo = enTransaccion(function () use ($idPedido, $nuevoEstado, $usuario, $actual) {
-        $st = db()->prepare("
+    $recepcionesPendientes = db()->prepare("
+        SELECT 1 FROM movimiento_inventario
+        WHERE id_pedido = :id AND tipo_movimiento = 'ENTRADA' AND estado = 'PENDIENTE'
+        LIMIT 1
+    ");
+    $recepcionesPendientes->execute([':id' => $idPedido]);
+    if ($recepcionesPendientes->fetchColumn()) {
+        respuesta(false, null, 'El pedido tiene recepciones pendientes de confirmar y no se puede cancelar.', 409);
+    }
+
+    $nuevo = enTransaccion(function () use ($idPedido, $usuario, $actual) {
+        db()->prepare("
             UPDATE pedido
-            SET estado = :estado, id_usuario_actualiza = :id_usuario, fecha_actualizacion = NOW(),
-                requiere_aprobacion = FALSE
+            SET estado = 'CANCELADO', id_usuario_actualiza = :id_usuario, fecha_actualizacion = NOW()
             WHERE id_pedido = :id
-        ");
-        $st->execute([
-            ':estado'     => $nuevoEstado,
-            ':id_usuario' => $usuario['id_usuario'],
-            ':id'         => $idPedido,
-        ]);
+        ")->execute([':id_usuario' => $usuario['id_usuario'], ':id' => $idPedido]);
 
         $foto = fotoPedido($idPedido);
-        auditar('PEDIDO', 'ACTUALIZAR_ESTADO', ['estado' => $actual['estado']], ['estado' => $nuevoEstado]);
+        auditar('PEDIDO', 'ACTUALIZAR_ESTADO', ['estado' => $actual['estado']], ['estado' => 'CANCELADO']);
 
         return $foto;
-    }, 'No se pudo actualizar el estado del pedido.');
+    }, 'No se pudo cancelar el pedido.');
 
-    respuesta(true, $nuevo, 'Estado del pedido actualizado correctamente.');
+    respuesta(true, $nuevo, 'Pedido cancelado correctamente.');
+}
+
+
+/* ==========================================================
+   FLUJO DE APROBACIÓN
+========================================================== */
+
+function accionEnviarAprobacionPedido(array $in): void
+{
+    $usuario = exigirPuedeEditarPedido();
+    exigirPost();
+
+    $idPedido = (int)($in['id_pedido'] ?? 0);
+
+    if ($idPedido <= 0) {
+        respuesta(false, null, 'Pedido inválido.', 400);
+    }
+
+    $actual = obtenerPedidoParaAprobacion($idPedido);
+    exigirOperarEnUbicacion(db(), (int)$actual['id_tienda']);
+
+    if (esDependiente() && (int)$actual['id_usuario_solicita'] !== (int)$usuario['id_usuario']) {
+        respuesta(false, null, 'Solo puede enviar a aprobación los pedidos que usted registró.', 403);
+    }
+
+    if ($actual['estado'] !== 'PENDIENTE') {
+        respuesta(false, null, 'Solo se pueden enviar a aprobación pedidos en estado Pendiente.', 409);
+    }
+
+    if ($actual['estado_aprobacion'] !== 'BORRADOR') {
+        respuesta(false, null, 'El pedido ya fue enviado a aprobación o ya está aprobado.', 409);
+    }
+
+    $nuevo = enTransaccion(function () use ($idPedido, $usuario) {
+        db()->prepare("
+            UPDATE pedido
+            SET estado_aprobacion = 'POR_APROBAR', requiere_aprobacion = TRUE,
+                id_usuario_actualiza = :usuario, fecha_actualizacion = NOW()
+            WHERE id_pedido = :id AND estado_aprobacion = 'BORRADOR'
+        ")->execute([':usuario' => $usuario['id_usuario'], ':id' => $idPedido]);
+
+        auditar('PEDIDO', 'ENVIAR_APROBACION', ['estado_aprobacion' => 'BORRADOR'], ['estado_aprobacion' => 'POR_APROBAR']);
+
+        return fotoPedido($idPedido);
+    }, 'No se pudo enviar el pedido a aprobación.');
+
+    respuesta(true, $nuevo, 'Pedido enviado a aprobación.');
+}
+
+function accionAprobarPedido(array $in): void
+{
+    $usuario = exigirPuedeAprobarPedido();
+    exigirPost();
+
+    $idPedido = (int)($in['id_pedido'] ?? 0);
+
+    if ($idPedido <= 0) {
+        respuesta(false, null, 'Pedido inválido.', 400);
+    }
+
+    $actual = obtenerPedidoParaAprobacion($idPedido);
+    exigirOperarEnUbicacion(db(), (int)$actual['id_tienda']);
+
+    if ($actual['estado'] !== 'PENDIENTE') {
+        respuesta(false, null, 'Solo se pueden aprobar pedidos en estado Pendiente.', 409);
+    }
+
+    if ($actual['estado_aprobacion'] === 'BORRADOR') {
+        respuesta(false, null, 'El pedido todavía es un borrador: debe enviarse a aprobación primero.', 409);
+    }
+
+    if ($actual['estado_aprobacion'] === 'APROBADO') {
+        respuesta(false, null, 'El pedido ya está aprobado.', 409);
+    }
+
+    $nuevo = enTransaccion(function () use ($idPedido, $usuario) {
+        db()->prepare("
+            UPDATE pedido
+            SET estado_aprobacion = 'APROBADO', requiere_aprobacion = FALSE, estado = 'EN_CAMINO',
+                id_usuario_actualiza = :usuario, fecha_actualizacion = NOW()
+            WHERE id_pedido = :id AND estado_aprobacion = 'POR_APROBAR'
+        ")->execute([':usuario' => $usuario['id_usuario'], ':id' => $idPedido]);
+
+        auditar('PEDIDO', 'APROBAR', ['estado' => 'PENDIENTE', 'estado_aprobacion' => 'POR_APROBAR'], ['estado' => 'EN_CAMINO', 'estado_aprobacion' => 'APROBADO']);
+
+        return fotoPedido($idPedido);
+    }, 'No se pudo aprobar el pedido.');
+
+    respuesta(true, $nuevo, 'Pedido aprobado correctamente.');
 }
 
 
@@ -842,6 +958,8 @@ $acciones = [
     'listar_pedidos'          => 'accionListarPedidos',
     'obtener_pedido'          => 'accionObtenerPedido',
     'actualizar_estado_pedido' => 'accionActualizarEstadoPedido',
+    'enviar_aprobacion_pedido' => 'accionEnviarAprobacionPedido',
+    'aprobar_pedido'           => 'accionAprobarPedido',
 ];
 
 try {

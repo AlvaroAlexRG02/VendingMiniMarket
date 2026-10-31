@@ -56,9 +56,30 @@
         try {
             await Promise.all([cargarProveedores(), cargarUbicaciones(), cargarImpuestos(), cargarPedidos()]);
             await cargarFacturas();
+            await abrirFacturaDesdePedido();
         } catch (error) {
             mostrarMensaje(error.message, 'error');
         }
+    }
+
+    // Llegada desde "Listo para facturar" en Pedidos (facturas.php?id_pedido=N).
+    async function abrirFacturaDesdePedido() {
+        const idPedido = new URLSearchParams(window.location.search).get('id_pedido');
+        if (!idPedido) return;
+
+        window.history.replaceState(null, '', window.location.pathname);
+
+        const select = $('pedidoRelacionadoFactura');
+        const disponible = select && [...select.options].some((o) => o.value === idPedido);
+
+        if (!disponible) {
+            mostrarMensaje('Ese pedido no está disponible para facturar (ya tiene factura o no está recibido).', 'error');
+            return;
+        }
+
+        abrirModalNuevaFactura();
+        select.value = idPedido;
+        await sincronizarConPedido();
     }
 
     function registrarEventos() {
@@ -450,7 +471,7 @@
                 <td>${moneda(f.subtotal)}</td>
                 <td>${moneda(f.monto_impuesto)}</td>
                 <td>${moneda(f.monto_total)}</td>
-                <td>${Number(f.movimientos_asociados || 0)}</td>
+                <td>${f.numero_pedido ? escaparHTML(f.numero_pedido) : '-'}</td>
                 <td>
                     <span class="badge badge-${COLOR_ESTADO[f.estado] || 'naranja'}">
                         ${ETIQUETAS_ESTADO[f.estado] || f.estado}

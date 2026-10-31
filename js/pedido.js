@@ -35,6 +35,8 @@
     let productosProveedorActual = [];
     let puedeActualizarEstado = false;
     let puedeEditarPedido = false;
+    let puedeAprobarPedido = false;
+    let idUsuarioActual = 0;
     let pedidoEnEdicion = null;
 
     document.addEventListener('DOMContentLoaded', iniciar);
@@ -46,6 +48,8 @@
 
         puedeActualizarEstado = document.body.dataset.puedeActualizarEstado === '1';
         puedeEditarPedido = document.body.dataset.puedeEditarPedido === '1';
+        puedeAprobarPedido = document.body.dataset.puedeAprobarPedido === '1';
+        idUsuarioActual = Number(document.body.dataset.idUsuario) || 0;
 
         registrarEventos();
 
@@ -73,6 +77,7 @@
         document.querySelector('[data-cerrar-modal-recepcion]')?.addEventListener('click', cerrarModalRecepcion);
         $('formularioRecepcion')?.addEventListener('submit', guardarRecepcion);
         $('cuerpoTablaRecepcionesPendientes')?.addEventListener('click', manejarClicRecepcionesPendientes);
+        $('cuerpoTablaPedidosPorAprobar')?.addEventListener('click', manejarClicTabla);
 
         $('botonCerrarModalVerRecepcion')?.addEventListener('click', cerrarModalVerRecepcion);
         $('botonCerrarVerRecepcion')?.addEventListener('click', cerrarModalVerRecepcion);
@@ -309,6 +314,11 @@
             const resultado = await api('obtener_pedido', null, { id_pedido: idPedido });
             const pedido = resultado.data;
 
+            if (pedido.estado === 'EN_CAMINO'
+                && !window.confirm('Este pedido ya está aprobado. Si lo edita volverá a Pendiente y deberá aprobarse de nuevo. ¿Continuar?')) {
+                return;
+            }
+
             pedidoEnEdicion = pedido.id_pedido;
 
             $('tituloModalPedido').textContent = 'Editar pedido';
@@ -361,15 +371,15 @@
 
         try {
             if (pedidoEnEdicion) {
-                await api('editar_pedido', { ...datos, id_pedido: pedidoEnEdicion });
+                const resultado = await api('editar_pedido', { ...datos, id_pedido: pedidoEnEdicion });
                 cerrarModal();
                 ocultarMensaje();
-                mostrarMensaje('Pedido actualizado correctamente.', 'exito');
+                mostrarMensaje(mensajeTrasGuardar(resultado.data, 'Pedido actualizado correctamente.'), 'exito');
             } else {
-                await api('crear_pedido', datos);
+                const resultado = await api('crear_pedido', datos);
                 cerrarModal();
                 ocultarMensaje();
-                mostrarMensaje('Pedido registrado correctamente.', 'exito');
+                mostrarMensaje(mensajeTrasGuardar(resultado.data, 'Pedido registrado correctamente.'), 'exito');
             }
 
             await cargarPedidos();
@@ -398,9 +408,63 @@
             const resultado = await api('listar_pedidos', null, leerFiltros());
             pedidos = resultado.data || [];
             renderPedidos();
+            await cargarPedidosPorAprobar();
         } catch (error) {
             mostrarMensaje(error.message, 'error');
         }
+    }
+
+    function mensajeTrasGuardar(pedido, base) {
+        if (pedido && pedido.estado_aprobacion === 'BORRADOR') {
+            return `${base} Quedó como borrador: envíalo a aprobación cuando esté listo.`;
+        }
+        return base;
+    }
+
+    // Mientras no esté aprobado, el pedido se muestra según su etapa de aprobación.
+    function etiquetaEstado(pedido) {
+        if (pedido.estado === 'PENDIENTE') {
+            return pedido.estado_aprobacion === 'BORRADOR' ? 'Borrador' : 'Pendiente de aprobación';
+        }
+        return ETIQUETAS_ESTADO[pedido.estado] || pedido.estado;
+    }
+
+    function colorEstado(pedido) {
+        if (pedido.estado === 'PENDIENTE' && pedido.estado_aprobacion === 'BORRADOR') return 'gris';
+        return COLOR_ESTADO[pedido.estado] || 'naranja';
+    }
+
+    // Panel independiente de los filtros del historial.
+    async function cargarPedidosPorAprobar() {
+        if (!puedeAprobarPedido || !$('cuerpoTablaPedidosPorAprobar')) return;
+
+        const resultado = await api('listar_pedidos');
+        const porAprobar = (resultado.data || [])
+            .filter((p) => p.estado === 'PENDIENTE' && p.estado_aprobacion === 'POR_APROBAR');
+
+        mostrarElemento('panelPedidosPorAprobar', porAprobar.length > 0);
+
+        $('cuerpoTablaPedidosPorAprobar').innerHTML = porAprobar.map((p) => `
+            <tr>
+                <td>${p.numero_pedido}</td>
+                <td>${new Date(p.fecha_pedido).toLocaleDateString('es-CR')}</td>
+                <td>${escaparHTML(p.proveedor_nombre)}</td>
+                <td>${escaparHTML(p.ubicacion_nombre)}</td>
+                <td>${p.total_unidades ?? 0} unidad(es)</td>
+                <td>${moneda(p.monto_total)}</td>
+                <td>${escaparHTML(`${p.solicita_nombre} ${p.solicita_apellido || ''}`.trim())}</td>
+                <td>
+                    <div class="acciones-tabla">
+                        <button type="button" class="boton boton-borde boton-tabla boton-ver-pedido" data-pedido="${p.id_pedido}">
+                            Ver
+                        </button>
+                        <button type="button" class="boton boton-azul boton-tabla boton-aprobar-pedido" data-pedido="${p.id_pedido}">
+                            Aprobar
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
     }
 
     function renderPedidos() {
@@ -416,10 +480,10 @@
                 <td>${p.total_unidades ?? 0}</td>
                 <td>${moneda(p.monto_total)}</td>
                 <td>
-                    <span class="badge badge-${COLOR_ESTADO[p.estado] || 'naranja'}">
-                        ${ETIQUETAS_ESTADO[p.estado] || p.estado}
+                    <span class="badge badge-${colorEstado(p)}">
+                        ${etiquetaEstado(p)}
                     </span>
-                    ${p.requiere_aprobacion ? '<span class="badge badge-morado">Por aprobar</span>' : ''}
+                    ${p.numero_factura ? '<span class="badge badge-verde">Facturado</span>' : ''}
                 </td>
                 <td>${celdaAcciones(p)}</td>
             </tr>
@@ -431,52 +495,53 @@
 
         $('totalPedidos').textContent = pedidos.length;
         $('pedidosPendientes').textContent = pedidos.filter((p) => p.estado === 'PENDIENTE').length;
-        $('pedidosRequierenAprobacion').textContent = pedidos.filter((p) => p.requiere_aprobacion).length;
+        $('pedidosRequierenAprobacion').textContent = pedidos.filter((p) => p.estado_aprobacion === 'POR_APROBAR' && !['RECIBIDO', 'CANCELADO'].includes(p.estado)).length;
         $('totalProductosPedidos').textContent = pedidos.reduce((s, p) => s + Number(p.total_unidades || 0), 0);
         $('resultadoBusquedaPedidos').textContent = `${pedidos.length} resultado(s)`;
     }
 
     function celdaAcciones(pedido) {
         const cerrado = ['RECIBIDO', 'CANCELADO'].includes(pedido.estado);
+        const esPropio = Number(pedido.id_usuario_solicita) === idUsuarioActual;
+        const enAprobacion = pedido.estado === 'PENDIENTE';
+        const aprobado = pedido.estado_aprobacion === 'APROBADO';
 
-        const botonVer = `<button type="button" class="boton-tabla boton-ver-pedido" data-pedido="${pedido.id_pedido}" title="Ver pedido">
-                   <i class="fa-solid fa-eye"></i>
+        const boton = (clase, titulo, icono) => `<button type="button" class="boton-tabla ${clase}" data-pedido="${pedido.id_pedido}" title="${titulo}">
+                   <i class="fa-solid ${icono}"></i>
                </button>`;
 
-        const botonEditar = (puedeEditarPedido && pedido.estado === 'PENDIENTE')
-            ? `<button type="button" class="boton-tabla boton-editar-pedido" data-pedido="${pedido.id_pedido}" title="Editar pedido">
-                   <i class="fa-solid fa-pen"></i>
-               </button>`
+        const botonVer = boton('boton-ver-pedido', 'Ver pedido', 'fa-eye');
+
+        // Se edita mientras no haya mercadería recibida. El Dependiente solo edita
+        // sus pedidos y no mientras esperan aprobación.
+        const editable = ['PENDIENTE', 'EN_CAMINO'].includes(pedido.estado);
+        const botonEditar = (puedeEditarPedido && editable && (
+            puedeAprobarPedido || (esPropio && pedido.estado_aprobacion !== 'POR_APROBAR')
+        )) ? boton('boton-editar-pedido', 'Editar pedido', 'fa-pen') : '';
+
+        const botonEnviar = (enAprobacion && pedido.estado_aprobacion === 'BORRADOR' && (puedeAprobarPedido || esPropio))
+            ? boton('boton-enviar-aprobacion-pedido', 'Enviar a aprobación', 'fa-paper-plane')
             : '';
 
-        const botonRecibir = cerrado
-            ? ''
-            : `<button type="button" class="boton-tabla boton-recibir-pedido" data-pedido="${pedido.id_pedido}" title="Recibir pedido">
-                   <i class="fa-solid fa-truck-ramp-box"></i>
-               </button>`;
+        const botonAprobar = (puedeAprobarPedido && enAprobacion && pedido.estado_aprobacion === 'POR_APROBAR')
+            ? boton('boton-aprobar-pedido', 'Aprobar pedido', 'fa-circle-check')
+            : '';
 
-        if (!puedeActualizarEstado) {
-            return `<div class="acciones-tabla">${botonVer}${botonEditar}${botonRecibir}</div>`;
-        }
+        // Solo se recibe mercadería de pedidos ya aprobados (En camino / Recibido parcial).
+        const botonRecibir = (!cerrado && aprobado)
+            ? boton('boton-recibir-pedido', 'Recibir pedido', 'fa-truck-ramp-box')
+            : '';
 
-        if (cerrado) {
-            return `<div class="acciones-tabla">${botonVer}</div>`;
-        }
+        // Pedido recibido por completo y sin factura: listo para facturar.
+        const botonFacturar = (pedido.estado === 'RECIBIDO' && !pedido.numero_factura)
+            ? boton('boton-facturar-pedido', 'Listo para facturar', 'fa-file-invoice-dollar')
+            : '';
 
-        const opciones = Object.entries(ETIQUETAS_ESTADO)
-            .map(([valor, etiqueta]) => `<option value="${valor}" ${valor === pedido.estado ? 'selected' : ''}>${etiqueta}</option>`)
-            .join('');
+        const botonCancelar = (puedeActualizarEstado && !cerrado)
+            ? boton('boton-cancelar-pedido', 'Cancelar pedido', 'fa-ban')
+            : '';
 
-        return `
-            <div class="acciones-tabla">
-                ${botonVer}
-                ${botonEditar}
-                ${botonRecibir}
-                <select class="selector-estado-pedido" data-pedido="${pedido.id_pedido}">
-                    ${opciones}
-                </select>
-            </div>
-        `;
+        return `<div class="acciones-tabla">${botonVer}${botonEditar}${botonEnviar}${botonAprobar}${botonRecibir}${botonFacturar}${botonCancelar}</div>`;
     }
 
     async function manejarClicTabla(evento) {
@@ -492,29 +557,59 @@
             return;
         }
 
+        const botonEnviar = evento.target.closest('button.boton-enviar-aprobacion-pedido');
+        if (botonEnviar) {
+            await cambiarAprobacion('enviar_aprobacion_pedido', Number(botonEnviar.dataset.pedido));
+            return;
+        }
+
+        const botonFacturar = evento.target.closest('button.boton-facturar-pedido');
+        if (botonFacturar) {
+            window.location.href = `facturas.php?id_pedido=${encodeURIComponent(botonFacturar.dataset.pedido)}`;
+            return;
+        }
+
+        const botonCancelar = evento.target.closest('button.boton-cancelar-pedido');
+        if (botonCancelar) {
+            if (window.confirm('¿Cancelar este pedido? Esta acción no se puede deshacer.')) {
+                await cancelarPedido(Number(botonCancelar.dataset.pedido));
+            }
+            return;
+        }
+
+        const botonAprobar = evento.target.closest('button.boton-aprobar-pedido');
+        if (botonAprobar) {
+            await cambiarAprobacion('aprobar_pedido', Number(botonAprobar.dataset.pedido));
+            return;
+        }
+
         const boton = evento.target.closest('button.boton-recibir-pedido');
         if (!boton) return;
 
         await abrirModalRecepcion(Number(boton.dataset.pedido));
     }
 
-    document.addEventListener('change', async (evento) => {
-        const select = evento.target.closest('select.selector-estado-pedido');
-        if (!select) return;
-
+    async function cambiarAprobacion(accion, idPedido) {
         try {
-            await api('actualizar_estado_pedido', {
-                id_pedido: Number(select.dataset.pedido),
-                estado: select.value
-            });
-
-            mostrarMensaje('Estado del pedido actualizado.', 'exito');
-            await cargarPedidos();
+            const resultado = await api(accion, { id_pedido: idPedido });
+            mostrarMensaje(resultado.message, 'exito');
         } catch (error) {
             mostrarMensaje(error.message, 'error');
-            await cargarPedidos();
         }
-    });
+
+        await cargarPedidos();
+    }
+
+    async function cancelarPedido(idPedido) {
+        try {
+            const resultado = await api('actualizar_estado_pedido', { id_pedido: idPedido, estado: 'CANCELADO' });
+            mostrarMensaje(resultado.message, 'exito');
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+
+        await cargarPedidos();
+    }
 
 
     /*-----------------------------------------------------
@@ -617,7 +712,7 @@
             $('ubicacionVerPedido').value = pedido.ubicacion_nombre;
             $('solicitaVerPedido').value = `${pedido.solicita_nombre} ${pedido.solicita_apellido || ''}`.trim();
             $('fechaVerPedido').value = new Date(pedido.fecha_pedido).toLocaleDateString('es-CR');
-            $('estadoVerPedido').value = ETIQUETAS_ESTADO[pedido.estado] || pedido.estado;
+            $('estadoVerPedido').value = etiquetaEstado(pedido);
             $('observacionesVerPedido').value = pedido.observaciones || '';
 
             const lista = $('listaProductosVerPedido');
