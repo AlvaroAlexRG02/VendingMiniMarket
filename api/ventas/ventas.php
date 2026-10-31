@@ -4,6 +4,7 @@ ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/cierre.php';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
 require_once __DIR__ . '/../../config/ubicaciones.php';
@@ -533,6 +534,9 @@ function accionRegistrarVenta(PDO $pdo): void
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
+        }
+        if ($mensajeCierre = mensajeDiaCerrado($e)) {
+            respuestaVenta(false, null, $mensajeCierre, 423);
         }
         error_log('[ventas] ' . $e->getMessage());
         respuestaVenta(false, null, 'No fue posible registrar la venta. Intente nuevamente.', 500);

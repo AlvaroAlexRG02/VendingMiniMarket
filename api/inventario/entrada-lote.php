@@ -12,6 +12,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
+require_once __DIR__ . '/../../config/cierre.php';
 
 function respuestaLote(bool $exito, $datos = null, string $mensaje = '', int $codigo = 200): void
 {
@@ -197,6 +198,9 @@ try {
     respuestaLote(false, null, $e instanceof JsonException ? 'JSON inválido.' : $e->getMessage(), 400);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($mensajeCierre = mensajeDiaCerrado($e)) {
+        respuestaLote(false, null, $mensajeCierre, 423);
+    }
     error_log('[HU-21 entrada-lote] ' . $e->getMessage());
     respuestaLote(false, null, 'No fue posible registrar la entrada. Consulte el registro del servidor.', 500);
 }

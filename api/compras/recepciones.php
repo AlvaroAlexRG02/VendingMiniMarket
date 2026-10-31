@@ -31,6 +31,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
+require_once __DIR__ . '/../../config/cierre.php';
 require_once __DIR__ . '/../../config/ubicaciones.php';
 
 const ESTADOS_PEDIDO_FINALES_RECEPCION = ['RECIBIDO', 'CANCELADO'];
@@ -116,6 +117,9 @@ function manejarErrorBD(PDOException $e, string $mensajeGeneral): void
         respuesta(false, null, 'La operación se relaciona con un registro que no existe.', 409);
     }
 
+    if ($mensajeCierre = mensajeDiaCerrado($e)) {
+        respuesta(false, null, $mensajeCierre, 423);
+    }
     error_log('[recepciones] ' . $e->getMessage());
     respuesta(false, null, $mensajeGeneral, 500);
 }

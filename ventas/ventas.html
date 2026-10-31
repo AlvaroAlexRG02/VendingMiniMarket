@@ -275,14 +275,13 @@
                         hidden
                     >
 
-                    <button
-                        type="button"
-                        id="botonAbrirCierreCaja"
+                    <a
+                        href="../reportes/reportes.php?reporte=cierre"
                         class="boton boton-borde"
                     >
-                        <i class="fa-solid fa-cash-register"></i>
+                        <i class="fa-solid fa-lock"></i>
                         Cierre diario
-                    </button>
+                    </a>
 
                     <button
                         type="button"
@@ -402,23 +401,6 @@
 
                 </article>
 
-                <article class="tarjeta-estadistica">
-
-                    <div class="tarjeta-estadistica-icono">
-                        <i class="fa-solid fa-scale-balanced"></i>
-                    </div>
-
-                    <div>
-
-                        <span>Diferencia de caja</span>
-
-                        <strong id="diferenciaCajaDia">
-                            ₡0
-                        </strong>
-
-                    </div>
-
-                </article>
 
             </section>
 
@@ -949,228 +931,6 @@
                     >
                         <i class="fa-solid fa-floppy-disk"></i>
                         Confirmar venta
-                    </button>
-
-                </div>
-
-            </form>
-
-        </section>
-
-    </div>
-
-    <!-- ==========================================
-         MODAL: CIERRE DIARIO
-    =========================================== -->
-
-    <div
-        id="modalCierreCaja"
-        class="modal-producto"
-        hidden
-    >
-
-        <div
-            class="modal-producto-fondo"
-            data-cerrar-modal-cierre
-        ></div>
-
-        <section
-            class="modal-producto-contenido modal-venta-contenido"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tituloModalCierreCaja"
-        >
-
-            <div class="encabezado-modal-venta">
-
-                <div>
-
-                    <h2 id="tituloModalCierreCaja">
-                        Cierre diario
-                    </h2>
-
-                    <p>
-                        Registra los ingresos y diferencias
-                        encontradas durante la jornada.
-                    </p>
-
-                </div>
-
-                <button
-                    type="button"
-                    id="botonCerrarModalCierre"
-                    class="boton-cerrar-modal"
-                    aria-label="Cerrar formulario de cierre"
-                >
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-
-            </div>
-
-            <form id="formularioCierreCaja">
-
-                <div class="cuadricula-formulario">
-
-                    <!-- Tienda -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="tiendaCierreCaja">
-                            Tienda
-                        </label>
-
-                        <select
-                            id="tiendaCierreCaja"
-                            name="tiendaCierreCaja"
-                            required
-                        >
-
-                            <option value="">
-                                Seleccione una tienda
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <!-- Fecha -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="fechaCierreCaja">
-                            Fecha
-                        </label>
-
-                        <input
-                            type="date"
-                            id="fechaCierreCaja"
-                            name="fechaCierreCaja"
-                            required
-                        >
-
-                    </div>
-
-                    <!-- Efectivo -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="montoEfectivoCierre">
-                            Efectivo contado
-                        </label>
-
-                        <input
-                            type="number"
-                            id="montoEfectivoCierre"
-                            name="montoEfectivoCierre"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            required
-                        >
-
-                    </div>
-
-                    <!-- SINPE -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="montoSinpeCierre">
-                            Total SINPE
-                        </label>
-
-                        <input
-                            type="number"
-                            id="montoSinpeCierre"
-                            name="montoSinpeCierre"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            required
-                        >
-
-                    </div>
-
-                    <!-- Tarjeta -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="montoTarjetaCierre">
-                            Total tarjeta
-                        </label>
-
-                        <input
-                            type="number"
-                            id="montoTarjetaCierre"
-                            name="montoTarjetaCierre"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            required
-                        >
-
-                    </div>
-
-                    <!-- Diferencia -->
-
-                    <div class="grupo-formulario">
-
-                        <label for="diferenciaCierreCaja">
-                            Diferencia
-                        </label>
-
-                        <input
-                            type="number"
-                            id="diferenciaCierreCaja"
-                            name="diferenciaCierreCaja"
-                            step="0.01"
-                            value="0"
-                            readonly
-                        >
-
-                    </div>
-
-                    <!-- Observaciones -->
-
-                    <div class="grupo-formulario campo-completo">
-
-                        <label for="observacionesCierreCaja">
-                            Observaciones
-                        </label>
-
-                        <textarea
-                            id="observacionesCierreCaja"
-                            name="observacionesCierreCaja"
-                            rows="4"
-                            maxlength="500"
-                            placeholder="Describa diferencias, incidencias o información importante del cierre"
-                        ></textarea>
-
-                    </div>
-
-                </div>
-
-                <p
-                    id="mensajeCierreCaja"
-                    class="mensaje-login"
-                    aria-live="polite"
-                ></p>
-
-                <div class="acciones-modal-producto">
-
-                    <button
-                        type="button"
-                        id="botonCancelarCierreCaja"
-                        class="boton boton-borde"
-                    >
-                        Cancelar
-                    </button>
-
-                    <button
-                        type="submit"
-                        class="boton boton-azul"
-                    >
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        Guardar cierre
                     </button>
 
                 </div>

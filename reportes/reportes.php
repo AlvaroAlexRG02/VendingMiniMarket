@@ -9,6 +9,12 @@ if (!isset($_SESSION["usuario"])) {
     exit;
 }
 
+// Los reportes no están disponibles para el Dependiente.
+if (esDependiente()) {
+    header("Location: ../dashboard/dashboard.php");
+    exit;
+}
+
 $paginaActual = basename($_SERVER['PHP_SELF']);
 
 /*
@@ -271,8 +277,8 @@ header("Expires: 0");
                     <h1>Reportes</h1>
 
                     <p>
-                        Consulta información de ventas, inventario,
-                        movimientos, compras y cierres de caja.
+                        Ventas, utilidad, inventario, rotación y pérdidas
+                        por tienda y periodo, para apoyar la toma de decisiones.
                     </p>
 
                 </div>
@@ -293,8 +299,8 @@ header("Expires: 0");
                         id="botonExportarReporte"
                         class="boton boton-azul"
                     >
-                        <i class="fa-solid fa-file-export"></i>
-                        Exportar reporte
+                        <i class="fa-solid fa-file-pdf"></i>
+                        Exportar PDF
                     </button>
 
                 </div>
@@ -311,166 +317,164 @@ header("Expires: 0");
             ></div>
 
             <!-- ==========================================
-                 FILTROS DEL REPORTE
+                 TIPO DE REPORTE Y FILTROS
             =========================================== -->
+
+            <nav class="pestanas-reportes" role="tablist" aria-label="Tipo de reporte">
+
+                <button type="button" class="pestana-reporte activa" role="tab" aria-selected="true" data-reporte="ventas">
+                    <i class="fa-solid fa-cash-register"></i>
+                    <span>Ventas</span>
+                </button>
+
+                <?php if (esAdministradorOGerente()): ?>
+                    <button type="button" class="pestana-reporte" role="tab" aria-selected="false" data-reporte="utilidad">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                        <span>Utilidad</span>
+                    </button>
+                <?php endif; ?>
+
+                <button type="button" class="pestana-reporte" role="tab" aria-selected="false" data-reporte="inventario">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span>Inventario</span>
+                </button>
+
+                <button type="button" class="pestana-reporte" role="tab" aria-selected="false" data-reporte="rotacion">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Rotación y pérdidas</span>
+                </button>
+
+                <button type="button" class="pestana-reporte" role="tab" aria-selected="false" data-reporte="cierre">
+                    <i class="fa-solid fa-lock"></i>
+                    <span>Cierre diario</span>
+                </button>
+
+                <?php if (esAdministradorOGerente()): ?>
+                    <span class="pestanas-divisor" aria-hidden="true"></span>
+
+                    <button type="button" class="pestana-reporte pestana-herramienta" role="tab" aria-selected="false" data-vista="conciliacion">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                        <span>Conciliación</span>
+                    </button>
+                <?php endif; ?>
+
+                <?php if (esAdministrador()): ?>
+                    <button type="button" class="pestana-reporte pestana-herramienta" role="tab" aria-selected="false" data-vista="resumen">
+                        <i class="fa-solid fa-envelope-open-text"></i>
+                        <span>Resumen programado</span>
+                    </button>
+                <?php endif; ?>
+
+            </nav>
+
+            <div id="vistaReportes">
 
             <section class="panel panel-filtros-reportes">
 
                 <div class="panel-encabezado">
-
                     <div>
-
-                        <h2>Configurar reporte</h2>
-
-                        <p class="descripcion-panel">
-                            Selecciona el tipo de información y el periodo.
-                        </p>
-
+                        <h2 id="tituloFiltrosReporte">Filtros del reporte</h2>
+                        <p class="descripcion-panel" id="descripcionFiltrosReporte">Elige el periodo, la tienda y los criterios; el reporte se actualiza al generarlo.</p>
                     </div>
-
                 </div>
 
                 <form id="formularioReporte">
 
+                    <div class="atajos-periodo-reporte" data-filtro="periodo">
+                        <span>Periodo rápido</span>
+                        <button type="button" class="atajo-periodo" data-atajo="hoy">Hoy</button>
+                        <button type="button" class="atajo-periodo" data-atajo="7dias">Últimos 7 días</button>
+                        <button type="button" class="atajo-periodo" data-atajo="mes">Este mes</button>
+                        <button type="button" class="atajo-periodo" data-atajo="mesAnterior">Mes anterior</button>
+                    </div>
+
                     <div class="cuadricula-filtros-reportes">
 
-                        <!-- Tipo -->
+                        <div class="grupo-formulario" data-filtro="tienda">
+                            <label for="tiendaReporte">Tienda</label>
+                            <select id="tiendaReporte" name="tiendaReporte"></select>
+                        </div>
 
-                        <div class="grupo-formulario">
+                        <div class="grupo-formulario" data-filtro="periodo">
+                            <label for="fechaInicioReporte">Fecha inicial</label>
+                            <input type="date" id="fechaInicioReporte" name="fechaInicioReporte" required>
+                        </div>
 
-                            <label for="tipoReporte">
-                                Tipo de reporte
-                            </label>
+                        <div class="grupo-formulario" data-filtro="periodo">
+                            <label for="fechaFinReporte">Fecha final</label>
+                            <input type="date" id="fechaFinReporte" name="fechaFinReporte" required>
+                        </div>
 
-                            <select
-                                id="tipoReporte"
-                                name="tipoReporte"
-                                required
-                            >
+                        <div class="grupo-formulario" data-filtro="dia">
+                            <label for="fechaCierreReporte">Día a cerrar</label>
+                            <input type="date" id="fechaCierreReporte" name="fechaCierreReporte">
+                        </div>
 
-                                <option value="Ventas">
-                                    Ventas
-                                </option>
+                        <div class="grupo-formulario" data-filtro="busqueda">
+                            <label for="busquedaReporte">Producto</label>
+                            <input type="search" id="busquedaReporte" name="busquedaReporte" placeholder="Nombre o código de barras" autocomplete="off">
+                        </div>
 
-                                <option value="Inventario">
-                                    Inventario
-                                </option>
+                        <div class="grupo-formulario" data-filtro="categoria">
+                            <label for="categoriaReporte">Categoría</label>
+                            <select id="categoriaReporte" name="categoriaReporte"></select>
+                        </div>
 
-                                <option value="Movimientos">
-                                    Movimientos
-                                </option>
+                        <div class="grupo-formulario" data-filtro="proveedor">
+                            <label for="proveedorReporte">Proveedor</label>
+                            <select id="proveedorReporte" name="proveedorReporte"></select>
+                        </div>
 
-                                <option value="Compras">
-                                    Compras
-                                </option>
+                        <div class="grupo-formulario" data-filtro="ubicacion">
+                            <label for="ubicacionReporte">Ubicación</label>
+                            <select id="ubicacionReporte" name="ubicacionReporte"></select>
+                        </div>
 
-                                <option value="Cierres de caja">
-                                    Cierres de caja
-                                </option>
-
-                                <option value="Productos">
-                                    Productos
-                                </option>
-
+                        <div class="grupo-formulario" data-filtro="estado">
+                            <label for="estadoReporte">Estado del stock</label>
+                            <select id="estadoReporte" name="estadoReporte">
+                                <option value="">Todos</option>
+                                <option value="CRITICO">Solo críticos</option>
+                                <option value="AGOTADO">Agotados</option>
+                                <option value="BAJO_MINIMO">Bajo mínimo</option>
+                                <option value="NEGATIVO">Negativos</option>
+                                <option value="NORMAL">Normales</option>
                             </select>
-
-                        </div>
-
-                        <!-- Tienda -->
-
-                        <div class="grupo-formulario">
-
-                            <label for="tiendaReporte">
-                                Tienda
-                            </label>
-
-                            <select
-                                id="tiendaReporte"
-                                name="tiendaReporte"
-                            >
-
-                                <option value="">
-                                    Todas las tiendas
-                                </option>
-
-                                <option value="Ultrapark 1">
-                                    Ultrapark 1
-                                </option>
-
-                                <option value="Ultrapark 2">
-                                    Ultrapark 2
-                                </option>
-
-                                <option value="Ultralag">
-                                    Ultralag
-                                </option>
-
-                            </select>
-
-                        </div>
-
-                        <!-- Fecha inicial -->
-
-                        <div class="grupo-formulario">
-
-                            <label for="fechaInicioReporte">
-                                Fecha inicial
-                            </label>
-
-                            <input
-                                type="date"
-                                id="fechaInicioReporte"
-                                name="fechaInicioReporte"
-                                required
-                            >
-
-                        </div>
-
-                        <!-- Fecha final -->
-
-                        <div class="grupo-formulario">
-
-                            <label for="fechaFinReporte">
-                                Fecha final
-                            </label>
-
-                            <input
-                                type="date"
-                                id="fechaFinReporte"
-                                name="fechaFinReporte"
-                                required
-                            >
-
                         </div>
 
                     </div>
 
                     <div class="acciones-formulario-reporte">
-
-                        <button
-                            type="button"
-                            id="botonLimpiarReporte"
-                            class="boton boton-borde"
-                        >
+                        <button type="button" id="botonLimpiarReporte" class="boton boton-borde">
                             <i class="fa-solid fa-eraser"></i>
                             Limpiar
                         </button>
-
-                        <button
-                            type="submit"
-                            class="boton boton-azul"
-                        >
+                        <button type="submit" class="boton boton-azul">
                             <i class="fa-solid fa-chart-column"></i>
                             Generar reporte
                         </button>
-
                     </div>
 
                 </form>
 
             </section>
 
+            <!-- ==========================================
+                 RESULTADO (lo dibuja js/reportes.js)
+            =========================================== -->
+
+            <div id="areaReporte" aria-live="polite">
+                <div class="estado-vacio-productos">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <h3>Cargando reporte…</h3>
+                </div>
+            </div>
+
+            </div>
+
+
             <?php if (esAdministrador()): ?>
+                <div id="vistaResumen" hidden>
                 <section class="panel" aria-labelledby="tituloResumenInventario">
                     <div class="panel-encabezado">
                         <div>
@@ -574,9 +578,11 @@ header("Expires: 0");
                         </table>
                     </div>
                 </section>
+                </div>
             <?php endif; ?>
 
             <?php if (esAdministradorOGerente()): ?>
+                <div id="vistaConciliacion" hidden>
                 <section class="panel panel-conciliacion" aria-labelledby="tituloConciliacion">
                     <div class="panel-encabezado">
                         <div>
@@ -653,316 +659,136 @@ header("Expires: 0");
                         <p>No se encontraron ventas en las fechas seleccionadas.</p>
                     </div>
                 </section>
+                </div>
             <?php endif; ?>
-
-            <!-- ==========================================
-                 RESUMEN
-            =========================================== -->
-
-            <section
-                class="grilla-estadisticas"
-                aria-label="Resumen del reporte"
-            >
-
-                <article class="tarjeta-estadistica">
-
-                    <div class="tarjeta-estadistica-encabezado">
-
-                        <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-coins"></i>
-                        </div>
-
-                        <div>
-
-                            <div
-                                class="tarjeta-estadistica-titulo"
-                                id="tituloIndicadorReporte1"
-                            >
-                                Total registrado
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="valorIndicadorReporte1"
-                            >
-                                ₡0
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="tarjeta-estadistica-cambio"
-                        id="detalleIndicadorReporte1"
-                    >
-                        Según el periodo seleccionado
-                    </div>
-
-                </article>
-
-                <article class="tarjeta-estadistica borde-verde">
-
-                    <div class="tarjeta-estadistica-encabezado">
-
-                        <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-list-ol"></i>
-                        </div>
-
-                        <div>
-
-                            <div
-                                class="tarjeta-estadistica-titulo"
-                                id="tituloIndicadorReporte2"
-                            >
-                                Registros
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="valorIndicadorReporte2"
-                            >
-                                0
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="tarjeta-estadistica-cambio"
-                        id="detalleIndicadorReporte2"
-                    >
-                        Cantidad de resultados
-                    </div>
-
-                </article>
-
-                <article class="tarjeta-estadistica borde-naranja">
-
-                    <div class="tarjeta-estadistica-encabezado">
-
-                        <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-arrow-trend-up"></i>
-                        </div>
-
-                        <div>
-
-                            <div
-                                class="tarjeta-estadistica-titulo"
-                                id="tituloIndicadorReporte3"
-                            >
-                                Mayor valor
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="valorIndicadorReporte3"
-                            >
-                                ₡0
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="tarjeta-estadistica-cambio"
-                        id="detalleIndicadorReporte3"
-                    >
-                        Registro más alto
-                    </div>
-
-                </article>
-
-                <article class="tarjeta-estadistica borde-morado">
-
-                    <div class="tarjeta-estadistica-encabezado">
-
-                        <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-calculator"></i>
-                        </div>
-
-                        <div>
-
-                            <div
-                                class="tarjeta-estadistica-titulo"
-                                id="tituloIndicadorReporte4"
-                            >
-                                Promedio
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="valorIndicadorReporte4"
-                            >
-                                ₡0
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div
-                        class="tarjeta-estadistica-cambio"
-                        id="detalleIndicadorReporte4"
-                    >
-                        Promedio del periodo
-                    </div>
-
-                </article>
-
-            </section>
-
-            <!-- ==========================================
-                 RESULTADOS
-            =========================================== -->
-
-            <section class="panel">
-
-                <div class="panel-encabezado">
-
-                    <div>
-
-                        <h2 id="tituloResultadosReporte">
-                            Resultados del reporte
-                        </h2>
-
-                        <p
-                            class="descripcion-panel"
-                            id="descripcionResultadosReporte"
-                        >
-                            Genera un reporte para consultar la información.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <!-- Resumen del periodo -->
-
-                <div
-                    id="resumenPeriodoReporte"
-                    class="resumen-periodo-reporte"
-                    hidden
-                >
-
-                    <div>
-
-                        <span>Tipo</span>
-
-                        <strong id="resumenTipoReporte">
-                            Ventas
-                        </strong>
-
-                    </div>
-
-                    <div>
-
-                        <span>Tienda</span>
-
-                        <strong id="resumenTiendaReporte">
-                            Todas las tiendas
-                        </strong>
-
-                    </div>
-
-                    <div>
-
-                        <span>Periodo</span>
-
-                        <strong id="resumenFechasReporte">
-                            Sin seleccionar
-                        </strong>
-
-                    </div>
-
-                    <div>
-
-                        <span>Generado</span>
-
-                        <strong id="fechaGeneracionReporte">
-                            -
-                        </strong>
-
-                    </div>
-
-                </div>
-
-                <!-- Tabla -->
-
-                <div
-                    id="contenedorTablaReporte"
-                    class="contenedor-tabla"
-                    hidden
-                >
-
-                    <table class="tabla-datos tabla-reportes">
-
-                        <caption class="texto-solo-lectores">
-                            Resultados generados por el reporte
-                        </caption>
-
-                        <thead id="encabezadoTablaReporte">
-                            <!-- JavaScript genera las columnas -->
-                        </thead>
-
-                        <tbody id="cuerpoTablaReporte">
-                            <!-- JavaScript genera los resultados -->
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-                <!-- Estado inicial -->
-
-                <div
-                    id="mensajeReporteInicial"
-                    class="estado-vacio-productos"
-                >
-
-                    <i class="fa-solid fa-chart-column"></i>
-
-                    <h3>
-                        Configura el reporte
-                    </h3>
-
-                    <p>
-                        Selecciona el tipo, la tienda y el periodo
-                        para mostrar la información.
-                    </p>
-
-                </div>
-
-                <!-- Sin datos -->
-
-                <div
-                    id="mensajeSinDatosReporte"
-                    class="estado-vacio-productos"
-                    hidden
-                >
-
-                    <i class="fa-solid fa-folder-open"></i>
-
-                    <h3>
-                        No hay datos para mostrar
-                    </h3>
-
-                    <p>
-                        No se encontraron registros dentro
-                        del periodo seleccionado.
-                    </p>
-
-                </div>
-
-            </section>
 
         </main>
 
     </div>
 
+
+    <!-- ==========================================
+         MODAL: EXPORTAR REPORTE A PDF
+    =========================================== -->
+
+    <div id="modalExportarReporte" class="modal-producto" hidden>
+
+        <div class="modal-producto-fondo" data-cerrar-modal-exportar-reporte></div>
+
+        <section
+            class="modal-producto-contenido modal-exportar-reporte"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalExportarReporte"
+        >
+
+            <div class="modal-producto-icono">
+                <i class="fa-solid fa-file-pdf"></i>
+            </div>
+
+            <h2 id="tituloModalExportarReporte">Exportar reporte a PDF</h2>
+
+            <p>Elige qué incluir. El PDF se descarga con el mismo formato de los demás reportes del sistema.</p>
+
+            <form id="formularioExportarReporte" novalidate>
+
+                <div class="cuadricula-formulario">
+
+                    <div class="grupo-formulario cuadricula-completa">
+                        <label for="tipoExportarReporte">Reporte</label>
+                        <select id="tipoExportarReporte"></select>
+                    </div>
+
+                    <div class="grupo-formulario" data-exportar="periodo">
+                        <label for="mesExportarReporte">Mes</label>
+                        <select id="mesExportarReporte">
+                            <option value="01">Enero</option>
+                            <option value="02">Febrero</option>
+                            <option value="03">Marzo</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Mayo</option>
+                            <option value="06">Junio</option>
+                            <option value="07">Julio</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+
+                    <div class="grupo-formulario" data-exportar="periodo">
+                        <label for="anioExportarReporte">Año</label>
+                        <select id="anioExportarReporte"></select>
+                    </div>
+
+                    <p class="texto-ayuda cuadricula-completa" data-exportar="sin-periodo" hidden>
+                        El inventario se exporta con las existencias a la fecha y hora de la descarga.
+                    </p>
+
+                    <div class="grupo-formulario cuadricula-completa">
+                        <label>Tiendas</label>
+                        <div class="lista-tiendas-exportar" id="tiendasExportarReporte"></div>
+                    </div>
+
+                    <div class="grupo-formulario">
+                        <label for="categoriaExportarReporte">Categoría</label>
+                        <select id="categoriaExportarReporte"></select>
+                    </div>
+
+                    <div class="grupo-formulario">
+                        <label for="proveedorExportarReporte">Proveedor</label>
+                        <select id="proveedorExportarReporte"></select>
+                    </div>
+
+                    <div class="grupo-formulario" data-exportar="estado" hidden>
+                        <label for="estadoExportarReporte">Estado del stock</label>
+                        <select id="estadoExportarReporte">
+                            <option value="">Todos</option>
+                            <option value="CRITICO">Solo críticos</option>
+                            <option value="AGOTADO">Agotados</option>
+                            <option value="BAJO_MINIMO">Bajo mínimo</option>
+                            <option value="NEGATIVO">Negativos</option>
+                            <option value="NORMAL">Normales</option>
+                        </select>
+                    </div>
+
+                    <div class="grupo-formulario" data-exportar="limite" hidden>
+                        <label for="limiteExportarReporte">Productos en los rankings</label>
+                        <select id="limiteExportarReporte">
+                            <option value="10">Top 10</option>
+                            <option value="15" selected>Top 15</option>
+                            <option value="25">Top 25</option>
+                            <option value="50">Top 50</option>
+                        </select>
+                    </div>
+
+                    <label class="opcion-exportar cuadricula-completa">
+                        <input type="checkbox" id="detalleExportarReporte" checked>
+                        <span>Incluir el detalle (productos, existencias o bajas)</span>
+                    </label>
+
+                </div>
+
+                <p id="mensajeExportarReporte" class="mensaje-login" aria-live="polite"></p>
+
+                <div class="acciones-modal-producto">
+                    <button type="button" class="boton boton-borde" id="botonCancelarExportarReporte">Cancelar</button>
+                    <button type="submit" class="boton boton-azul" id="botonGenerarExportarReporte">
+                        <i class="fa-solid fa-download"></i>
+                        Descargar PDF
+                    </button>
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
     <script src="../js/app.js"></script>
+    <script src="../js/vending-comun.js"></script>
+    <script src="../js/reportes.js"></script>
 
 </body>
 </html>

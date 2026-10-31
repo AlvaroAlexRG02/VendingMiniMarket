@@ -345,25 +345,7 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
                             Tienda
                         </label>
 
-                        <select id="filtroTiendaDashboard">
-
-                            <option value="">
-                                Todas las tiendas
-                            </option>
-
-                            <option value="Ultrapark 1">
-                                Ultrapark 1
-                            </option>
-
-                            <option value="Ultrapark 2">
-                                Ultrapark 2
-                            </option>
-
-                            <option value="Ultralag">
-                                Ultralag
-                            </option>
-
-                        </select>
+                        <select id="filtroTiendaDashboard"></select>
 
                     </div>
 
@@ -388,150 +370,104 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
                  TARJETAS ESTADÍSTICAS
             =========================================== -->
 
+            <div class="separador-seccion" role="separator"><span><i class="fa-solid fa-gauge-high"></i>Resumen del día</span></div>
+
             <section
                 class="grilla-estadisticas"
-                aria-label="Resumen general del sistema"
+                aria-label="Resumen del negocio"
             >
 
-                <!-- Productos -->
-
-                <article class="tarjeta-estadistica">
-
+                <article class="tarjeta-estadistica borde-verde">
                     <div class="tarjeta-estadistica-encabezado">
-
                         <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-box"></i>
+                            <i class="fa-solid fa-cash-register"></i>
                         </div>
-
                         <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Productos
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="totalProductosDashboard"
-                            >
-                                0
-                            </div>
-
+                            <div class="tarjeta-estadistica-titulo">Ventas del día</div>
+                            <div class="tarjeta-estadistica-valor" id="totalVentasDashboard">₡0</div>
                         </div>
-
                     </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        Productos registrados
-                    </div>
-
+                    <div class="tarjeta-estadistica-cambio" id="detalleVentasDashboard">Ventas confirmadas</div>
                 </article>
 
-                <!-- Stock crítico -->
+                <?php if (esAdministradorOGerente()): ?>
+                <article class="tarjeta-estadistica borde-morado">
+                    <div class="tarjeta-estadistica-encabezado">
+                        <div class="tarjeta-estadistica-icono">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </div>
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">Utilidad estimada</div>
+                            <div class="tarjeta-estadistica-valor" id="utilidadDashboard">₡0</div>
+                        </div>
+                    </div>
+                    <div class="tarjeta-estadistica-cambio" id="detalleUtilidadDashboard">Ingresos menos costo</div>
+                </article>
+                <?php endif; ?>
 
                 <article class="tarjeta-estadistica borde-naranja">
-
                     <div class="tarjeta-estadistica-encabezado">
-
                         <div class="tarjeta-estadistica-icono">
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
-
                         <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Stock crítico
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="totalStockCriticoDashboard"
-                            >
-                                0
-                            </div>
-
+                            <div class="tarjeta-estadistica-titulo">Inventario bajo</div>
+                            <div class="tarjeta-estadistica-valor" id="stockCriticoDashboard">0</div>
                         </div>
-
                     </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        Productos que requieren atención
-                    </div>
-
+                    <div class="tarjeta-estadistica-cambio" id="detalleStockDashboard">Productos que requieren atención</div>
                 </article>
 
-                <!-- Ventas -->
-
-                <article class="tarjeta-estadistica borde-verde">
-
+                <article class="tarjeta-estadistica">
                     <div class="tarjeta-estadistica-encabezado">
-
                         <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-colon-sign"></i>
+                            <i class="fa-solid fa-right-left"></i>
                         </div>
-
                         <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Ventas de hoy
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="totalVentasDashboard"
-                            >
-                                ₡0
-                            </div>
-
+                            <div class="tarjeta-estadistica-titulo">Movimientos del día</div>
+                            <div class="tarjeta-estadistica-valor" id="totalMovimientosDashboard">0</div>
                         </div>
-
                     </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        Total vendido durante el día
-                    </div>
-
-                </article>
-
-                <!-- Movimientos -->
-
-                <article class="tarjeta-estadistica borde-morado">
-
-                    <div class="tarjeta-estadistica-encabezado">
-
-                        <div class="tarjeta-estadistica-icono">
-                            <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                        </div>
-
-                        <div>
-
-                            <div class="tarjeta-estadistica-titulo">
-                                Movimientos de hoy
-                            </div>
-
-                            <div
-                                class="tarjeta-estadistica-valor"
-                                id="totalMovimientosDashboard"
-                            >
-                                0
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="tarjeta-estadistica-cambio">
-                        Entradas, salidas, ajustes y traslados
-                    </div>
-
+                    <div class="tarjeta-estadistica-cambio">Entradas, salidas, ajustes y traslados</div>
                 </article>
 
             </section>
+
+            <div class="separador-seccion" role="separator"><span><i class="fa-solid fa-chart-column"></i>Ventas</span></div>
+
+            <div class="grilla-graficos">
+
+                <section class="panel">
+                    <div class="panel-encabezado">
+                        <div>
+                            <h2>Tendencia de ventas</h2>
+                            <p class="descripcion-panel">Ingresos (sin IVA) de los últimos 7 días hasta la fecha elegida.</p>
+                        </div>
+                    </div>
+                    <div id="tendenciaVentasDashboard"></div>
+                </section>
+
+                <?php if (esAdministradorOGerente()): ?>
+                <section class="panel" id="panelVentasTiendaDashboard" hidden>
+                    <div class="panel-encabezado">
+                        <div>
+                            <h2>Ventas por ubicación</h2>
+                            <p class="descripcion-panel">Comparación de las tiendas en el día elegido.</p>
+                        </div>
+                    </div>
+                    <div id="barrasVentasTiendaDashboard"></div>
+                </section>
+                <?php endif; ?>
+
+            </div>
 
             <!-- ==========================================
                  MOVIMIENTOS Y ALERTAS
             =========================================== -->
 
-            <section class="grilla-dos-columnas">
+<div class="separador-seccion" role="separator"><span><i class="fa-solid fa-list-check"></i>Actividad y alertas</span></div>
+
+                        <section class="grilla-dos-columnas">
 
                 <!-- ==========================================
                      ÚLTIMOS MOVIMIENTOS
@@ -678,6 +614,8 @@ $paginaActual = basename($_SERVER['SCRIPT_NAME']);
 
     <!-- JavaScript general -->
     <script src="../js/app.js"></script>
+    <script src="../js/vending-comun.js"></script>
+    <script src="../js/dashboard.js"></script>
 
 </body>
 </html>

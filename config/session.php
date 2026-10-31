@@ -8,6 +8,15 @@ session_set_cookie_params([
 
 session_start();
 
+// Rol visible para el JS del menú lateral (solo afecta lo que se muestra;
+// los permisos reales se validan siempre en el servidor).
+if (!empty($_SESSION['usuario']['id_rol']) && !headers_sent()) {
+    setcookie('vm_rol', (string)(int)$_SESSION['usuario']['id_rol'], [
+        'path' => '/',
+        'samesite' => 'Lax',
+    ]);
+}
+
 if (empty($_SESSION['usuario']['debe_cambiar_contrasena'])) {
     return;
 }

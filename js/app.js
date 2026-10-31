@@ -19,6 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarCambioContrasenaInicialVending();
 });
 
+function rolDelUsuarioVending() {
+    const coincidencia = document.cookie.match(/(?:^|;\s*)vm_rol=(\d+)/);
+    return coincidencia ? Number(coincidencia[1]) : 0;
+}
+
 function inicializarNavegacionLateral() {
     const navegaciones = document.querySelectorAll(".nav-lateral");
 
@@ -142,6 +147,11 @@ function inicializarNavegacionLateral() {
         navegacion.setAttribute("aria-label", "Navegación principal");
 
         paginas.forEach((pagina) => {
+            // El Dependiente (rol 4) no tiene acceso a Reportes.
+            if (pagina.ruta === "reportes/reportes.php" && rolDelUsuarioVending() === 4) {
+                return;
+            }
+
             const enlace = document.createElement("a");
             const icono = document.createElement("i");
             const activa = pagina.rutasActivas.includes(rutaActual);
@@ -1462,13 +1472,16 @@ function inicializarPaginaVentas() {
 
     inicializarRegistroVenta();
     inicializarImportacionDirectaNayax();
-    inicializarCierreCaja();
     inicializarFiltrosVentas();
+
+    // El Dependiente no tiene acceso a Reportes, donde vive el cierre diario.
+    if (rolDelUsuarioVending() === 4) {
+        document.querySelector('a[href*="reporte=cierre"]')?.remove();
+    }
 
     cargarTiendasVenta();
     cargarVentasServidor();
     mostrarVentas();
-    establecerFechaCierreActual();
 }
 
 /*=========================================================
@@ -1785,18 +1798,6 @@ async function cargarTiendasVenta() {
                 selector.appendChild(opcion);
             });
         });
-
-        const tiendasCierre = document.getElementById("tiendaCierreCaja");
-        if (tiendasCierre) {
-            const opcionInicial = tiendasCierre.options[0];
-            tiendasCierre.replaceChildren(opcionInicial);
-            tiendas.forEach((tienda) => {
-                const opcion = document.createElement("option");
-                opcion.value = tienda.nombre;
-                opcion.textContent = tienda.nombre;
-                tiendasCierre.appendChild(opcion);
-            });
-        }
     } catch (error) {
         mostrarMensajeVentas(error.message, "error");
     }
@@ -2591,220 +2592,6 @@ function actualizarResumenVentas(ventas) {
     }
 
     actualizarCantidadImportacionesPendientes();
-    actualizarDiferenciaCaja();
-}
-
-/*=========================================================
-  CIERRE DIARIO
-=========================================================*/
-
-function inicializarCierreCaja() {
-    document.getElementById(
-        "botonAbrirCierreCaja"
-    )?.addEventListener(
-        "click",
-        abrirModalCierreCaja
-    );
-
-    document.getElementById(
-        "botonCerrarModalCierre"
-    )?.addEventListener(
-        "click",
-        cerrarModalCierreCaja
-    );
-
-    document.getElementById(
-        "botonCancelarCierreCaja"
-    )?.addEventListener(
-        "click",
-        cerrarModalCierreCaja
-    );
-
-    document.querySelectorAll(
-        "[data-cerrar-modal-cierre]"
-    ).forEach((fondo) => {
-        fondo.addEventListener(
-            "click",
-            cerrarModalCierreCaja
-        );
-    });
-
-    document.getElementById(
-        "formularioCierreCaja"
-    )?.addEventListener(
-        "submit",
-        guardarCierreCaja
-    );
-}
-
-function abrirModalCierreCaja() {
-    const modal = document.getElementById(
-        "modalCierreCaja"
-    );
-
-    if (!modal) {
-        return;
-    }
-
-    establecerFechaCierreActual();
-
-    modal.hidden = false;
-
-    document.body.classList.add(
-        "modal-producto-abierto"
-    );
-}
-
-function cerrarModalCierreCaja() {
-    const modal = document.getElementById(
-        "modalCierreCaja"
-    );
-
-    if (!modal || modal.hidden) {
-        return;
-    }
-
-    modal.hidden = true;
-
-    document.body.classList.remove(
-        "modal-producto-abierto"
-    );
-}
-
-function establecerFechaCierreActual() {
-    const campo = document.getElementById(
-        "fechaCierreCaja"
-    );
-
-    if (campo && !campo.value) {
-        campo.value = obtenerFechaActualISO();
-    }
-}
-
-function guardarCierreCaja(evento) {
-    evento.preventDefault();
-
-    const tienda = document.getElementById(
-        "tiendaCierreCaja"
-    )?.value;
-
-    const fecha = document.getElementById(
-        "fechaCierreCaja"
-    )?.value;
-
-    if (!tienda || !fecha) {
-        return;
-    }
-
-    const efectivo = Number(
-        document.getElementById(
-            "montoEfectivoCierre"
-        )?.value || 0
-    );
-
-    const sinpe = Number(
-        document.getElementById(
-            "montoSinpeCierre"
-        )?.value || 0
-    );
-
-    const tarjeta = Number(
-        document.getElementById(
-            "montoTarjetaCierre"
-        )?.value || 0
-    );
-
-    const cierres = obtenerCierresCaja();
-
-    const repetido = cierres.some(
-        (cierre) =>
-            cierre.tienda === tienda &&
-            cierre.fecha === fecha
-    );
-
-    if (repetido) {
-        document.getElementById(
-            "mensajeCierreCaja"
-        ).textContent =
-            "Ya existe un cierre para esa tienda y fecha.";
-
-        return;
-    }
-
-    cierres.push({
-        id: `cierre-${Date.now()}`,
-        tienda,
-        fecha,
-        efectivo,
-        sinpe,
-        tarjeta,
-        totalContado:
-            efectivo + sinpe + tarjeta,
-        diferencia: 0,
-        usuarioResponsable:
-            obtenerSesionVending()?.nombre || "Administrador",
-        observaciones:
-            document.getElementById(
-                "observacionesCierreCaja"
-            )?.value.trim() || "",
-        fechaRegistro:
-            new Date().toISOString()
-    });
-
-    localStorage.setItem(
-        "cierresCajaVending",
-        JSON.stringify(cierres)
-    );
-
-    cerrarModalCierreCaja();
-    actualizarDiferenciaCaja();
-
-    mostrarMensajeVentas(
-        "El cierre diario fue guardado correctamente.",
-        "exito"
-    );
-}
-
-function obtenerCierresCaja() {
-    try {
-        const datos = JSON.parse(
-            localStorage.getItem(
-                "cierresCajaVending"
-            ) || "[]"
-        );
-
-        return Array.isArray(datos)
-            ? datos
-            : [];
-    } catch (error) {
-        return [];
-    }
-}
-
-function actualizarDiferenciaCaja() {
-    const elemento = document.getElementById(
-        "diferenciaCajaDia"
-    );
-
-    if (!elemento) {
-        return;
-    }
-
-    const hoy = obtenerFechaActualISO();
-
-    const diferencia = obtenerCierresCaja()
-        .filter((cierre) =>
-            cierre.fecha === hoy
-        )
-        .reduce(
-            (total, cierre) =>
-                total +
-                Number(cierre.diferencia || 0),
-            0
-        );
-
-    elemento.textContent =
-        formatearMonedaCRC(diferencia);
 }
 
 /*=========================================================
@@ -4269,126 +4056,13 @@ function descargarCsvVending(nombre, filas) {
 }
 
 function inicializarDashboardVending() {
-    const totalProductos = document.getElementById(
-        "totalProductosDashboard"
-    );
-
-    if (!totalProductos) {
+    // Las tarjetas y movimientos los dibuja js/dashboard.js con datos reales;
+    // aquí solo se cargan las alertas y el contador de notificaciones.
+    if (!document.getElementById("totalVentasDashboard")) {
         return;
     }
 
-    const fecha = document.getElementById("fechaDashboard");
-
-    if (fecha && !fecha.value) {
-        fecha.value = fechaLocalISOVending();
-    }
-
-    fecha?.addEventListener("change", mostrarDashboardVending);
-
-    document.getElementById("filtroTiendaDashboard")
-        ?.addEventListener("change", mostrarDashboardVending);
-
-    mostrarDashboardVending();
     cargarAlertasDashboardVending();
-}
-
-function mostrarDashboardVending() {
-    const productos = obtenerProductosGuardados();
-    const movimientos = obtenerMovimientosVending();
-    const ventas = obtenerVentasGuardadas();
-
-    const tienda =
-        document.getElementById("filtroTiendaDashboard")?.value || "";
-    const fecha =
-        document.getElementById("fechaDashboard")?.value ||
-        fechaLocalISOVending();
-
-    const productosFiltrados = productos.filter(
-        (producto) => !tienda || producto.ubicacion === tienda
-    );
-
-    const movimientosFiltrados = movimientos.filter(
-        (movimiento) =>
-            (!tienda ||
-                movimiento.origen === tienda ||
-                movimiento.destino === tienda) &&
-            movimiento.fecha === fecha
-    );
-
-    const ventasFiltradas = ventas.filter(
-        (venta) =>
-            (!tienda || venta.tienda === tienda) &&
-            String(venta.fecha).slice(0, 10) === fecha
-    );
-
-    const valores = {
-        totalProductosDashboard: productosFiltrados.length,
-        totalVentasDashboard: formatearMonedaCRC(
-            ventasFiltradas.reduce(
-                (total, venta) => total + Number(venta.total || 0),
-                0
-            )
-        ),
-        totalMovimientosDashboard: movimientosFiltrados.length
-    };
-
-    Object.entries(valores).forEach(([id, valor]) => {
-        const elemento = document.getElementById(id);
-        if (elemento) elemento.textContent = valor;
-    });
-
-    mostrarMovimientosDashboardVending(movimientosFiltrados);
-}
-
-function mostrarMovimientosDashboardVending(movimientos) {
-    const cuerpo = document.getElementById("tablaMovimientosDashboard");
-
-    if (!cuerpo) {
-        return;
-    }
-
-    cuerpo.innerHTML = "";
-
-    const recientes = [...movimientos]
-        .sort(
-            (a, b) =>
-                new Date(b.fechaRegistro) - new Date(a.fechaRegistro)
-        )
-        .slice(0, 5);
-
-    if (recientes.length === 0) {
-        const fila = document.createElement("tr");
-        const celda = document.createElement("td");
-
-        celda.colSpan = 5;
-        celda.textContent = "No hay movimientos registrados.";
-        celda.style.textAlign = "center";
-        celda.style.padding = "40px";
-
-        fila.appendChild(celda);
-        cuerpo.appendChild(fila);
-        return;
-    }
-
-    recientes.forEach((movimiento) => {
-        const fila = document.createElement("tr");
-
-        fila.appendChild(
-            crearCeldaTexto(
-                formatearFechaHoraVenta(movimiento.fechaRegistro)
-            )
-        );
-        fila.appendChild(crearCeldaTexto(movimiento.tipo));
-        fila.appendChild(
-            crearCeldaTexto(
-                `${movimiento.productoNombre}: ${movimiento.cantidad} unidad(es)`
-            )
-        );
-        fila.appendChild(crearCeldaTexto(movimiento.referencia));
-        fila.appendChild(crearCeldaTexto(movimiento.responsable));
-
-        cuerpo.appendChild(fila);
-    });
 }
 
 function mostrarAlertasDashboardVending(alertas) {
@@ -4524,7 +4198,6 @@ function actualizarContadoresNotificacionVending(alertas) {
   PEDIDOS Y FACTURAS
 =========================================================*/
 
-const CLAVE_COMPRAS_VENDING = "comprasVending";
 const CLAVE_PEDIDOS_VENDING = "pedidosVending";
 const CLAVE_FACTURAS_VENDING = "facturasVending";
 
@@ -5658,12 +5331,8 @@ async function cargarHistorialAlertaVending(evento) {
 
 /* REPORTES */
 function inicializarPaginaReportesVending(){
-    const form=document.getElementById("formularioReporte"); if(!form)return;
-    document.getElementById("fechaInicioReporte").value=fechaHoyVending(); document.getElementById("fechaFinReporte").value=fechaHoyVending();
-    form.addEventListener("submit",e=>{e.preventDefault();generarReporteVending();});
-    document.getElementById("botonLimpiarReporte")?.addEventListener("click",()=>{form.reset();document.getElementById("fechaInicioReporte").value=fechaHoyVending();document.getElementById("fechaFinReporte").value=fechaHoyVending();});
-    document.getElementById("botonImprimirReporte")?.addEventListener("click",()=>window.print());
-    document.getElementById("botonExportarReporte")?.addEventListener("click",exportarReporteVending);
+    // Los reportes los dibuja js/reportes.js con datos reales; aquí solo la conciliación.
+    if(!document.getElementById("formularioReporte"))return;
     inicializarConciliacionVending();
 }
 
@@ -5795,29 +5464,6 @@ function inicializarResumenInventarioVending() {
         mostrarMensajeResumenInventarioVending(error.message, true);
         mostrarHistorialResumenInventarioVending([]);
     });
-}
-
-function datosReporteVending(tipo){
-    if(tipo==="Ventas")return leerListaVending("ventasVending"); if(tipo==="Inventario"||tipo==="Productos")return obtenerProductosGuardados();
-    if(tipo==="Movimientos")return obtenerMovimientosVending(); if(tipo==="Compras")return leerListaVending(CLAVE_COMPRAS_VENDING); if(tipo==="Cierres de caja")return leerListaVending("cierresCajaVending"); return [];
-}
-function generarReporteVending(){
-    const tipo=document.getElementById("tipoReporte").value, tienda=document.getElementById("tiendaReporte").value, inicio=document.getElementById("fechaInicioReporte").value, fin=document.getElementById("fechaFinReporte").value;
-    if(inicio&&fin&&inicio>fin){mostrarMensajeModuloVending("mensajeReportes","La fecha inicial no puede ser posterior a la final.","error");return;}
-    let datos=datosReporteVending(tipo).filter(x=>!tienda||(x.tienda||x.ubicacion||x.destino||x.origen)===tienda);
-    datos=datos.filter(x=>{const f=String(x.fecha||x.fechaRegistro||"").slice(0,10);return !f||((!inicio||f>=inicio)&&(!fin||f<=fin));});
-    const claves=datos.length?Object.keys(datos[0]).filter(k=>!["id","contrasena","imagen","observaciones"].includes(k)).slice(0,8):[];
-    document.getElementById("encabezadoTablaReporte").innerHTML=`<tr>${claves.map(k=>`<th>${escaparHTMLVending(k.replace(/([A-Z])/g," $1"))}</th>`).join("")}</tr>`;
-    document.getElementById("cuerpoTablaReporte").innerHTML=datos.map(x=>`<tr>${claves.map(k=>`<td>${typeof x[k]==="number"&&/total|precio|monto|subtotal|impuesto/i.test(k)?monedaVending(x[k]):escaparHTMLVending(Array.isArray(x[k])?x[k].length:x[k])}</td>`).join("")}</tr>`).join("");
-    const montos=datos.map(x=>Number(x.total||x.monto||x.precioVenta||0)); const suma=montos.reduce((a,b)=>a+b,0);
-    textoVending("valorIndicadorReporte1",monedaVending(suma));textoVending("valorIndicadorReporte2",datos.length);textoVending("valorIndicadorReporte3",monedaVending(Math.max(0,...montos)));textoVending("valorIndicadorReporte4",monedaVending(datos.length?suma/datos.length:0));
-    textoVending("resumenTipoReporte",tipo);textoVending("resumenTiendaReporte",tienda||"Todas las tiendas");textoVending("resumenFechasReporte",`${inicio||"Inicio"} al ${fin||"Hoy"}`);textoVending("fechaGeneracionReporte",new Date().toLocaleString("es-CR"));
-    mostrarElementoVending("resumenPeriodoReporte",true);mostrarElementoVending("contenedorTablaReporte",datos.length>0);mostrarElementoVending("mensajeSinDatosReporte",datos.length===0);mostrarElementoVending("mensajeReporteInicial",false);
-}
-function exportarReporteVending(){
-    const filas=[...document.querySelectorAll("#contenedorTablaReporte tr")].map(f=>[...f.children].map(c=>`"${c.textContent.trim().replace(/"/g,'""')}"`).join(","));
-    if(!filas.length){mostrarMensajeModuloVending("mensajeReportes","Primero genera un reporte.","error");return;}
-    const blob=new Blob(["\ufeff"+filas.join("\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="reporte-vending.csv";a.click();URL.revokeObjectURL(a.href);
 }
 
 let resultadosConciliacionVending = [];

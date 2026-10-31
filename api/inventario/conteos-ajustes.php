@@ -10,6 +10,7 @@ ini_set('display_errors', '0');
 error_reporting(E_ALL);
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
+require_once __DIR__ . '/../../config/cierre.php';
 
 function caResponder(bool $success, $data = null, string $message = '', int $status = 200): void {
     http_response_code($status);
@@ -319,6 +320,9 @@ try {
 }catch(DomainException | JsonException $e){caResponder(false,null,$e instanceof JsonException?'JSON no válido.':$e->getMessage(),400);
 }catch(Throwable $e){
     if($pdo->inTransaction()) $pdo->rollBack();
+    if ($mensajeCierre = mensajeDiaCerrado($e)) {
+        caResponder(false, null, $mensajeCierre, 423);
+    }
     error_log('[HU24/25] '.$e->getMessage());
     // Diagnóstico SOLO para la sesión de Administrador en el servidor local.
     // El resto de los usuarios recibe el mensaje genérico.

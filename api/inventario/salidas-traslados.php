@@ -12,6 +12,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
+require_once __DIR__ . '/../../config/cierre.php';
 
 function responderMovimiento2322(bool $success, $data = null, string $message = '', int $http = 200): void
 {
@@ -306,6 +307,9 @@ try {
     responderMovimiento2322(false, null, $e instanceof JsonException ? 'El JSON no es válido.' : $e->getMessage(), 400);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($mensajeCierre = mensajeDiaCerrado($e)) {
+        responderMovimiento2322(false, null, $mensajeCierre, 423);
+    }
     error_log('[inventario salidas-traslados] ' . $e->getMessage());
     responderMovimiento2322(false, null, 'No fue posible registrar el movimiento. Revise el registro del servidor.', 500);
 }

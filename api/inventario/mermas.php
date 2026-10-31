@@ -7,6 +7,7 @@ ini_set('display_errors', '0');
 error_reporting(E_ALL);
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
+require_once __DIR__ . '/../../config/cierre.php';
 
 function bajaResponder(bool $ok, $data = null, string $message = '', int $status = 200): void
 {
@@ -267,6 +268,9 @@ try {
     bajaResponder(false, null, $e instanceof JsonException ? 'La solicitud no contiene JSON válido.' : $e->getMessage(), 400);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($mensajeCierre = mensajeDiaCerrado($e)) {
+        bajaResponder(false, null, $mensajeCierre, 423);
+    }
     error_log('[HU26] ' . $e->getMessage());
     bajaResponder(false, null, 'No fue posible registrar la baja. Revise el registro PHP.', 500);
 }

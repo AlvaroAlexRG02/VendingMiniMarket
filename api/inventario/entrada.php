@@ -23,6 +23,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
+require_once __DIR__ . '/../../config/cierre.php';
 
 
 /* ==========================================================
@@ -1288,6 +1289,10 @@ function registrarEntrada(
             $pdo->rollBack();
         }
 
+
+        if ($mensajeCierre = mensajeDiaCerrado($error)) {
+            responderEntrada(false, null, $mensajeCierre, 423);
+        }
 
         error_log(
             'HU-21 entrada inventario: ' .
