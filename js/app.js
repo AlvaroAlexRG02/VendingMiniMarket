@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaVentas();
     inicializarDashboardVending();
     actualizarContadoresNotificacionVending();
+    inicializarBotonNotificacionesVending();
+    inicializarMenuPerfilVending();
     inicializarPaginaUsuariosVending();
     inicializarPaginaAlertasVending();
     inicializarPaginaReportesVending();
@@ -4174,6 +4176,122 @@ async function solicitarApiAlertasInventarioVending(accion, datos = {}) {
         throw new Error(resultado.message || "No fue posible guardar la gestión de alerta.");
     }
     return resultado.data;
+}
+
+/** Menú del perfil (flechita de la barra superior): datos del usuario y cierre de sesión. */
+function inicializarMenuPerfilVending() {
+    const ROLES = { 1: "Administrador", 2: "Gerente General", 3: "Encargado", 4: "Dependiente" };
+
+    document.querySelectorAll(".perfil-superior").forEach((perfil) => {
+        const menu = document.createElement("div");
+        menu.className = "menu-perfil";
+        menu.hidden = true;
+        menu.setAttribute("role", "menu");
+
+        const cabecera = document.createElement("div");
+        cabecera.className = "menu-perfil-cabecera";
+
+        const etiquetaRol = document.createElement("span");
+        etiquetaRol.className = "menu-perfil-rol";
+
+        const nombre = document.createElement("strong");
+        const correo = document.createElement("span");
+        correo.className = "menu-perfil-dato";
+        const ubicacion = document.createElement("span");
+        ubicacion.className = "menu-perfil-dato";
+
+        cabecera.append(etiquetaRol, nombre, correo, ubicacion);
+
+        const cerrar = document.createElement("button");
+        cerrar.type = "button";
+        cerrar.className = "menu-perfil-accion";
+        cerrar.setAttribute("role", "menuitem");
+        cerrar.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión';
+        cerrar.addEventListener("click", () => {
+            cerrarMenu();
+            cerrarSesionVending();
+        });
+
+        menu.append(cabecera, cerrar);
+        perfil.append(menu);
+
+        perfil.classList.add("perfil-superior-interactivo");
+        perfil.tabIndex = 0;
+        perfil.setAttribute("role", "button");
+        perfil.setAttribute("aria-haspopup", "menu");
+        perfil.setAttribute("aria-expanded", "false");
+
+        function cerrarMenu() {
+            menu.hidden = true;
+            perfil.classList.remove("abierto");
+            perfil.setAttribute("aria-expanded", "false");
+        }
+
+        function abrirMenu() {
+            const texto = (id) => document.getElementById(id)?.textContent.replace(/\s+/g, " ").trim() || "";
+
+            etiquetaRol.textContent = ROLES[rolDelUsuarioVending()] || "";
+            etiquetaRol.hidden = !etiquetaRol.textContent;
+            nombre.textContent = texto("nombreUsuarioSuperior");
+            correo.textContent = texto("correoUsuarioSuperior").split(" · ")[0];
+            ubicacion.textContent = texto("ubicacionUsuarioSuperior");
+            ubicacion.hidden = !ubicacion.textContent;
+
+            menu.hidden = false;
+            perfil.classList.add("abierto");
+            perfil.setAttribute("aria-expanded", "true");
+        }
+
+        perfil.addEventListener("click", (evento) => {
+            if (menu.contains(evento.target)) {
+                return;
+            }
+
+            if (menu.hidden) {
+                abrirMenu();
+            } else {
+                cerrarMenu();
+            }
+        });
+
+        perfil.addEventListener("keydown", (evento) => {
+            if (evento.target === perfil && (evento.key === "Enter" || evento.key === " ")) {
+                evento.preventDefault();
+                menu.hidden ? abrirMenu() : cerrarMenu();
+            }
+
+            if (evento.key === "Escape") {
+                cerrarMenu();
+                perfil.focus();
+            }
+        });
+
+        document.addEventListener("click", (evento) => {
+            if (!perfil.contains(evento.target)) {
+                cerrarMenu();
+            }
+        });
+    });
+}
+
+/** La campanita lleva a la pantalla de Alertas. */
+function inicializarBotonNotificacionesVending() {
+    const scriptAplicacion = Array.from(document.scripts).find((script) => {
+        return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+    });
+
+    if (!scriptAplicacion) {
+        return;
+    }
+
+    const destino = new URL("../alertas/alertas.html", scriptAplicacion.src).href;
+
+    document.querySelectorAll(".boton-notificacion").forEach((boton) => {
+        boton.title = "Ver alertas de inventario";
+        boton.addEventListener("click", () => {
+            window.location.href = destino;
+        });
+    });
 }
 
 function actualizarContadoresNotificacionVending(alertas) {

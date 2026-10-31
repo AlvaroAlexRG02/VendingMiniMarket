@@ -588,6 +588,104 @@ body.pagina-app {
     object-fit: cover;
 }
 
+.perfil-superior-interactivo {
+    position: relative;
+    padding: 6px 8px;
+    border-radius: var(--radio-sm);
+    cursor: pointer;
+    user-select: none;
+}
+
+.perfil-superior-interactivo:hover,
+.perfil-superior-interactivo.abierto {
+    background: var(--fondo-pagina);
+}
+
+.perfil-superior-interactivo:focus-visible {
+    outline: 2px solid var(--azul);
+    outline-offset: 2px;
+}
+
+.perfil-superior-interactivo > i {
+    color: var(--texto-secundario);
+    transition: transform 0.15s ease;
+}
+
+.perfil-superior-interactivo.abierto > i {
+    transform: rotate(180deg);
+}
+
+.menu-perfil {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 270px;
+    overflow: hidden;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    background: var(--fondo-tarjeta);
+    box-shadow: 0 12px 32px rgba(12, 31, 74, 0.18);
+    cursor: default;
+}
+
+.menu-perfil[hidden] {
+    display: none;
+}
+
+.menu-perfil-cabecera {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--borde);
+    background: var(--fondo-pagina);
+}
+
+.menu-perfil-rol {
+    align-self: flex-start;
+    margin-bottom: 4px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--azul-marino);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.menu-perfil-cabecera strong {
+    color: var(--texto-principal);
+    font-size: 15px;
+}
+
+.menu-perfil-dato {
+    overflow-wrap: anywhere;
+    color: var(--texto-secundario);
+    font-size: 12px;
+}
+
+.menu-perfil-accion {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 18px;
+    border: none;
+    background: transparent;
+    color: var(--rojo);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.menu-perfil-accion:hover {
+    background: var(--rojo-claro);
+}
+
 .perfil-superior-texto strong {
     display: block;
     font-size: 14px;
