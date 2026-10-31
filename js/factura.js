@@ -88,6 +88,7 @@
         document.querySelector('[data-cerrar-modal-exportar-historial]')?.addEventListener('click', cerrarModalExportarHistorial);
         $('botonGenerarExportarHistorial')?.addEventListener('click', exportarHistorial);
         $('impuestoFacturaDetalle')?.addEventListener('change', calcularTotalesDetalle);
+        $('impuestoFactura')?.addEventListener('change', calcularTotales);
 
         ['buscarFactura', 'filtroProveedorFactura', 'filtroTiendaFactura', 'filtroEstadoFactura', 'filtroFechaFactura']
             .forEach((id) => {
@@ -173,7 +174,7 @@
 
         const select = $('pedidoRelacionadoFactura');
         if (select) {
-            select.innerHTML = '<option value="">Sin pedido relacionado</option>' +
+            select.innerHTML = '<option value="">Seleccione un pedido</option>' +
                 pedidos.map((p) => `<option value="${p.id_pedido}">${p.numero_pedido} - ${escaparHTML(p.proveedor_nombre)} (${new Date(p.fecha_pedido).toLocaleDateString('es-CR')})</option>`).join('');
         }
     }

@@ -293,6 +293,10 @@ function accionCrearFactura(array $in): void
     $observaciones    = trim((string)($_POST['observaciones'] ?? ''));
     $items            = leerItemsFactura((string)($_POST['items'] ?? '[]'));
 
+    if ($idPedido === null) {
+        respuesta(false, null, 'Debe relacionar la factura con un pedido.', 400);
+    }
+
     if ($idProveedor <= 0) {
         respuesta(false, null, 'Debe seleccionar un proveedor.', 400);
     }

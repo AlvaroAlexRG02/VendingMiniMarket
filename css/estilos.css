@@ -3256,6 +3256,185 @@ body.pagina-app {
     font-size: 22px;
 }
 
+/* ---- Formato de documento (modal Nueva factura) ---- */
+
+#modalFactura .modal-factura-contenido {
+    padding: 0;
+    border-top: 6px solid var(--azul-marino);
+}
+
+#modalFactura .modal-factura-contenido .encabezado-documento-factura {
+    margin: 0;
+    padding: 22px 28px 18px;
+    border-bottom: 2px solid var(--azul-marino);
+    background: var(--fondo-pagina);
+}
+
+.etiqueta-documento-factura {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    color: var(--azul);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#modalFactura .modal-factura-contenido #formularioFactura {
+    padding: 22px 28px 26px;
+}
+
+#modalFactura .modal-factura-contenido #formularioFactura > .grupo-formulario:first-child {
+    margin-bottom: 16px;
+}
+
+.bloques-documento-factura {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.bloque-documento-factura {
+    padding: 14px 16px 6px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-sm);
+}
+
+.bloque-documento-factura h3 {
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--borde);
+    color: var(--azul-marino);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.bloque-documento-factura .cuadricula-formulario {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+#modalFactura .modal-factura-contenido .seccion-productos-compra {
+    padding: 0;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-sm);
+    background: #ffffff;
+    overflow: hidden;
+}
+
+#modalFactura .modal-factura-contenido .encabezado-productos-compra {
+    margin: 0;
+    padding: 14px 16px;
+}
+
+.cabecera-items-factura,
+#modalFactura .modal-factura-contenido .fila-producto-compra {
+    display: grid;
+    grid-template-columns:
+        minmax(190px, 2fr)
+        minmax(90px, 0.6fr)
+        minmax(120px, 1fr)
+        minmax(120px, 1fr)
+        40px;
+    gap: 10px;
+    align-items: center;
+}
+
+.cabecera-items-factura {
+    padding: 10px 16px;
+    background: var(--azul-marino);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+#modalFactura .modal-factura-contenido .lista-productos-compra {
+    gap: 0;
+}
+
+#modalFactura .modal-factura-contenido .fila-producto-compra {
+    padding: 10px 16px;
+    border: none;
+    border-bottom: 1px solid var(--borde);
+    border-radius: 0;
+}
+
+#modalFactura .modal-factura-contenido .fila-producto-compra label {
+    display: none;
+}
+
+#modalFactura .modal-factura-contenido .mensaje-productos-compra {
+    margin: 12px 16px;
+}
+
+.totales-documento-factura {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 340px);
+    margin: 20px 0 0 auto;
+    border-top: 2px solid var(--azul-marino);
+}
+
+.totales-documento-factura > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 9px 4px;
+    border-bottom: 1px solid var(--borde);
+}
+
+.totales-documento-factura span {
+    color: var(--texto-secundario);
+    font-size: 13px;
+}
+
+.totales-documento-factura strong {
+    color: var(--texto-principal);
+    font-size: 16px;
+}
+
+.totales-documento-factura .total-documento-factura {
+    padding: 12px 10px;
+    border-bottom: none;
+    background: var(--azul-claro);
+}
+
+.totales-documento-factura .total-documento-factura span {
+    color: var(--azul-marino);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.totales-documento-factura .total-documento-factura strong {
+    color: var(--azul);
+    font-size: 22px;
+}
+
+@media (max-width: 900px) {
+    .bloques-documento-factura {
+        grid-template-columns: 1fr;
+    }
+
+    .cabecera-items-factura {
+        display: none;
+    }
+
+    #modalFactura .modal-factura-contenido .fila-producto-compra {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #modalFactura .modal-factura-contenido .fila-producto-compra label {
+        display: block;
+    }
+}
+
 @media (max-width: 720px) {
     .acciones-encabezado-facturas {
         width: 100%;

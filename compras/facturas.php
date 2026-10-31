@@ -471,8 +471,9 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
             aria-labelledby="tituloModalFactura"
         >
 
-            <div class="encabezado-modal-venta">
+            <div class="encabezado-modal-venta encabezado-documento-factura">
                 <div>
+                    <span class="etiqueta-documento-factura"><i class="fa-solid fa-file-invoice-dollar"></i> Factura de proveedor</span>
                     <h2 id="tituloModalFactura">Nueva factura</h2>
                     <p>Registra los datos del documento recibido del proveedor.</p>
                 </div>
@@ -486,29 +487,37 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                 <!-- Pedido relacionado (primero, opcional) -->
 
                 <div class="grupo-formulario">
-                    <label for="pedidoRelacionadoFactura">Pedido relacionado (opcional)</label>
-                    <select id="pedidoRelacionadoFactura" name="pedidoRelacionadoFactura">
-                        <option value="">Sin pedido relacionado</option>
+                    <label for="pedidoRelacionadoFactura">Pedido relacionado</label>
+                    <select id="pedidoRelacionadoFactura" name="pedidoRelacionadoFactura" required>
+                        <option value="">Seleccione un pedido</option>
                     </select>
                 </div>
 
-                <div class="cuadricula-formulario">
+                                <div class="bloques-documento-factura">
 
-                    <div class="grupo-formulario">
+                    <div class="bloque-documento-factura">
+                        <h3>Proveedor y destino</h3>
+                        <div class="cuadricula-formulario">
+                            <div class="grupo-formulario">
                         <label for="proveedorFactura">Proveedor</label>
                         <select id="proveedorFactura" name="proveedorFactura" required>
                             <option value="">Seleccione un proveedor</option>
                         </select>
                     </div>
 
-                    <div class="grupo-formulario">
+                            <div class="grupo-formulario">
                         <label for="ubicacionFactura">Tienda</label>
                         <select id="ubicacionFactura" name="ubicacionFactura" required>
                             <option value="">Seleccione una tienda</option>
                         </select>
                     </div>
+                        </div>
+                    </div>
 
-                    <div class="grupo-formulario">
+                    <div class="bloque-documento-factura">
+                        <h3>Datos del documento</h3>
+                        <div class="cuadricula-formulario">
+                            <div class="grupo-formulario">
                         <label for="numeroFactura">Número de factura</label>
                         <input
                             type="text"
@@ -521,21 +530,23 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                         >
                     </div>
 
-                    <div class="grupo-formulario">
+                            <div class="grupo-formulario">
                         <label for="fechaFactura">Fecha de emisión</label>
                         <input type="date" id="fechaFactura" name="fechaFactura" required>
                     </div>
 
-                    <div class="grupo-formulario">
+                            <div class="grupo-formulario">
                         <label for="fechaVencimientoFactura">Fecha de vencimiento</label>
                         <input type="date" id="fechaVencimientoFactura" name="fechaVencimientoFactura">
                     </div>
 
-                    <div class="grupo-formulario">
+                            <div class="grupo-formulario">
                         <label for="impuestoFactura">Impuesto</label>
                         <select id="impuestoFactura" name="impuestoFactura" required>
                             <option value="">Seleccione un impuesto</option>
                         </select>
+                    </div>
+                        </div>
                     </div>
 
                 </div>
@@ -551,6 +562,14 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                             <i class="fa-solid fa-plus"></i>
                             Agregar producto
                         </button>
+                    </div>
+
+                    <div class="cabecera-items-factura" aria-hidden="true">
+                        <span>Producto</span>
+                        <span>Cantidad</span>
+                        <span>Costo unitario</span>
+                        <span>Subtotal</span>
+                        <span></span>
                     </div>
 
                     <div id="listaProductosFactura" class="lista-productos-compra"></div>
@@ -580,7 +599,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                     ></textarea>
                 </div>
 
-                <div class="resumen-compra-formulario">
+                <div class="totales-documento-factura">
                     <div>
                         <span>Subtotal</span>
                         <strong id="subtotalFacturaResumen">₡0</strong>
@@ -589,7 +608,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                         <span>Impuesto</span>
                         <strong id="impuestoFacturaResumen">₡0</strong>
                     </div>
-                    <div class="total-compra-formulario">
+                    <div class="total-documento-factura">
                         <span>Total</span>
                         <strong id="totalFacturaResumen">₡0</strong>
                     </div>
