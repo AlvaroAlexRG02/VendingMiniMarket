@@ -82,7 +82,11 @@
         $('botonAprobarFacturaDetalle')?.addEventListener('click', aprobarFacturaDetalle);
         $('botonRechazarFacturaDetalle')?.addEventListener('click', rechazarFacturaDetalle);
         $('botonAnularFacturaDetalle')?.addEventListener('click', anularFacturaDetalle);
-        $('botonExportarHistorial')?.addEventListener('click', exportarHistorial);
+        $('botonExportarHistorial')?.addEventListener('click', abrirModalExportarHistorial);
+        $('botonCerrarModalExportarHistorial')?.addEventListener('click', cerrarModalExportarHistorial);
+        $('botonCancelarExportarHistorial')?.addEventListener('click', cerrarModalExportarHistorial);
+        document.querySelector('[data-cerrar-modal-exportar-historial]')?.addEventListener('click', cerrarModalExportarHistorial);
+        $('botonGenerarExportarHistorial')?.addEventListener('click', exportarHistorial);
         $('impuestoFacturaDetalle')?.addEventListener('change', calcularTotalesDetalle);
 
         ['buscarFactura', 'filtroProveedorFactura', 'filtroTiendaFactura', 'filtroEstadoFactura', 'filtroFechaFactura']
@@ -748,6 +752,39 @@
 
     function exportarHistorial() {
         const parametros = new URLSearchParams(leerFiltros());
+
+        const mes = $('selectMesExportarHistorial')?.value || '';
+        const anio = $('selectAnioExportarHistorial')?.value || '';
+        if (mes && anio) {
+            parametros.set('mes', `${anio}-${mes}`);
+        }
+
         window.open(`../api/compras/facturas.php?accion=exportar_historial&${parametros.toString()}`, '_blank');
+        cerrarModalExportarHistorial();
+    }
+
+    function abrirModalExportarHistorial() {
+        const hoy = new Date();
+        const selectAnio = $('selectAnioExportarHistorial');
+
+        if (selectAnio && !selectAnio.children.length) {
+            const anioActual = hoy.getFullYear();
+            for (let anio = anioActual; anio >= anioActual - 5; anio--) {
+                const opcion = document.createElement('option');
+                opcion.value = String(anio);
+                opcion.textContent = String(anio);
+                selectAnio.appendChild(opcion);
+            }
+        }
+
+        const selectMes = $('selectMesExportarHistorial');
+        if (selectMes) selectMes.value = String(hoy.getMonth() + 1).padStart(2, '0');
+        if (selectAnio) selectAnio.value = String(hoy.getFullYear());
+
+        $('modalExportarHistorial').hidden = false;
+    }
+
+    function cerrarModalExportarHistorial() {
+        $('modalExportarHistorial').hidden = true;
     }
 })();

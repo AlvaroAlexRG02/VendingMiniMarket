@@ -24,10 +24,25 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/permisos.php';
 require_once __DIR__ . '/../../config/ubicaciones.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
 const ESTADOS_FACTURA = ['PENDIENTE', 'EN_REVISION', 'APROBADA', 'RECHAZADA', 'ANULADA'];
 const CARPETA_EVIDENCIAS = __DIR__ . '/../../compras/facturas-adjuntas/';
 const TAMANO_MAXIMO_EVIDENCIA = 5 * 1024 * 1024; // 5 MB
+
+const ETIQUETAS_ESTADO_FACTURA = [
+    'PENDIENTE'   => 'Pendiente',
+    'EN_REVISION' => 'En revisión',
+    'APROBADA'    => 'Aprobada',
+    'RECHAZADA'   => 'Rechazada',
+    'ANULADA'     => 'Anulada',
+];
+
+const NOMBRES_MESES = [
+    '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
+    '05' => 'Mayo', '06' => 'Junio', '07' => 'Julio', '08' => 'Agosto',
+    '09' => 'Septiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre',
+];
 
 
 /* ==========================================================
@@ -337,6 +352,17 @@ function accionCrearFactura(array $in): void
 
         if ($estadoPedido === 'CANCELADO') {
             respuesta(false, null, 'No se puede relacionar una factura con un pedido Cancelado.', 400);
+        }
+
+        // Un pedido solo puede tener una factura asociada (la lista de "pedidos
+        // disponibles" ya los oculta, pero esto evita duplicados si la API se
+        // llama directamente o si dos solicitudes llegan casi al mismo tiempo).
+        $facturaExistente = db()->prepare('SELECT numero_factura FROM factura_proveedor WHERE id_pedido = :id LIMIT 1');
+        $facturaExistente->execute([':id' => $idPedido]);
+        $numeroFacturaExistente = $facturaExistente->fetchColumn();
+
+        if ($numeroFacturaExistente !== false) {
+            respuesta(false, null, "Este pedido ya tiene la factura $numeroFacturaExistente asociada.", 409);
         }
     }
 
@@ -1015,6 +1041,12 @@ function filtrosHistorialFacturas(): array
         $params[':fecha'] = $fecha;
     }
 
+    $mes = trim((string)($_GET['mes'] ?? ''));
+    if ($mes !== '' && preg_match('/^\d{4}-\d{2}$/', $mes)) {
+        $where[] = "to_char(f.fecha_emision, 'YYYY-MM') = :mes";
+        $params[':mes'] = $mes;
+    }
+
     return [$where, $params];
 }
 
@@ -1028,40 +1060,203 @@ function accionExportarHistorial(array $in): void
     if ($where) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
     }
-    $sql .= ' ORDER BY f.fecha_registro DESC';
+    $sql .= ' ORDER BY f.fecha_emision ASC, f.id_factura ASC';
 
     $st = db()->prepare($sql);
     $st->execute($params);
     $filas = $st->fetchAll();
 
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="historial_compras_' . date('Y-m-d_His') . '.csv"');
-    header('Cache-Control: no-store');
-
-    $salida = fopen('php://output', 'w');
-    fputs($salida, "\xEF\xBB\xBF"); // BOM para que Excel reconozca UTF-8
-
-    fputcsv($salida, [
-        'Pedido', 'Factura', 'Proveedor', 'Tienda', 'Fecha emisión', 'Estado',
-        'Subtotal', 'Impuesto', 'Total', 'Movimientos asociados',
-    ]);
-
-    foreach ($filas as $f) {
-        fputcsv($salida, [
-            $f['numero_pedido'] ?? '-',
-            $f['numero_factura'],
-            $f['proveedor_nombre'],
-            $f['ubicacion_nombre'],
-            $f['fecha_emision'],
-            $f['estado'],
-            $f['subtotal'],
-            $f['monto_impuesto'],
-            $f['monto_total'],
-            $f['movimientos_asociados'],
-        ]);
+    $mes = trim((string)($_GET['mes'] ?? ''));
+    $tituloPeriodo = 'Historial completo';
+    if ($mes !== '' && preg_match('/^\d{4}-\d{2}$/', $mes)) {
+        [$anio, $numMes] = explode('-', $mes);
+        $tituloPeriodo = (NOMBRES_MESES[$numMes] ?? $numMes) . ' ' . $anio;
     }
 
-    fclose($salida);
+    $totalSubtotal = 0.0;
+    $totalImpuesto = 0.0;
+    $totalGeneral  = 0.0;
+
+    $filasHtml = '';
+
+    foreach ($filas as $f) {
+        $totalSubtotal += (float)$f['subtotal'];
+        $totalImpuesto += (float)$f['monto_impuesto'];
+        $totalGeneral  += (float)$f['monto_total'];
+
+        $registradoPor = trim(($f['registra_nombre'] ?? '') . ' ' . ($f['registra_apellido'] ?? ''));
+        $etiquetaEstado = ETIQUETAS_ESTADO_FACTURA[$f['estado']] ?? $f['estado'];
+        $claseEstado = 'estado-' . strtolower((string)$f['estado']);
+
+        $filasHtml .= '
+            <tr>
+                <td>' . htmlspecialchars($f['numero_pedido'] ?? '-') . '</td>
+                <td>' . htmlspecialchars($f['numero_factura']) . '</td>
+                <td>' . htmlspecialchars($f['proveedor_nombre']) . '</td>
+                <td>' . htmlspecialchars($f['ubicacion_nombre']) . '</td>
+                <td>' . htmlspecialchars(date('d/m/Y', strtotime((string)$f['fecha_emision']))) . '</td>
+                <td><span class="badge-estado ' . $claseEstado . '">' . htmlspecialchars($etiquetaEstado) . '</span></td>
+                <td>' . htmlspecialchars($registradoPor ?: '-') . '</td>
+                <td class="num">₡' . number_format((float)$f['subtotal'], 2) . '</td>
+                <td class="num">₡' . number_format((float)$f['monto_impuesto'], 2) . '</td>
+                <td class="num">₡' . number_format((float)$f['monto_total'], 2) . '</td>
+            </tr>
+        ';
+    }
+
+    if ($filas === []) {
+        $filasHtml = '<tr><td colspan="10" class="vacio">No hay facturas registradas para el periodo seleccionado.</td></tr>';
+    }
+
+    $fechaGeneracion = (new DateTime())->format('d/m/Y H:i');
+
+    $html = '
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                @page { margin: 28px 32px; }
+                * { font-family: Helvetica, Arial, sans-serif; }
+                body { color: #1f2937; font-size: 10px; }
+
+                .encabezado {
+                    border-bottom: 3px solid #2563eb;
+                    padding-bottom: 10px;
+                    margin-bottom: 14px;
+                }
+                .encabezado h1 {
+                    margin: 0;
+                    font-size: 20px;
+                    color: #1e3a8a;
+                }
+                .encabezado p {
+                    margin: 2px 0 0;
+                    color: #6b7280;
+                    font-size: 11px;
+                }
+                .meta {
+                    width: 100%;
+                    margin-bottom: 14px;
+                    font-size: 10px;
+                    color: #374151;
+                }
+                .meta td { padding: 2px 0; }
+                .meta td.etiqueta { font-weight: bold; width: 110px; }
+
+                table.datos {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                table.datos thead th {
+                    background: #1e3a8a;
+                    color: #ffffff;
+                    text-align: left;
+                    padding: 6px 5px;
+                    font-size: 9px;
+                    text-transform: uppercase;
+                }
+                table.datos tbody td {
+                    padding: 5px;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 9.5px;
+                }
+                table.datos tbody tr:nth-child(even) { background: #f3f4f6; }
+                table.datos td.num { text-align: right; }
+                table.datos td.vacio { text-align: center; padding: 20px; color: #6b7280; }
+
+                .badge-estado {
+                    display: inline-block;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-size: 8.5px;
+                    color: #ffffff;
+                }
+                .estado-pendiente { background: #d97706; }
+                .estado-en_revision { background: #2563eb; }
+                .estado-aprobada { background: #16a34a; }
+                .estado-rechazada { background: #dc2626; }
+                .estado-anulada { background: #6b7280; }
+
+                tfoot td {
+                    padding: 7px 5px;
+                    font-weight: bold;
+                    border-top: 2px solid #1e3a8a;
+                }
+                .pie {
+                    margin-top: 16px;
+                    font-size: 8.5px;
+                    color: #9ca3af;
+                    text-align: center;
+                }
+            </style>
+        </head>
+        <body>
+
+            <div class="encabezado">
+                <h1>Vending Mini Market</h1>
+                <p>Historial de compras y facturas de proveedores</p>
+            </div>
+
+            <table class="meta">
+                <tr>
+                    <td class="etiqueta">Periodo:</td>
+                    <td>' . htmlspecialchars($tituloPeriodo) . '</td>
+                </tr>
+                <tr>
+                    <td class="etiqueta">Generado el:</td>
+                    <td>' . htmlspecialchars($fechaGeneracion) . '</td>
+                </tr>
+                <tr>
+                    <td class="etiqueta">Total de facturas:</td>
+                    <td>' . count($filas) . '</td>
+                </tr>
+            </table>
+
+            <table class="datos">
+                <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Factura</th>
+                        <th>Proveedor</th>
+                        <th>Tienda</th>
+                        <th>Fecha emisión</th>
+                        <th>Estado</th>
+                        <th>Registrado por</th>
+                        <th>Subtotal</th>
+                        <th>Impuesto</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>' . $filasHtml . '</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="7">Totales</td>
+                        <td class="num">₡' . number_format($totalSubtotal, 2) . '</td>
+                        <td class="num">₡' . number_format($totalImpuesto, 2) . '</td>
+                        <td class="num">₡' . number_format($totalGeneral, 2) . '</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <p class="pie">Vending Mini Market &mdash; Reporte generado automáticamente por el sistema.</p>
+
+        </body>
+        </html>
+    ';
+
+    $dompdf = new \Dompdf\Dompdf([
+        'isRemoteEnabled' => false,
+        'defaultFont' => 'Helvetica',
+    ]);
+    $dompdf->setPaper('letter', 'landscape');
+    $dompdf->loadHtml($html);
+    $dompdf->render();
+
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="historial_compras_' . date('Y-m-d_His') . '.pdf"');
+    header('Cache-Control: no-store');
+
+    echo $dompdf->output();
     exit;
 }
 

@@ -656,6 +656,85 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
     </div>
 
+    <!-- ==========================================
+         MODAL: EXPORTAR HISTORIAL (PDF)
+    =========================================== -->
+
+    <div id="modalExportarHistorial" class="modal-producto" hidden>
+
+        <div class="modal-producto-fondo" data-cerrar-modal-exportar-historial></div>
+
+        <section
+            class="modal-producto-contenido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloModalExportarHistorial"
+        >
+
+            <div class="modal-producto-icono">
+                <i class="fa-solid fa-file-pdf"></i>
+            </div>
+
+            <h2 id="tituloModalExportarHistorial">Exportar historial</h2>
+
+            <p>
+                Elige el mes que quieres incluir en el reporte.
+                Se respetan también los filtros de proveedor, tienda
+                y estado que tengas activos en la tabla.
+            </p>
+
+            <div class="cuadricula-formulario">
+
+                <div class="grupo-formulario">
+                    <label for="selectMesExportarHistorial">Mes</label>
+                    <select id="selectMesExportarHistorial">
+                        <option value="01">Enero</option>
+                        <option value="02">Febrero</option>
+                        <option value="03">Marzo</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Mayo</option>
+                        <option value="06">Junio</option>
+                        <option value="07">Julio</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+
+                <div class="grupo-formulario">
+                    <label for="selectAnioExportarHistorial">Año</label>
+                    <select id="selectAnioExportarHistorial"></select>
+                </div>
+
+            </div>
+
+            <div class="acciones-modal-producto">
+
+                <button
+                    type="button"
+                    id="botonCancelarExportarHistorial"
+                    class="boton boton-borde"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="button"
+                    id="botonGenerarExportarHistorial"
+                    class="boton boton-azul"
+                >
+                    <i class="fa-solid fa-file-pdf"></i>
+                    Generar PDF
+                </button>
+
+            </div>
+
+        </section>
+
+    </div>
+
     <script src="../js/app.js"></script>
     <script src="../js/pedido-api.js"></script>
     <script src="../js/factura-api.js"></script>
