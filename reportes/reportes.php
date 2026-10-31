@@ -682,97 +682,124 @@ header("Expires: 0");
             aria-labelledby="tituloModalExportarReporte"
         >
 
-            <div class="modal-producto-icono">
-                <i class="fa-solid fa-file-pdf"></i>
-            </div>
-
-            <h2 id="tituloModalExportarReporte">Exportar reporte a PDF</h2>
-
-            <p>Elige qué incluir. El PDF se descarga con el mismo formato de los demás reportes del sistema.</p>
+            <header class="exportar-encabezado">
+                <div class="exportar-encabezado-icono"><i class="fa-solid fa-file-pdf"></i></div>
+                <div>
+                    <h2 id="tituloModalExportarReporte">Exportar reporte a PDF</h2>
+                    <p>Elige el reporte, el periodo y las tiendas. Cada tipo se descarga con su propio diseño.</p>
+                </div>
+                <button type="button" class="boton-cerrar-modal" id="botonCerrarExportarReporte" aria-label="Cerrar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
 
             <form id="formularioExportarReporte" novalidate>
 
-                <div class="cuadricula-formulario">
+                <section class="exportar-seccion">
+                    <h3><span>1</span> Tipo de reporte</h3>
+                    <div class="exportar-tipos" id="tiposExportarReporte" role="radiogroup" aria-label="Tipo de reporte"></div>
+                </section>
 
-                    <div class="grupo-formulario cuadricula-completa">
-                        <label for="tipoExportarReporte">Reporte</label>
-                        <select id="tipoExportarReporte"></select>
+                <section class="exportar-seccion" id="seccionPeriodoExportar">
+                    <h3><span>2</span> Periodo</h3>
+
+                    <div data-exportar="periodo">
+                        <div class="exportar-modos" role="radiogroup" aria-label="Forma de elegir el periodo">
+                            <label class="opcion-exportar"><input type="radio" name="modoPeriodoExportar" value="mes" checked><span>Por mes</span></label>
+                            <label class="opcion-exportar"><input type="radio" name="modoPeriodoExportar" value="rango"><span>Rango de fechas</span></label>
+                        </div>
+
+                        <div class="exportar-fila" data-modo="mes">
+                            <div class="grupo-formulario">
+                                <label for="mesExportarReporte">Mes</label>
+                                <select id="mesExportarReporte"><option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option><option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option><option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="anioExportarReporte">Año</label>
+                                <select id="anioExportarReporte"></select>
+                            </div>
+                        </div>
+
+                        <div class="exportar-fila" data-modo="rango" hidden>
+                            <div class="grupo-formulario">
+                                <label for="desdeExportarReporte">Desde</label>
+                                <input type="date" id="desdeExportarReporte">
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="hastaExportarReporte">Hasta</label>
+                                <input type="date" id="hastaExportarReporte">
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="grupo-formulario" data-exportar="periodo">
-                        <label for="mesExportarReporte">Mes</label>
-                        <select id="mesExportarReporte">
-                            <option value="01">Enero</option>
-                            <option value="02">Febrero</option>
-                            <option value="03">Marzo</option>
-                            <option value="04">Abril</option>
-                            <option value="05">Mayo</option>
-                            <option value="06">Junio</option>
-                            <option value="07">Julio</option>
-                            <option value="08">Agosto</option>
-                            <option value="09">Septiembre</option>
-                            <option value="10">Octubre</option>
-                            <option value="11">Noviembre</option>
-                            <option value="12">Diciembre</option>
-                        </select>
+                    <div class="exportar-fila" data-exportar="dia" hidden>
+                        <div class="grupo-formulario">
+                            <label for="diaExportarReporte">Día del cierre</label>
+                            <input type="date" id="diaExportarReporte">
+                        </div>
                     </div>
 
-                    <div class="grupo-formulario" data-exportar="periodo">
-                        <label for="anioExportarReporte">Año</label>
-                        <select id="anioExportarReporte"></select>
-                    </div>
-
-                    <p class="texto-ayuda cuadricula-completa" data-exportar="sin-periodo" hidden>
+                    <p class="exportar-ayuda" data-exportar="sin-periodo" hidden>
+                        <i class="fa-solid fa-circle-info"></i>
                         El inventario se exporta con las existencias a la fecha y hora de la descarga.
                     </p>
+                </section>
 
-                    <div class="grupo-formulario cuadricula-completa">
-                        <label>Tiendas</label>
-                        <div class="lista-tiendas-exportar" id="tiendasExportarReporte"></div>
+                <section class="exportar-seccion">
+                    <h3><span>3</span> <b id="tituloTiendasExportar">Tiendas</b></h3>
+                    <div class="lista-tiendas-exportar" id="tiendasExportarReporte"></div>
+                </section>
+
+                <section class="exportar-seccion" id="seccionFiltrosExportar">
+                    <h3><span>4</span> Filtros <small>(opcionales)</small></h3>
+                    <div class="exportar-fila">
+                        <div class="grupo-formulario" data-exportar="categoria">
+                            <label for="categoriaExportarReporte">Categoría</label>
+                            <select id="categoriaExportarReporte"></select>
+                        </div>
+                        <div class="grupo-formulario" data-exportar="proveedor">
+                            <label for="proveedorExportarReporte">Proveedor</label>
+                            <select id="proveedorExportarReporte"></select>
+                        </div>
+                        <div class="grupo-formulario" data-exportar="busqueda">
+                            <label for="busquedaExportarReporte">Producto</label>
+                            <input type="search" id="busquedaExportarReporte" placeholder="Nombre o código de barras" autocomplete="off">
+                        </div>
+                        <div class="grupo-formulario" data-exportar="estado" hidden>
+                            <label for="estadoExportarReporte">Estado del stock</label>
+                            <select id="estadoExportarReporte">
+                                <option value="">Todos</option>
+                                <option value="CRITICO">Solo críticos</option>
+                                <option value="AGOTADO">Agotados</option>
+                                <option value="BAJO_MINIMO">Bajo mínimo</option>
+                                <option value="NEGATIVO">Negativos</option>
+                                <option value="NORMAL">Normales</option>
+                            </select>
+                        </div>
+                        <div class="grupo-formulario" data-exportar="limite" hidden>
+                            <label for="limiteExportarReporte">Productos en los rankings</label>
+                            <select id="limiteExportarReporte">
+                                <option value="10">Top 10</option>
+                                <option value="15" selected>Top 15</option>
+                                <option value="25">Top 25</option>
+                                <option value="50">Top 50</option>
+                            </select>
+                        </div>
                     </div>
+                    <p class="exportar-ayuda" data-exportar="sin-filtros" hidden>
+                        <i class="fa-solid fa-circle-info"></i>
+                        El cierre diario consolida todo el día de la tienda, por eso no admite filtros.
+                    </p>
+                </section>
 
-                    <div class="grupo-formulario">
-                        <label for="categoriaExportarReporte">Categoría</label>
-                        <select id="categoriaExportarReporte"></select>
-                    </div>
-
-                    <div class="grupo-formulario">
-                        <label for="proveedorExportarReporte">Proveedor</label>
-                        <select id="proveedorExportarReporte"></select>
-                    </div>
-
-                    <div class="grupo-formulario" data-exportar="estado" hidden>
-                        <label for="estadoExportarReporte">Estado del stock</label>
-                        <select id="estadoExportarReporte">
-                            <option value="">Todos</option>
-                            <option value="CRITICO">Solo críticos</option>
-                            <option value="AGOTADO">Agotados</option>
-                            <option value="BAJO_MINIMO">Bajo mínimo</option>
-                            <option value="NEGATIVO">Negativos</option>
-                            <option value="NORMAL">Normales</option>
-                        </select>
-                    </div>
-
-                    <div class="grupo-formulario" data-exportar="limite" hidden>
-                        <label for="limiteExportarReporte">Productos en los rankings</label>
-                        <select id="limiteExportarReporte">
-                            <option value="10">Top 10</option>
-                            <option value="15" selected>Top 15</option>
-                            <option value="25">Top 25</option>
-                            <option value="50">Top 50</option>
-                        </select>
-                    </div>
-
-                    <label class="opcion-exportar cuadricula-completa">
-                        <input type="checkbox" id="detalleExportarReporte" checked>
-                        <span>Incluir el detalle (productos, existencias o bajas)</span>
-                    </label>
-
-                </div>
+                <label class="opcion-exportar exportar-detalle" data-exportar="detalle">
+                    <input type="checkbox" id="detalleExportarReporte" checked>
+                    <span>Incluir el detalle completo <small id="textoDetalleExportar">(productos, existencias o bajas)</small></span>
+                </label>
 
                 <p id="mensajeExportarReporte" class="mensaje-login" aria-live="polite"></p>
 
-                <div class="acciones-modal-producto">
+                <div class="exportar-acciones">
                     <button type="button" class="boton boton-borde" id="botonCancelarExportarReporte">Cancelar</button>
                     <button type="submit" class="boton boton-azul" id="botonGenerarExportarReporte">
                         <i class="fa-solid fa-download"></i>

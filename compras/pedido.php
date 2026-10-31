@@ -248,7 +248,7 @@ $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-arrow-left"></i>
-                        Volver a compras
+                        Volver a historial
                     </a>
 
                     <button

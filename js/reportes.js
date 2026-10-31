@@ -682,7 +682,7 @@
 
         // Exportar PDF e Imprimir solo aplican a los reportes (el cierre se imprime, no se exporta).
         const botonExportar = $('botonExportarReporte');
-        if (botonExportar) botonExportar.hidden = !esReporte || tipoActual === 'cierre';
+        if (botonExportar) botonExportar.hidden = !esReporte;
         const botonImprimir = $('botonImprimirReporte');
         if (botonImprimir) botonImprimir.hidden = !esReporte;
 
@@ -801,11 +801,18 @@
 
     /* ---------- exportar a PDF ---------- */
 
-    const REPORTES_EXPORTABLES = ['ventas', 'utilidad', 'inventario', 'rotacion'];
+    const TIPOS_EXPORTAR = {
+        ventas: { titulo: 'Ventas', icono: 'fa-cash-register', color: 'color-azul', descripcion: 'Ingresos, unidades y costo por tienda y producto.', filtros: ['categoria', 'proveedor', 'busqueda'], detalle: 'productos vendidos', periodo: true },
+        utilidad: { titulo: 'Utilidad', icono: 'fa-sack-dollar', color: 'color-verde', descripcion: 'Ingresos menos costo: utilidad y margen.', filtros: ['categoria', 'proveedor', 'busqueda'], detalle: 'utilidad por producto', periodo: true },
+        inventario: { titulo: 'Inventario', icono: 'fa-boxes-stacked', color: 'color-naranja', descripcion: 'Existencias por ubicación y productos críticos.', filtros: ['categoria', 'proveedor', 'busqueda', 'estado'], detalle: 'existencias por producto', periodo: false },
+        rotacion: { titulo: 'Rotación y pérdidas', icono: 'fa-arrows-rotate', color: 'color-morado', descripcion: 'Más y menos vendidos, bajas y pérdidas.', filtros: ['categoria', 'proveedor', 'busqueda', 'limite'], detalle: 'detalle de bajas', periodo: true },
+        cierre: { titulo: 'Cierre diario', icono: 'fa-lock', color: 'color-teal', descripcion: 'Consolidado de un día de una tienda.', filtros: [], detalle: null, periodo: false, dia: true, unaTienda: true }
+    };
+
+    let tipoExportar = 'ventas';
 
     function iniciarModalExportar() {
-        const modal = $('modalExportarReporte');
-        if (!modal) return;
+        if (!$('modalExportarReporte')) return;
 
         const anio = new Date().getFullYear();
         $('anioExportarReporte').innerHTML = Array.from({ length: 6 }, (_, i) => anio - i)
@@ -814,14 +821,31 @@
         llenarSelect($('categoriaExportarReporte'), 'Todas las categorías', catalogos.categorias, 'id_categoria', 'nombre');
         llenarSelect($('proveedorExportarReporte'), 'Todos los proveedores', catalogos.proveedores, 'id_proveedor', 'nombre');
 
-        const permitidos = REPORTES_EXPORTABLES.filter((t) => t !== 'utilidad' || catalogos.puede_ver_utilidad);
-        $('tipoExportarReporte').innerHTML = permitidos
-            .map((t) => `<option value="${t}">${escapar(REPORTES[t].titulo)}</option>`).join('');
+        const permitidos = Object.keys(TIPOS_EXPORTAR).filter((t) => t !== 'utilidad' || catalogos.puede_ver_utilidad);
+        $('tiposExportarReporte').innerHTML = permitidos.map((t) => `
+            <label class="exportar-tipo ${TIPOS_EXPORTAR[t].color}">
+                <input type="radio" name="tipoExportarReporte" value="${t}">
+                <i class="fa-solid ${TIPOS_EXPORTAR[t].icono}"></i>
+                <strong>${escapar(TIPOS_EXPORTAR[t].titulo)}</strong>
+                <span>${escapar(TIPOS_EXPORTAR[t].descripcion)}</span>
+            </label>`).join('');
 
-        $('tipoExportarReporte').addEventListener('change', actualizarCamposExportar);
+        $('tiposExportarReporte').addEventListener('change', (evento) => {
+            if (evento.target.name === 'tipoExportarReporte') {
+                tipoExportar = evento.target.value;
+                actualizarCamposExportar();
+            }
+        });
+
+        document.querySelectorAll('input[name="modoPeriodoExportar"]').forEach((radio) => {
+            radio.addEventListener('change', actualizarCamposExportar);
+        });
+
         $('formularioExportarReporte').addEventListener('submit', descargarPdf);
         $('botonCancelarExportarReporte').addEventListener('click', cerrarModalExportar);
+        $('botonCerrarExportarReporte').addEventListener('click', cerrarModalExportar);
         document.querySelector('[data-cerrar-modal-exportar-reporte]').addEventListener('click', cerrarModalExportar);
+        $('modalExportarReporte').addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModalExportar(); });
 
         $('tiendasExportarReporte').addEventListener('change', (evento) => {
             const maestra = evento.target.closest('[data-todas]');
@@ -836,42 +860,78 @@
         });
     }
 
-    function actualizarCamposExportar() {
-        const tipo = $('tipoExportarReporte').value;
+    function dibujarTiendasExportar() {
+        const unaSola = TIPOS_EXPORTAR[tipoExportar].unaTienda;
+        const seleccionada = $('tiendaReporte').value || (catalogos.tiendas[0] && String(catalogos.tiendas[0].id_tienda));
+        const unica = catalogos.tiendas.length === 1;
 
-        document.querySelectorAll('[data-exportar="periodo"]').forEach((e) => { e.hidden = tipo === 'inventario'; });
-        document.querySelectorAll('[data-exportar="sin-periodo"]').forEach((e) => { e.hidden = tipo !== 'inventario'; });
-        document.querySelectorAll('[data-exportar="estado"]').forEach((e) => { e.hidden = tipo !== 'inventario'; });
-        document.querySelectorAll('[data-exportar="limite"]').forEach((e) => { e.hidden = tipo !== 'rotacion'; });
+        $('tituloTiendasExportar').textContent = unaSola ? 'Tienda' : 'Tiendas';
+
+        if (unaSola) {
+            $('tiendasExportarReporte').innerHTML = catalogos.tiendas.map((t) => `
+                <label class="opcion-exportar">
+                    <input type="radio" name="tiendaCierreExportar" data-tienda value="${t.id_tienda}"
+                        ${String(t.id_tienda) === seleccionada ? 'checked' : ''} ${unica ? 'disabled' : ''}>
+                    <span>${escapar(t.nombre)}</span>
+                </label>`).join('');
+            return;
+        }
+
+        const filtrada = $('tiendaReporte').value;
+        $('tiendasExportarReporte').innerHTML =
+            (catalogos.tiendas.length > 1
+                ? `<label class="opcion-exportar opcion-exportar-todas"><input type="checkbox" data-todas ${filtrada ? '' : 'checked'}><span>Todas las tiendas</span></label>`
+                : '') +
+            catalogos.tiendas.map((t) => `
+                <label class="opcion-exportar">
+                    <input type="checkbox" data-tienda value="${t.id_tienda}"
+                        ${unica || !filtrada || String(t.id_tienda) === filtrada ? 'checked' : ''} ${unica ? 'disabled' : ''}>
+                    <span>${escapar(t.nombre)}</span>
+                </label>`).join('');
+    }
+
+    function actualizarCamposExportar() {
+        const tipo = TIPOS_EXPORTAR[tipoExportar];
+        const modo = document.querySelector('input[name="modoPeriodoExportar"]:checked')?.value || 'mes';
+
+        document.querySelectorAll('#tiposExportarReporte input').forEach((r) => {
+            r.checked = r.value === tipoExportar;
+            r.closest('.exportar-tipo').classList.toggle('seleccionado', r.checked);
+        });
+
+        document.querySelectorAll('[data-exportar="periodo"]').forEach((e) => { e.hidden = !tipo.periodo; });
+        document.querySelectorAll('[data-exportar="dia"]').forEach((e) => { e.hidden = !tipo.dia; });
+        document.querySelectorAll('[data-exportar="sin-periodo"]').forEach((e) => { e.hidden = tipo.periodo || tipo.dia; });
+        document.querySelectorAll('[data-modo]').forEach((e) => { e.hidden = e.dataset.modo !== modo; });
+
+        ['categoria', 'proveedor', 'busqueda', 'estado', 'limite'].forEach((campo) => {
+            document.querySelectorAll(`[data-exportar="${campo}"]`).forEach((e) => { e.hidden = !tipo.filtros.includes(campo); });
+        });
+
+        document.querySelectorAll('[data-exportar="sin-filtros"]').forEach((e) => { e.hidden = tipo.filtros.length > 0; });
+        document.querySelectorAll('[data-exportar="detalle"]').forEach((e) => { e.hidden = !tipo.detalle; });
+        if (tipo.detalle) $('textoDetalleExportar').textContent = `(${tipo.detalle})`;
+
+        dibujarTiendasExportar();
     }
 
     function abrirModalExportar() {
         if (!catalogos) return;
 
-        const tipo = REPORTES_EXPORTABLES.includes(tipoActual) ? tipoActual : 'ventas';
-        $('tipoExportarReporte').value = Array.from($('tipoExportarReporte').options).some((o) => o.value === tipo) ? tipo : 'ventas';
+        tipoExportar = TIPOS_EXPORTAR[tipoActual] && (tipoActual !== 'utilidad' || catalogos.puede_ver_utilidad) ? tipoActual : 'ventas';
 
-        // Mes inicial: el del filtro de periodo actual.
+        // Valores iniciales tomados de lo que se está viendo en pantalla.
         const fechaBase = $('fechaInicioReporte').value ? new Date(`${$('fechaInicioReporte').value}T00:00:00`) : new Date();
         $('mesExportarReporte').value = String(fechaBase.getMonth() + 1).padStart(2, '0');
         $('anioExportarReporte').value = String(fechaBase.getFullYear());
-
-        // Tiendas: la seleccionada en pantalla, o todas.
-        const seleccionada = $('tiendaReporte').value;
-        const unica = catalogos.tiendas.length === 1;
-        $('tiendasExportarReporte').innerHTML =
-            (catalogos.tiendas.length > 1
-                ? `<label class="opcion-exportar opcion-exportar-todas"><input type="checkbox" data-todas ${seleccionada ? '' : 'checked'}><span>Todas las tiendas</span></label>`
-                : '') +
-            catalogos.tiendas.map((t) => `
-                <label class="opcion-exportar">
-                    <input type="checkbox" data-tienda value="${t.id_tienda}"
-                        ${unica || !seleccionada || String(t.id_tienda) === seleccionada ? 'checked' : ''} ${unica ? 'disabled' : ''}>
-                    <span>${escapar(t.nombre)}</span>
-                </label>`).join('');
+        $('desdeExportarReporte').value = $('fechaInicioReporte').value;
+        $('hastaExportarReporte').value = $('fechaFinReporte').value;
+        $('diaExportarReporte').value = $('fechaCierreReporte').value || fechaLocal(new Date());
+        $('diaExportarReporte').max = fechaLocal(new Date());
 
         $('categoriaExportarReporte').value = $('categoriaReporte').value;
         $('proveedorExportarReporte').value = $('proveedorReporte').value;
+        $('busquedaExportarReporte').value = $('busquedaReporte').value;
         $('estadoExportarReporte').value = $('estadoReporte').value;
         $('mensajeExportarReporte').textContent = '';
 
@@ -886,30 +946,54 @@
     async function descargarPdf(evento) {
         evento.preventDefault();
 
-        const tipo = $('tipoExportarReporte').value;
+        const tipo = tipoExportar;
+        const def = TIPOS_EXPORTAR[tipo];
         const tiendas = [...document.querySelectorAll('#tiendasExportarReporte input[data-tienda]:checked')].map((c) => c.value);
+        const error = (texto) => { $('mensajeExportarReporte').textContent = texto; };
 
-        if (!tiendas.length) {
-            $('mensajeExportarReporte').textContent = 'Selecciona al menos una tienda.';
-            return;
+        if (!tiendas.length) return error(def.unaTienda ? 'Selecciona la tienda.' : 'Selecciona al menos una tienda.');
+
+        const parametros = new URLSearchParams({ accion: 'exportar_pdf', tipo });
+
+        if (def.unaTienda) {
+            parametros.set('id_tienda', tiendas[0]);
+            parametros.set('id_tiendas', tiendas[0]);
+        } else {
+            parametros.set('id_tiendas', tiendas.join(','));
         }
 
-        const parametros = new URLSearchParams({
-            accion: 'exportar_pdf',
-            tipo,
-            id_tiendas: tiendas.join(','),
-            detalle: $('detalleExportarReporte').checked ? '1' : '0'
-        });
+        if (def.periodo) {
+            const modo = document.querySelector('input[name="modoPeriodoExportar"]:checked').value;
 
-        if (tipo !== 'inventario') parametros.set('mes', `${$('anioExportarReporte').value}-${$('mesExportarReporte').value}`);
-        if ($('categoriaExportarReporte').value) parametros.set('id_categoria', $('categoriaExportarReporte').value);
-        if ($('proveedorExportarReporte').value) parametros.set('id_proveedor', $('proveedorExportarReporte').value);
-        if (tipo === 'inventario' && $('estadoExportarReporte').value) parametros.set('estado', $('estadoExportarReporte').value);
-        if (tipo === 'rotacion') parametros.set('limite', $('limiteExportarReporte').value);
+            if (modo === 'mes') {
+                parametros.set('mes', `${$('anioExportarReporte').value}-${$('mesExportarReporte').value}`);
+            } else {
+                const desde = $('desdeExportarReporte').value;
+                const hasta = $('hastaExportarReporte').value;
+
+                if (!desde || !hasta) return error('Indica las fechas del rango.');
+                if (desde > hasta) return error('La fecha inicial no puede ser posterior a la final.');
+
+                parametros.set('fecha_inicio', desde);
+                parametros.set('fecha_fin', hasta);
+            }
+        }
+
+        if (def.dia) {
+            if (!$('diaExportarReporte').value) return error('Selecciona el día del cierre.');
+            parametros.set('fecha', $('diaExportarReporte').value);
+        }
+
+        if (def.filtros.includes('categoria') && $('categoriaExportarReporte').value) parametros.set('id_categoria', $('categoriaExportarReporte').value);
+        if (def.filtros.includes('proveedor') && $('proveedorExportarReporte').value) parametros.set('id_proveedor', $('proveedorExportarReporte').value);
+        if (def.filtros.includes('busqueda') && $('busquedaExportarReporte').value.trim()) parametros.set('busqueda', $('busquedaExportarReporte').value.trim());
+        if (def.filtros.includes('estado') && $('estadoExportarReporte').value) parametros.set('estado', $('estadoExportarReporte').value);
+        if (def.filtros.includes('limite')) parametros.set('limite', $('limiteExportarReporte').value);
+        if (def.detalle) parametros.set('detalle', $('detalleExportarReporte').checked ? '1' : '0');
 
         const boton = $('botonGenerarExportarReporte');
         boton.disabled = true;
-        $('mensajeExportarReporte').textContent = 'Generando el PDF…';
+        error('Generando el PDF…');
 
         try {
             const respuesta = await fetch(`${API}?${parametros}`, { credentials: 'same-origin' });
@@ -919,8 +1003,7 @@
                 throw new Error((json && json.message) || 'No se pudo generar el PDF.');
             }
 
-            const nombre = (respuesta.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1]
-                || `reporte-${tipo}.pdf`;
+            const nombre = (respuesta.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || `reporte-${tipo}.pdf`;
             const blob = await respuesta.blob();
             const enlace = document.createElement('a');
             enlace.href = URL.createObjectURL(blob);
@@ -930,12 +1013,13 @@
 
             cerrarModalExportar();
             mensaje('El PDF se generó correctamente.', 'exito');
-        } catch (error) {
-            $('mensajeExportarReporte').textContent = error.message;
+        } catch (e) {
+            error(e.message);
         } finally {
             boton.disabled = false;
         }
     }
+
     /* ---------- inicio ---------- */
 
     async function iniciar() {

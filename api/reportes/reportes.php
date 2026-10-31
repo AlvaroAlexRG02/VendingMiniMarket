@@ -931,10 +931,11 @@ function accionExportarPdf(PDO $pdo): void
 
     $tipo = (string)($_GET['tipo'] ?? '');
     $titulos = [
-        'ventas'     => ['Ventas por tienda y periodo', 'ventas'],
-        'utilidad'   => ['Utilidad bruta estimada', 'utilidad'],
-        'inventario' => ['Inventario por ubicación', 'inventario'],
-        'rotacion'   => ['Rotación, bajas y pérdidas', 'rotacion'],
+        'ventas'     => ['Ventas por tienda y periodo', 'Ingresos, unidades y costo de las ventas confirmadas.'],
+        'utilidad'   => ['Utilidad bruta estimada', 'Ingresos menos el costo de los productos vendidos, por tienda y producto.'],
+        'inventario' => ['Inventario por ubicación', 'Existencias actuales por tienda, bodega y exhibición, con los productos críticos.'],
+        'rotacion'   => ['Rotación, bajas y pérdidas', 'Productos más y menos vendidos, y valor estimado de las bajas y pérdidas.'],
+        'cierre'     => ['Cierre operativo diario', 'Consolidado de ventas, movimientos, diferencias y alertas del día.'],
     ];
 
     if (!isset($titulos[$tipo])) {
@@ -945,25 +946,54 @@ function accionExportarPdf(PDO $pdo): void
         respuesta(false, null, 'Solo Administración o Gerencia pueden exportar la utilidad.', 403);
     }
 
-    $usaPeriodo = $tipo !== 'inventario';
-    $mes = trim((string)($_GET['mes'] ?? ''));
-    $textoPeriodo = 'Existencias al ' . (new DateTimeImmutable('now', new DateTimeZone(ZONA_REPORTES)))->format('d/m/Y H:i');
-    $sufijoArchivo = date('Y-m-d');
+    $ahora = new DateTimeImmutable('now', new DateTimeZone(ZONA_REPORTES));
+    $textoPeriodo = 'Existencias al ' . $ahora->format('d/m/Y H:i');
+    $sufijoArchivo = $ahora->format('Y-m-d');
+    $incluirDetalle = ($_GET['detalle'] ?? '1') !== '0';
+
+    $usaPeriodo = in_array($tipo, ['ventas', 'utilidad', 'rotacion'], true);
 
     if ($usaPeriodo) {
-        if (!preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $mes, $m)) {
-            respuesta(false, null, 'Seleccione el mes del reporte.', 400);
-        }
+        $mes = trim((string)($_GET['mes'] ?? ''));
 
-        $inicio = new DateTimeImmutable("{$m[1]}-{$m[2]}-01");
-        $_GET['fecha_inicio'] = $inicio->format('Y-m-d');
-        $_GET['fecha_fin'] = $inicio->modify('last day of this month')->format('Y-m-d');
-        $textoPeriodo = NOMBRES_MESES_REPORTE[$m[2]] . ' ' . $m[1];
-        $sufijoArchivo = "{$m[1]}-{$m[2]}";
+        if ($mes !== '') {
+            if (!preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $mes, $m)) {
+                respuesta(false, null, 'Seleccione un mes válido.', 400);
+            }
+
+            $inicio = new DateTimeImmutable("{$m[1]}-{$m[2]}-01");
+            $_GET['fecha_inicio'] = $inicio->format('Y-m-d');
+            $_GET['fecha_fin'] = $inicio->modify('last day of this month')->format('Y-m-d');
+            $textoPeriodo = NOMBRES_MESES_REPORTE[$m[2]] . ' ' . $m[1];
+            $sufijoArchivo = "{$m[1]}-{$m[2]}";
+        } else {
+            $ini = (string)($_GET['fecha_inicio'] ?? '');
+            $fin = (string)($_GET['fecha_fin'] ?? '');
+
+            if (!fechaValida($ini) || !fechaValida($fin) || $ini > $fin) {
+                respuesta(false, null, 'Indique un periodo válido.', 400);
+            }
+
+            if ((new DateTimeImmutable($ini))->diff(new DateTimeImmutable($fin))->days > 366) {
+                respuesta(false, null, 'El periodo no puede superar un año.', 400);
+            }
+
+            $textoPeriodo = date('d/m/Y', strtotime($ini)) . ' al ' . date('d/m/Y', strtotime($fin));
+            $sufijoArchivo = "$ini-a-$fin";
+        }
     }
 
-    $f = leerFiltros($pdo, $usaPeriodo);
-    $incluirDetalle = ($_GET['detalle'] ?? '1') !== '0';
+    if ($tipo === 'cierre') {
+        $fechaCierre = (string)($_GET['fecha'] ?? '');
+        $_GET['fecha'] = $fechaCierre;
+        $textoPeriodo = 'Día ' . (fechaValida($fechaCierre) ? date('d/m/Y', strtotime($fechaCierre)) : '-');
+        $sufijoArchivo = $fechaCierre;
+        $idTiendaCierre = (int)($_GET['id_tienda'] ?? 0);
+        $_GET['id_tienda'] = $idTiendaCierre;
+        $f = ['ids_tiendas' => [$idTiendaCierre], 'id_categoria' => 0, 'id_proveedor' => 0, 'busqueda' => '', 'estado' => ''];
+    } else {
+        $f = leerFiltros($pdo, $usaPeriodo);
+    }
 
     $filtros = [];
     $nombreDe = function (string $sql, int $id) use ($pdo): ?string {
@@ -986,11 +1016,13 @@ function accionExportarPdf(PDO $pdo): void
         $etiquetaEstado = ['CRITICO' => 'Solo críticos'] + array_map(fn ($e) => $e[0], ETIQUETAS_ESTADO_STOCK);
         $filtros[] = 'Estado: ' . ($etiquetaEstado[$f['estado']] ?? $f['estado']);
     }
+    $limiteRanking = max(5, min(50, (int)($_GET['limite'] ?? 15)));
     if ($tipo === 'rotacion') {
-        $filtros[] = 'Top ' . max(5, min(50, (int)($_GET['limite'] ?? 15))) . ' por ranking';
+        $filtros[] = "Top $limiteRanking por ranking";
     }
 
-    $columnasTienda = fn (array $extra) => array_merge([['titulo' => 'Tienda', 'campo' => 'tienda']], $extra);
+    $tienda = fn (array $extra) => array_merge([['titulo' => 'Tienda', 'campo' => 'tienda']], $extra);
+    $coloresTienda = ['azul', 'verde', 'naranja', 'morado', 'rojo', 'gris'];
     $secciones = [];
     $resumen = [];
 
@@ -998,16 +1030,34 @@ function accionExportarPdf(PDO $pdo): void
         $d = capturarReporte('accionVentas', $pdo);
         $r = $d['resumen'];
         $resumen = [
-            ['Ventas (sin IVA)', pdfMoneda($r['ingresos'])],
-            ['Total con IVA', pdfMoneda($r['total'])],
-            ['Unidades vendidas', number_format($r['unidades'])],
-            ['Costo asociado', pdfMoneda($r['costo'])],
-            ['Venta promedio', pdfMoneda($r['ventas'] > 0 ? $r['ingresos'] / $r['ventas'] : 0)],
+            ['Ventas (sin IVA)', pdfMoneda($r['ingresos']), pdfMoneda($r['total']) . ' con IVA'],
+            ['Unidades vendidas', number_format($r['unidades']), number_format($r['ventas']) . ' venta(s)'],
+            ['Costo asociado', pdfMoneda($r['costo']), 'Costo de lo vendido'],
+            ['Venta promedio', pdfMoneda($r['ventas'] > 0 ? $r['ingresos'] / $r['ventas'] : 0), 'Ingreso por venta'],
+        ];
+
+        if ($r['lineas_sin_costo'] > 0) {
+            $secciones[] = ['tipo' => 'aviso', 'nivel' => 'alerta', 'texto' => "{$r['lineas_sin_costo']} línea(s) vendida(s) no tienen costo registrado y se valoraron en ₡0."];
+        }
+
+        $porDia = [];
+        foreach ($d['por_dia'] as $x) {
+            $porDia[substr((string)$x['fecha'], 0, 10)] = $x['ingresos'];
+        }
+        $serie = [];
+        for ($dia = new DateTimeImmutable($_GET['fecha_inicio']), $fin = new DateTimeImmutable($_GET['fecha_fin']); $dia <= $fin && count($serie) < 93; $dia = $dia->modify('+1 day')) {
+            $serie[] = ['etiqueta' => $dia->format('d/m'), 'valor' => $porDia[$dia->format('Y-m-d')] ?? 0];
+        }
+
+        $secciones[] = ['tipo' => 'par',
+            'izquierda' => ['tipo' => 'columnas', 'titulo' => 'Ventas por día', 'descripcion' => 'Ingresos diarios del periodo (sin IVA).', 'items' => $serie],
+            'derecha' => ['tipo' => 'barras', 'titulo' => 'Participación por tienda', 'descripcion' => 'Ingresos de cada punto de venta.',
+                'items' => array_map(fn ($t, $i) => ['etiqueta' => $t['tienda'], 'valor' => $t['ingresos'], 'texto' => pdfMonedaCorta($t['ingresos']), 'color' => $coloresTienda[$i % 6]], $d['por_tienda'], array_keys($d['por_tienda']))],
         ];
         $secciones[] = [
-            'titulo' => 'Ventas por tienda', 'descripcion' => 'Ingresos del periodo en cada punto de venta.',
+            'titulo' => 'Ventas por tienda', 'descripcion' => 'Resumen numérico de cada punto de venta.',
             'vacio' => 'No hay ventas confirmadas en el periodo seleccionado.',
-            'columnas' => $columnasTienda([
+            'columnas' => $tienda([
                 ['titulo' => 'Ventas', 'campo' => 'ventas', 'tipo' => 'entero', 'sumar' => true],
                 ['titulo' => 'Unidades', 'campo' => 'unidades', 'tipo' => 'entero', 'sumar' => true],
                 ['titulo' => 'Ingresos', 'campo' => 'ingresos', 'tipo' => 'moneda', 'sumar' => true],
@@ -1020,8 +1070,7 @@ function accionExportarPdf(PDO $pdo): void
             $secciones[] = [
                 'titulo' => 'Detalle por producto', 'descripcion' => 'Unidades, ingresos y costo de cada producto vendido.',
                 'vacio' => 'No hay ventas confirmadas con estos filtros.',
-                'nota' => $d['resumen']['lineas_sin_costo'] > 0 ? "{$d['resumen']['lineas_sin_costo']} línea(s) vendida(s) sin costo registrado se valoraron en ₡0." : null,
-                'columnas' => $columnasTienda([
+                'columnas' => $tienda([
                     ['titulo' => 'Producto', 'campo' => 'producto'], ['titulo' => 'Categoría', 'campo' => 'categoria'],
                     ['titulo' => 'Unidades', 'campo' => 'unidades', 'tipo' => 'entero', 'sumar' => true],
                     ['titulo' => 'Ingresos', 'campo' => 'ingresos', 'tipo' => 'moneda', 'sumar' => true],
@@ -1036,19 +1085,30 @@ function accionExportarPdf(PDO $pdo): void
         $d = capturarReporte('accionUtilidad', $pdo);
         $r = $d['resumen'];
         $resumen = [
-            ['Ingresos', pdfMoneda($r['ingresos'])],
-            ['Costo de lo vendido', pdfMoneda($r['costo'])],
-            ['Utilidad bruta', pdfMoneda($r['utilidad'])],
-            ['Margen', number_format($r['margen'], 1) . '%'],
+            ['Ingresos', pdfMoneda($r['ingresos']), 'Ventas sin IVA'],
+            ['Costo de lo vendido', pdfMoneda($r['costo']), 'Costo de los productos'],
+            ['Utilidad bruta', pdfMoneda($r['utilidad']), 'Ingresos − costo'],
+            ['Margen', number_format($r['margen'], 1) . '%', 'Utilidad sobre ingresos'],
+        ];
+
+        if ($r['lineas_sin_costo'] > 0) {
+            $secciones[] = ['tipo' => 'aviso', 'nivel' => 'alerta', 'texto' => "{$r['lineas_sin_costo']} línea(s) sin costo registrado: su utilidad puede estar sobrevalorada."];
+        }
+
+        $secciones[] = ['tipo' => 'par',
+            'izquierda' => ['tipo' => 'barras', 'titulo' => 'Utilidad por tienda', 'descripcion' => 'Utilidad bruta estimada de cada tienda.',
+                'items' => array_map(fn ($t) => ['etiqueta' => $t['tienda'], 'valor' => $t['utilidad'], 'texto' => pdfMonedaCorta($t['utilidad']), 'color' => 'verde'], $d['por_tienda'])],
+            'derecha' => ['tipo' => 'barras', 'titulo' => 'Margen por tienda', 'descripcion' => 'Utilidad como porcentaje de los ingresos.',
+                'items' => array_map(fn ($t) => ['etiqueta' => $t['tienda'], 'valor' => $t['margen'], 'texto' => number_format($t['margen'], 1) . '%', 'color' => 'morado'], $d['por_tienda'])],
         ];
         $secciones[] = [
-            'titulo' => 'Utilidad por tienda', 'descripcion' => 'Utilidad bruta estimada = ingresos (sin IVA) − costo de los productos vendidos.',
+            'titulo' => 'Utilidad por tienda (detalle)', 'descripcion' => 'Utilidad bruta estimada = ingresos (sin IVA) − costo de los productos vendidos.',
             'vacio' => 'No hay ventas confirmadas en el periodo seleccionado.',
-            'columnas' => $columnasTienda([
+            'columnas' => $tienda([
                 ['titulo' => 'Unidades', 'campo' => 'unidades', 'tipo' => 'entero', 'sumar' => true],
                 ['titulo' => 'Ingresos', 'campo' => 'ingresos', 'tipo' => 'moneda', 'sumar' => true],
                 ['titulo' => 'Costo', 'campo' => 'costo', 'tipo' => 'moneda', 'sumar' => true],
-                ['titulo' => 'Utilidad', 'campo' => 'utilidad', 'tipo' => 'moneda', 'sumar' => true],
+                ['titulo' => 'Utilidad', 'campo' => 'utilidad', 'tipo' => 'positivo_negativo', 'sumar' => true],
                 ['titulo' => 'Margen', 'campo' => 'margen', 'tipo' => 'porcentaje'],
             ]),
             'filas' => $d['por_tienda'],
@@ -1057,13 +1117,12 @@ function accionExportarPdf(PDO $pdo): void
             $secciones[] = [
                 'titulo' => 'Utilidad por producto', 'descripcion' => 'Productos que más y menos aportan a la utilidad.',
                 'vacio' => 'No hay ventas confirmadas con estos filtros.',
-                'nota' => $d['resumen']['lineas_sin_costo'] > 0 ? "{$d['resumen']['lineas_sin_costo']} línea(s) sin costo registrado: su utilidad puede estar sobrevalorada." : null,
-                'columnas' => $columnasTienda([
+                'columnas' => $tienda([
                     ['titulo' => 'Producto', 'campo' => 'producto'], ['titulo' => 'Categoría', 'campo' => 'categoria'],
                     ['titulo' => 'Unidades', 'campo' => 'unidades', 'tipo' => 'entero', 'sumar' => true],
                     ['titulo' => 'Ingresos', 'campo' => 'ingresos', 'tipo' => 'moneda', 'sumar' => true],
                     ['titulo' => 'Costo', 'campo' => 'costo', 'tipo' => 'moneda', 'sumar' => true],
-                    ['titulo' => 'Utilidad', 'campo' => 'utilidad', 'tipo' => 'moneda', 'sumar' => true],
+                    ['titulo' => 'Utilidad', 'campo' => 'utilidad', 'tipo' => 'positivo_negativo', 'sumar' => true],
                     ['titulo' => 'Margen', 'campo' => 'margen', 'tipo' => 'porcentaje'],
                 ]),
                 'filas' => $d['detalle'],
@@ -1072,14 +1131,31 @@ function accionExportarPdf(PDO $pdo): void
     } elseif ($tipo === 'inventario') {
         $d = capturarReporte('accionInventario', $pdo);
         $r = $d['resumen'];
+        $criticos = $r['agotados'] + $r['bajo_minimo'] + $r['negativos'];
         $resumen = [
-            ['Unidades en stock', number_format($r['unidades'])],
-            ['Agotados', number_format($r['agotados'])],
-            ['Bajo mínimo', number_format($r['bajo_minimo'])],
-            ['Saldo negativo', number_format($r['negativos'])],
+            ['Unidades en stock', number_format($r['unidades']), number_format($r['ubicaciones']) . ' ubicación(es)'],
+            ['Agotados', number_format($r['agotados']), 'Existencia en cero'],
+            ['Bajo mínimo', number_format($r['bajo_minimo']), 'Requieren reposición'],
+            ['Saldo negativo', number_format($r['negativos']), 'Revisar movimientos'],
+        ];
+
+        if ($criticos > 0) {
+            $secciones[] = ['tipo' => 'aviso', 'nivel' => 'alerta', 'texto' => "Hay " . number_format($criticos) . " producto(s) críticos de " . number_format($r['lineas']) . " líneas de inventario."];
+        }
+
+        $secciones[] = ['tipo' => 'par',
+            'izquierda' => ['tipo' => 'barras', 'titulo' => 'Stock por ubicación', 'descripcion' => 'Unidades disponibles en cada ubicación.',
+                'items' => array_map(fn ($u) => ['etiqueta' => $u['ubicacion'], 'valor' => $u['unidades'], 'texto' => number_format($u['unidades']) . ' u.', 'color' => 'azul'], $d['por_ubicacion'])],
+            'derecha' => ['tipo' => 'barras', 'titulo' => 'Estado del inventario', 'descripcion' => 'Productos según su nivel de existencia.',
+                'items' => [
+                    ['etiqueta' => 'Normal', 'valor' => max(0, $r['lineas'] - $criticos), 'texto' => number_format(max(0, $r['lineas'] - $criticos)), 'color' => 'verde'],
+                    ['etiqueta' => 'Bajo mínimo', 'valor' => $r['bajo_minimo'], 'texto' => number_format($r['bajo_minimo']), 'color' => 'naranja'],
+                    ['etiqueta' => 'Agotado', 'valor' => $r['agotados'], 'texto' => number_format($r['agotados']), 'color' => 'rojo'],
+                    ['etiqueta' => 'Negativo', 'valor' => $r['negativos'], 'texto' => number_format($r['negativos']), 'color' => 'morado'],
+                ]],
         ];
         $secciones[] = [
-            'titulo' => 'Stock por ubicación', 'descripcion' => 'Existencias en tiendas, bodegas y exhibiciones.',
+            'titulo' => 'Stock por ubicación (detalle)', 'descripcion' => 'Existencias en tiendas, bodegas y exhibiciones.',
             'vacio' => 'No hay existencias con estos filtros.',
             'columnas' => [
                 ['titulo' => 'Tienda', 'campo' => 'tienda'], ['titulo' => 'Ubicación', 'campo' => 'ubicacion'], ['titulo' => 'Tipo', 'campo' => 'tipo'],
@@ -1105,27 +1181,36 @@ function accionExportarPdf(PDO $pdo): void
                 'filas' => array_slice($d['detalle'], 0, $limiteFilas),
             ];
         }
-    } else {
+    } elseif ($tipo === 'rotacion') {
         $d = capturarReporte('accionRotacion', $pdo);
         $r = $d['resumen'];
         $resumen = [
-            ['Unidades vendidas', number_format($r['unidades_vendidas'])],
-            ['Productos sin ventas', number_format($r['productos_sin_venta'])],
-            ['Unidades dadas de baja', number_format($r['unidades_baja'])],
-            ['Pérdida estimada', pdfMoneda($r['valor_perdidas'])],
+            ['Unidades vendidas', number_format($r['unidades_vendidas']), 'En el periodo'],
+            ['Productos sin ventas', number_format($r['productos_sin_venta']), 'Con stock y sin rotación'],
+            ['Unidades dadas de baja', number_format($r['unidades_baja']), pdfMoneda($r['valor_bajas']) . ' en total'],
+            ['Pérdida estimada', pdfMoneda($r['valor_perdidas']), 'Valor económico'],
         ];
-        $ranking = [
-            ['titulo' => 'Tienda', 'campo' => 'tienda'], ['titulo' => 'Producto', 'campo' => 'producto'], ['titulo' => 'Categoría', 'campo' => 'categoria'],
+        $secciones[] = ['tipo' => 'aviso', 'texto' => 'Las pérdidas incluyen bajas por vencimiento, daño, robo y pérdida, valoradas al costo vigente. Las devoluciones se muestran como baja pero no cuentan como pérdida.'];
+
+        $secciones[] = ['tipo' => 'par',
+            'izquierda' => ['tipo' => 'barras', 'titulo' => 'Más vendidos', 'descripcion' => 'Productos de mayor rotación.',
+                'items' => array_map(fn ($p) => ['etiqueta' => $p['producto'], 'valor' => $p['unidades'], 'texto' => number_format($p['unidades']) . ' u.', 'color' => 'verde'], array_slice($d['mas_vendidos'], 0, 10))],
+            'derecha' => ['tipo' => 'barras', 'titulo' => 'Bajas y pérdidas por motivo', 'descripcion' => 'Valor estimado de lo dado de baja.',
+                'items' => array_map(fn ($m) => ['etiqueta' => $m['motivo'], 'valor' => $m['valor'], 'texto' => pdfMonedaCorta($m['valor']), 'color' => $m['es_perdida'] ? 'rojo' : 'gris'], $d['bajas_por_motivo'])],
+        ];
+
+        $ranking = $tienda([
+            ['titulo' => 'Producto', 'campo' => 'producto'], ['titulo' => 'Categoría', 'campo' => 'categoria'],
             ['titulo' => 'Unidades vendidas', 'campo' => 'unidades', 'tipo' => 'entero'],
             ['titulo' => 'Ingresos', 'campo' => 'ingresos', 'tipo' => 'moneda'],
             ['titulo' => 'Stock actual', 'campo' => 'stock', 'tipo' => 'entero'],
-        ];
-        $secciones[] = ['titulo' => 'Más vendidos', 'descripcion' => 'Ranking de mayor rotación por tienda y periodo.',
+        ]);
+        $secciones[] = ['titulo' => 'Ranking de más vendidos', 'descripcion' => 'Mayor rotación por tienda y periodo.',
             'vacio' => 'No hubo ventas confirmadas en el periodo.', 'columnas' => $ranking, 'filas' => $d['mas_vendidos']];
         $secciones[] = ['titulo' => 'Menos vendidos', 'descripcion' => 'Productos con stock y la menor rotación del periodo.',
             'vacio' => 'No hay productos con stock para analizar.', 'columnas' => $ranking, 'filas' => $d['menos_vendidos']];
         $secciones[] = [
-            'titulo' => 'Bajas y pérdidas por motivo', 'descripcion' => 'Valor económico estimado al costo vigente. Las devoluciones no cuentan como pérdida.',
+            'titulo' => 'Bajas y pérdidas por motivo (detalle)', 'descripcion' => 'Las devoluciones no cuentan como pérdida.',
             'vacio' => 'No se registraron bajas en el periodo.',
             'columnas' => [
                 ['titulo' => 'Motivo', 'campo' => 'motivo'],
@@ -1150,6 +1235,73 @@ function accionExportarPdf(PDO $pdo): void
                 'filas' => $d['bajas'],
             ];
         }
+    } else {
+        $d = capturarReporte('accionCierrePreparar', $pdo);
+        $res = $d['resumen'];
+        $t = $res['ventas']['totales'];
+        $c = $d['cierre'];
+        $movs = array_sum(array_column($res['movimientos'], 'movimientos'));
+        $resumen = [
+            ['Ventas del día', pdfMoneda($t['total']), number_format($t['unidades']) . ' unidad(es) · ' . number_format($t['ventas']) . ' venta(s)'],
+            ['Movimientos', number_format($movs), number_format(array_sum(array_column($res['movimientos'], 'unidades'))) . ' unidad(es) movidas'],
+            ['Diferencias', number_format($res['diferencias']['cantidad']), 'Ventas vs. salidas de inventario'],
+            ['Alertas pendientes', number_format($res['alertas']['pendientes']), number_format($res['alertas']['generadas']) . ' generada(s) en el día'],
+        ];
+
+        $secciones[] = $c
+            ? ['tipo' => 'aviso', 'texto' => 'Día ' . ($c['estado'] === 'CERRADO' ? 'cerrado' : 'reabierto') . " por {$c['usuario_cierra']} el " . date('d/m/Y H:i', strtotime((string)$c['fecha_cierre'])) . " (versión {$c['version']})." . ($c['observaciones'] ? " Observaciones: {$c['observaciones']}" : '')]
+            : ['tipo' => 'aviso', 'nivel' => 'alerta', 'texto' => 'Este día aún está abierto: el consolidado es una vista previa y no ha sido cerrado.'];
+
+        if ($res['ventas_sin_confirmar']['cantidad'] > 0) {
+            $secciones[] = ['tipo' => 'aviso', 'nivel' => 'alerta', 'texto' => $res['ventas_sin_confirmar']['cantidad'] . ' venta(s) manual(es) por ' . pdfMoneda($res['ventas_sin_confirmar']['total']) . ' no tienen movimiento de inventario confirmado y no se cuentan.'];
+        }
+
+        $secciones[] = ['titulo' => 'Ventas del día', 'descripcion' => 'Ventas confirmadas por origen.', 'vacio' => 'No hubo ventas confirmadas en este día.',
+            'columnas' => [
+                ['titulo' => 'Origen', 'campo' => 'fuente'],
+                ['titulo' => 'Ventas', 'campo' => 'ventas', 'tipo' => 'entero', 'sumar' => true],
+                ['titulo' => 'Unidades', 'campo' => 'unidades', 'tipo' => 'entero', 'sumar' => true],
+                ['titulo' => 'Subtotal', 'campo' => 'subtotal', 'tipo' => 'moneda', 'sumar' => true],
+                ['titulo' => 'IVA', 'campo' => 'impuesto', 'tipo' => 'moneda', 'sumar' => true],
+                ['titulo' => 'Total', 'campo' => 'total', 'tipo' => 'moneda', 'sumar' => true],
+                ['titulo' => 'Costo', 'campo' => 'costo', 'tipo' => 'moneda', 'sumar' => true],
+            ],
+            'filas' => array_map(fn ($x) => $x + ['fuente' => $x['fuente'] === 'NAYAX' ? 'Nayax' : 'Manual'], $res['ventas']['por_fuente'])];
+
+        $secciones[] = ['titulo' => 'Movimientos de inventario', 'descripcion' => 'Entradas, salidas, ajustes, bajas y traslados del día.', 'vacio' => 'No hubo movimientos de inventario en este día.',
+            'columnas' => [
+                ['titulo' => 'Tipo', 'campo' => 'tipo'],
+                ['titulo' => 'Estado', 'campo' => 'estado', 'tipo' => 'badge', 'etiquetas' => ['CONFIRMADO' => ['Confirmado', 'verde'], 'PENDIENTE' => ['Pendiente', 'naranja']]],
+                ['titulo' => 'Movimientos', 'campo' => 'movimientos', 'tipo' => 'entero', 'sumar' => true],
+                ['titulo' => 'Unidades', 'campo' => 'unidades', 'tipo' => 'entero', 'sumar' => true],
+            ],
+            'filas' => $res['movimientos']];
+
+        $secciones[] = ['titulo' => 'Diferencias del día', 'descripcion' => 'Unidades vendidas que no coinciden con las salidas de inventario registradas por venta.',
+            'vacio' => 'Sin diferencias: las ventas coinciden con las salidas de inventario.',
+            'columnas' => [
+                ['titulo' => 'Producto', 'campo' => 'producto'],
+                ['titulo' => 'Vendidas', 'campo' => 'vendida', 'tipo' => 'entero'],
+                ['titulo' => 'Salidas de inventario', 'campo' => 'salida', 'tipo' => 'entero'],
+                ['titulo' => 'Diferencia', 'campo' => 'diferencia', 'tipo' => 'entero'],
+            ],
+            'filas' => $res['diferencias']['detalle']];
+
+        if ($d['eventos']) {
+            $secciones[] = ['titulo' => 'Historial del cierre', 'descripcion' => 'Cierres, reaperturas y nuevos cierres.',
+                'columnas' => [
+                    ['titulo' => 'Acción', 'campo' => 'accion'], ['titulo' => 'Versión', 'campo' => 'version', 'tipo' => 'entero'],
+                    ['titulo' => 'Usuario', 'campo' => 'usuario'],
+                    ['titulo' => 'Fecha y hora', 'campo' => 'fecha'],
+                    ['titulo' => 'Justificación / observaciones', 'campo' => 'detalle'],
+                ],
+                'filas' => array_map(fn ($e) => [
+                    'accion' => ['CIERRE' => 'Cierre', 'RECIERRE' => 'Nuevo cierre', 'REAPERTURA' => 'Reapertura'][$e['accion']] ?? $e['accion'],
+                    'version' => $e['version'], 'usuario' => $e['usuario'],
+                    'fecha' => date('d/m/Y H:i', strtotime((string)$e['fecha'])),
+                    'detalle' => $e['justificacion'] ?: ($e['observaciones'] ?? ''),
+                ], $d['eventos'])];
+        }
     }
 
     $generadoPor = trim(($usuario['nombre'] ?? '') . ' ' . ($usuario['apellido'] ?? ''));
@@ -1160,18 +1312,19 @@ function accionExportarPdf(PDO $pdo): void
     if ($filtros) {
         $meta[] = ['Filtros', implode(' | ', $filtros)];
     }
-    $meta[] = ['Generado el', (new DateTimeImmutable('now', new DateTimeZone(ZONA_REPORTES)))->format('d/m/Y H:i')];
+    $meta[] = ['Generado el', $ahora->format('d/m/Y H:i')];
     if ($generadoPor !== '') {
         $meta[] = ['Generado por', $generadoPor];
     }
 
     pdfReporte([
-        'titulo'    => 'Vending Mini Market',
-        'subtitulo' => $titulos[$tipo][0],
-        'archivo'   => 'reporte-' . $titulos[$tipo][1] . '_' . $sufijoArchivo,
-        'meta'      => $meta,
-        'resumen'   => $resumen,
-        'secciones' => $secciones,
+        'tipo'        => $tipo,
+        'subtitulo'   => $titulos[$tipo][0],
+        'descripcion' => $titulos[$tipo][1],
+        'archivo'     => 'reporte-' . $tipo . '_' . $sufijoArchivo,
+        'meta'        => $meta,
+        'resumen'     => $resumen,
+        'secciones'   => $secciones,
     ]);
 }
 
