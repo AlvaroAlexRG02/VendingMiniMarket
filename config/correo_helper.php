@@ -29,10 +29,12 @@ function enviarEnlaceRecuperacion(string $correo, string $enlace): void
     $mail->isHTML(true);
     $mail->Subject = 'Validación de identidad - Vending Mini Market';
     $mail->Body = "
-        <div style='font-family: Arial, sans-serif;'>
-            <h2>Vending Mini Market</h2>
+        <div style='max-width: 560px; margin: 0 auto; padding: 24px; font-family: Arial, sans-serif; color: #172554; text-align: center;'>
+            <h2 style='margin: 0 0 16px;'>Vending Mini Market</h2>
             <p>Para confirmar su identidad y recibir una contraseña temporal, use este enlace:</p>
-            <p><a href='" . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . "'>Validar identidad</a></p>
+            <p style='margin: 24px 0;'>
+                <a href='" . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . "' style='display: inline-block; padding: 12px 24px; border-radius: 6px; background: #2563eb; color: #ffffff; font-weight: bold; text-decoration: none;'>Validar identidad</a>
+            </p>
             <p>El enlace vence en 15 minutos. Si usted no inició este proceso, ignore este correo.</p>
         </div>
     ";
@@ -48,10 +50,10 @@ function enviarContrasenaTemporal(string $correo, string $nombre, string $contra
     $mail->isHTML(true);
     $mail->Subject = 'Contraseña temporal - Vending Mini Market';
     $mail->Body = "
-        <div style='font-family: Arial, sans-serif;'>
-            <h2>Vending Mini Market</h2>
+        <div style='max-width: 560px; margin: 0 auto; padding: 24px; font-family: Arial, sans-serif; color: #172554; text-align: center;'>
+            <h2 style='margin: 0 0 16px;'>Vending Mini Market</h2>
             <p>Su identidad fue validada. Use esta contraseña temporal para iniciar sesión:</p>
-            <p style='font-size: 20px; font-weight: bold;'>" .
+            <p style='display: inline-block; margin: 16px auto; padding: 12px 20px; border-radius: 6px; background: #eff6ff; font-size: 20px; font-weight: bold;'>" .
                 htmlspecialchars($contrasena, ENT_QUOTES, 'UTF-8') .
             "</p>
             <p>Por seguridad, el sistema le pedirá crear una contraseña nueva al ingresar.</p>

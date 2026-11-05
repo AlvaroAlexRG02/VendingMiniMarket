@@ -19,10 +19,10 @@ if (empty($_SESSION['usuario']['debe_cambiar_contrasena'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Actualice la contraseña inicial de Vending Mini Market">
     <title>Cambiar contraseña | Vending Mini Market</title>
-    <link rel="stylesheet" href="../css/estilos.css?v=20261007-1">
+    <link rel="stylesheet" href="../css/estilos.css?v=20261105-2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body class="pagina-login">
+<body class="pagina-login pagina-cambio-inicial">
     <main class="contenedor-login">
         <section class="panel-login-formulario cambio-inicial-contenedor">
             <div class="tarjeta-login">

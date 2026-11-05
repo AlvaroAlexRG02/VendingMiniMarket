@@ -82,6 +82,55 @@ body.pagina-login {
     min-height: 100vh;
 }
 
+body.pagina-recuperacion .contenedor-login,
+body.pagina-cambio-inicial .contenedor-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+body.pagina-recuperacion #formularioRecuperarContrasena .campo-formulario {
+    width: 100%;
+}
+
+body.pagina-recuperacion #formularioRecuperarContrasena label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--texto-principal);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+body.pagina-recuperacion #correoRecuperacion {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 15px;
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: #fbfcfe;
+    color: var(--texto-principal);
+    font: inherit;
+    font-size: 14px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+body.pagina-recuperacion #correoRecuperacion::placeholder {
+    color: var(--texto-tenue);
+}
+
+body.pagina-recuperacion #correoRecuperacion:focus {
+    outline: none;
+    border-color: var(--azul);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+body.pagina-cambio-inicial .panel-login-formulario {
+    width: 100%;
+}
+
 /* Panel izquierdo de marca */
 .panel-login-marca {
     background: linear-gradient(160deg, var(--azul-marino) 0%, #081638 100%);
