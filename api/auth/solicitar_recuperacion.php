@@ -2,11 +2,7 @@
 
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../config/session.php";
-
-require_once __DIR__ . "/../../vendor/autoload.php";
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+require_once __DIR__ . "/../../config/correo_helper.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -21,9 +17,9 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
-$entrada = json_decode(file_get_contents("php://input"), true);
+$entrada = json_decode(file_get_contents("php://input") ?: "", true);
 
-$correo = trim($entrada["correo"] ?? "");
+$correo = is_array($entrada) ? trim($entrada["correo"] ?? "") : "";
 
 if ($correo === "" || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
@@ -37,7 +33,7 @@ if ($correo === "" || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
-    $configCorreo = require __DIR__ . "/../../config/correo.php";
+    $pdo->beginTransaction();
 
     /*
      * Buscamos el usuario utilizando la misma lógica
@@ -47,13 +43,14 @@ try {
         SELECT
             u.id_usuario,
             u.correo,
-            u.estado,
+            u.estado AS usuario_estado,
             r.estado AS rol_estado
         FROM usuario u
         INNER JOIN rol r
             ON r.id_rol = u.id_rol
         WHERE LOWER(u.correo) = LOWER(:correo)
         LIMIT 1
+        FOR UPDATE OF u
     ";
 
     $stmt = $pdo->prepare($sql);
@@ -69,7 +66,12 @@ try {
      * Esto evita que alguien pueda descubrir
      * qué correos están registrados en el sistema.
      */
-    if (!$usuario || !$usuario["estado"] || !$usuario["rol_estado"]) {
+    if (
+        !$usuario ||
+        !in_array($usuario["usuario_estado"], [true, 1, "1", "t", "true"], true) ||
+        !in_array($usuario["rol_estado"], [true, 1, "1", "t", "true"], true)
+    ) {
+        $pdo->rollBack();
 
         echo json_encode([
             "success" => true,
@@ -96,121 +98,41 @@ try {
         ->modify("+15 minutes")
         ->format("Y-m-d H:i:sP");
 
-    /*
-     * Desactivamos solicitudes anteriores
-     * todavía activas para este usuario.
-     */
+    $baseUrl = rtrim(getenv("APP_BASE_URL") ?: "http://localhost/VendingMiniMarket", "/");
+    $partesUrl = parse_url($baseUrl);
+    if (
+        !filter_var($baseUrl, FILTER_VALIDATE_URL) ||
+        !in_array($partesUrl["scheme"] ?? "", ["http", "https"], true) ||
+        empty($partesUrl["host"])
+    ) {
+        throw new RuntimeException("APP_BASE_URL debe ser una URL HTTP o HTTPS válida.");
+    }
+
+    $enlaceRecuperacion = $baseUrl . "/index/validar-recuperacion.html?token=" . urlencode($token);
     $desactivar = $pdo->prepare("
         UPDATE recuperacion_contrasena
         SET estado = FALSE
         WHERE id_usuario = :id_usuario
           AND estado = TRUE
     ");
+    $desactivar->execute([":id_usuario" => $usuario["id_usuario"]]);
 
-    $desactivar->execute([
-        ":id_usuario" => $usuario["id_usuario"]
-    ]);
-
-    /*
-     * Guardamos la nueva solicitud.
-     */
     $insertar = $pdo->prepare("
         INSERT INTO recuperacion_contrasena (
-            id_usuario,
-            token_hash,
-            fecha_expiracion,
-            estado
+            id_usuario, token_hash, fecha_expiracion, estado
         )
         VALUES (
-            :id_usuario,
-            :token_hash,
-            :fecha_expiracion,
-            TRUE
+            :id_usuario, :token_hash, :fecha_expiracion, TRUE
         )
     ");
-
     $insertar->execute([
         ":id_usuario" => $usuario["id_usuario"],
         ":token_hash" => $tokenHash,
         ":fecha_expiracion" => $fechaExpiracion
     ]);
 
-    $mail = new PHPMailer(true);
-
-    $mail->isSMTP();
-    $mail->Host = $configCorreo["host"];
-    $mail->SMTPAuth = true;
-    $mail->Username = $configCorreo["username"];
-    $mail->Password = $configCorreo["password"];
-    $mail->SMTPSecure = $configCorreo["encryption"];
-    $mail->Port = $configCorreo["port"];
-    $mail->CharSet = "UTF-8";
-
-    $mail->setFrom(
-        $configCorreo["from_email"],
-        $configCorreo["from_name"]
-    );
-
-    $mail->addAddress(
-        $usuario["correo"]
-    );
-
-    $enlaceRecuperacion =
-        "http://localhost/VendingMiniMarket/index/validar-recuperacion.html?token=" .
-        urlencode($token);
-
-    $mail->isHTML(true);
-
-    $mail->Subject = "Recuperación de contraseña - Vending Mini Market";
-
-    $mail->Body = "
-        <div style='font-family: Arial, sans-serif;'>
-            <h2>Vending Mini Market</h2>
-
-            <p>
-                Hemos recibido una solicitud para restablecer
-                su contraseña.
-            </p>
-
-            <p>
-                Para continuar con el proceso, haga clic en el
-                siguiente botón:
-            </p>
-
-            <p>
-                <a
-                    href='{$enlaceRecuperacion}'
-                    style='
-                        display:inline-block;
-                        padding:12px 20px;
-                        background:#0d6efd;
-                        color:white;
-                        text-decoration:none;
-                        border-radius:6px;
-                    '
-                >
-                    Restablecer contraseña
-                </a>
-            </p>
-
-            <p>
-                Este enlace será válido durante 15 minutos.
-            </p>
-
-            <p>
-                Si usted no solicitó este cambio, puede ignorar
-                este correo.
-            </p>
-        </div>
-    ";
-
-    $mail->AltBody =
-        "Hemos recibido una solicitud para restablecer su contraseña. " .
-        "Utilice el siguiente enlace: " .
-        $enlaceRecuperacion .
-        ". El enlace será válido durante 15 minutos.";
-
-    $mail->send();
+    enviarEnlaceRecuperacion($usuario["correo"], $enlaceRecuperacion);
+    $pdo->commit();
 
     echo json_encode([
         "success" => true,
@@ -219,6 +141,9 @@ try {
     ]);
 
 } catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
 
     error_log(
         "Error en solicitar_recuperacion.php: " . $e->getMessage()

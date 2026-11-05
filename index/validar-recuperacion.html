@@ -9,6 +9,7 @@
         name="description"
         content="Validación de recuperación de contraseña | Vending Mini Market"
     >
+    <meta name="referrer" content="no-referrer">
 
     <title>Validar recuperación | Vending Mini Market</title>
 
@@ -51,6 +52,14 @@
                     aria-live="polite"
                 ></p>
 
+                <button
+                    type="button"
+                    id="botonValidarRecuperacion"
+                    class="boton boton-azul boton-login"
+                >
+                    Confirmar identidad y recibir contraseña temporal
+                </button>
+
             </form>
 
             <div class="acciones-login">
@@ -87,13 +96,15 @@
 
         async function validarRecuperacion() {
 
-            mensaje.textContent =
-                "Validando su solicitud...";
+            const boton = document.getElementById("botonValidarRecuperacion");
+            boton.disabled = true;
+            mensaje.textContent = "Validando su solicitud...";
 
             if (!token) {
 
                 mensaje.textContent =
                     "El enlace de recuperación no es válido.";
+                boton.disabled = false;
 
                 return;
             }
@@ -120,17 +131,19 @@
                     mensaje.textContent =
                         resultado.message ||
                         "El enlace de recuperación no es válido o ha expirado.";
+                    boton.disabled = false;
 
                     return;
                 }
 
                 mensaje.textContent =
                     resultado.message;
+                boton.hidden = true;
 
                 setTimeout(function () {
                     window.location.href =
-                        "nueva-contrasena.html";
-                }, 1000);
+                        "index.html";
+                }, 4000);
 
             } catch (error) {
 
@@ -138,10 +151,13 @@
 
                 mensaje.textContent =
                     "No fue posible comunicarse con el servidor.";
+                boton.disabled = false;
             }
         }
 
-        validarRecuperacion();
+        document
+            .getElementById("botonValidarRecuperacion")
+            .addEventListener("click", validarRecuperacion);
     </script>
 
 </body>

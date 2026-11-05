@@ -3,3 +3,6 @@
 
 ALTER TABLE public.usuario
     ADD COLUMN IF NOT EXISTS debe_cambiar_contrasena BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE public.usuario
+    ADD COLUMN IF NOT EXISTS origen_cambio_contrasena VARCHAR(20) NOT NULL DEFAULT 'INICIAL';

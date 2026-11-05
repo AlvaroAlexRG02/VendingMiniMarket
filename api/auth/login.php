@@ -5,6 +5,11 @@ require_once __DIR__ . "/../../config/session.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
+function booleanoPostgresAuth(mixed $valor): bool
+{
+    return in_array($valor, [true, 1, "1", "t", "true"], true);
+}
+
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     http_response_code(405);
 
@@ -45,6 +50,7 @@ try {
             u.password_hash,
             u.estado,
             u.debe_cambiar_contrasena,
+            u.origen_cambio_contrasena,
             u.intentos_fallidos,
             u.bloqueado_hasta,
             r.nombre AS rol_nombre,
@@ -82,7 +88,7 @@ try {
     /*
      * Verificar si la cuenta está activa.
      */
-    if (!$usuario["estado"] || !$usuario["rol_estado"]) {
+    if (!booleanoPostgresAuth($usuario["estado"]) || !booleanoPostgresAuth($usuario["rol_estado"])) {
         http_response_code(401);
 
         echo json_encode([
@@ -237,7 +243,8 @@ try {
         "apellido" => $usuario["apellido"],
         "correo" => $usuario["correo"],
         "rol" => $usuario["rol_nombre"],
-        "debe_cambiar_contrasena" => (bool)$usuario["debe_cambiar_contrasena"]
+        "debe_cambiar_contrasena" => booleanoPostgresAuth($usuario["debe_cambiar_contrasena"]),
+        "origen_cambio_contrasena" => $usuario["origen_cambio_contrasena"]
     ];
 
     /*

@@ -47,7 +47,7 @@ $idUsuario = (int)$_SESSION['usuario']['id_usuario'];
 try {
     $pdo->beginTransaction();
     $consulta = $pdo->prepare("
-        SELECT password_hash, debe_cambiar_contrasena
+        SELECT password_hash, debe_cambiar_contrasena, origen_cambio_contrasena
         FROM public.usuario
         WHERE id_usuario = :id_usuario
           AND estado = TRUE
@@ -57,7 +57,10 @@ try {
     $usuario = $consulta->fetch();
     $consulta->closeCursor();
 
-    if (!$usuario || !$usuario['debe_cambiar_contrasena']) {
+    if (
+        !$usuario ||
+        !in_array($usuario['debe_cambiar_contrasena'], [true, 1, '1', 't', 'true'], true)
+    ) {
         $pdo->rollBack();
         responderCambioInicial(false, 'No hay un cambio inicial de contraseña pendiente.', 409);
     }
@@ -70,6 +73,7 @@ try {
         UPDATE public.usuario
         SET password_hash = :password_hash,
             debe_cambiar_contrasena = FALSE,
+            origen_cambio_contrasena = 'INICIAL',
             intentos_fallidos = 0,
             bloqueado_hasta = NULL
         WHERE id_usuario = :id_usuario
@@ -79,22 +83,28 @@ try {
         ':id_usuario' => $idUsuario,
     ]);
 
+    $accion = match ($usuario['origen_cambio_contrasena'] ?? 'INICIAL') {
+        'RECUPERACION' => 'RESTABLECIMIENTO_CONTRASENA',
+        'SOPORTE' => 'CAMBIO_CONTRASENA_TEMPORAL',
+        default => 'CAMBIO_CONTRASENA_INICIAL',
+    };
     $auditoria = $pdo->prepare("
         INSERT INTO public.bitacora_auditoria
             (id_usuario, id_tienda, entidad, accion, valor_anterior,
              valor_nuevo, resultado, ip_origen, fecha)
         VALUES
-            (:id_usuario, NULL, 'USUARIO', 'CAMBIO_CONTRASENA_INICIAL',
+            (:id_usuario, NULL, 'USUARIO', :accion,
              NULL, NULL, 'EXITOSO', :ip, NOW())
     ");
-    $auditoria->execute([
-        ':id_usuario' => $idUsuario,
-        ':ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-    ]);
+    $auditoria->bindValue(':id_usuario', $idUsuario, PDO::PARAM_INT);
+    $auditoria->bindValue(':accion', $accion);
+    $auditoria->bindValue(':ip', $_SERVER['REMOTE_ADDR'] ?? null);
+    $auditoria->execute();
     $pdo->commit();
 
     session_regenerate_id(true);
     $_SESSION['usuario']['debe_cambiar_contrasena'] = false;
+    $_SESSION['usuario']['origen_cambio_contrasena'] = 'INICIAL';
     responderCambioInicial(true, 'Contraseña actualizada. Ya puede ingresar al sistema.', 200);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {

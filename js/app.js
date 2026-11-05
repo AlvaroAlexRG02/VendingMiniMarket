@@ -4388,7 +4388,14 @@ function inicializarPaginaUsuariosVending() {
     });
     document.getElementById("cuerpoTablaUsuarios")?.addEventListener("click", evento => {
         const boton=evento.target.closest("button[data-usuario]"); if(!boton)return;
-        boton.dataset.accion === "editar" ? prepararFormularioUsuarioVending(boton.dataset.usuario) : cambiarEstadoUsuarioVending(boton.dataset.usuario);
+        const id = boton.dataset.usuario;
+        if (boton.dataset.accion === "editar") {
+            prepararFormularioUsuarioVending(id);
+        } else if (boton.dataset.accion === "estado") {
+            cambiarEstadoUsuarioVending(id);
+        } else if (boton.dataset.accion === "restablecer-contrasena") {
+            restablecerContrasenaUsuarioVending(id);
+        }
     });
 
     cargarTiendasUsuarioVending();
@@ -4837,6 +4844,46 @@ async function cambiarEstadoUsuarioVending(id) {
     }
 }
 
+async function restablecerContrasenaUsuarioVending(id) {
+    const confirmar = await confirmarVending({
+        titulo: "Restablecer contraseña",
+        mensaje: "Se enviará una contraseña temporal al correo del usuario. Deberá cambiarla al iniciar sesión.",
+        icono: "fa-solid fa-key"
+    });
+
+    if (!confirmar) return;
+
+    try {
+        const respuesta = await fetch("../api/usuarios/restablecer_contrasena.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({ id_usuario: id })
+        });
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.exito) {
+            mostrarMensajeModuloVending(
+                "mensajeUsuarios",
+                resultado.mensaje || "No fue posible restablecer la contraseña.",
+                "error"
+            );
+            return;
+        }
+
+        mostrarMensajeModuloVending("mensajeUsuarios", resultado.mensaje);
+    } catch (error) {
+        console.error("Error al restablecer la contraseña:", error);
+        mostrarMensajeModuloVending(
+            "mensajeUsuarios",
+            "No fue posible comunicarse con el servidor.",
+            "error"
+        );
+    }
+}
+
 async function renderUsuariosVending() {
 
     const cuerpo = document.getElementById("cuerpoTablaUsuarios");
@@ -5081,6 +5128,16 @@ async function renderUsuariosVending() {
                                 title="Cambiar estado"
                             >
                                 <i class="fa-solid fa-user-lock"></i>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="boton-tabla"
+                                data-usuario="${usuario.id_usuario}"
+                                data-accion="restablecer-contrasena"
+                                title="Enviar contraseña temporal"
+                            >
+                                <i class="fa-solid fa-key"></i>
                             </button>
 
                         </div>
