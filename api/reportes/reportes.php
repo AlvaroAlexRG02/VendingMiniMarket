@@ -96,10 +96,29 @@ function leerFiltros(PDO $pdo, bool $requierePeriodo): array
         'fin'          => $fin,
         'id_categoria' => (int)($_GET['id_categoria'] ?? 0),
         'id_proveedor' => (int)($_GET['id_proveedor'] ?? 0),
+        'ids_proveedores' => idsProveedoresSolicitados(),
+        'ids_productos' => idsDeParametro('ids_productos'),
         'id_ubicacion' => (int)($_GET['id_ubicacion'] ?? 0),
         'busqueda'     => trim((string)($_GET['busqueda'] ?? '')),
         'estado'       => strtoupper(trim((string)($_GET['estado'] ?? ''))),
     ];
+}
+
+/** Lista de ids positivos de un parámetro GET "a,b,c". */
+function idsDeParametro(string $nombre): array
+{
+    $ids = array_map('intval', explode(',', (string)($_GET[$nombre] ?? '')));
+
+    return array_values(array_unique(array_filter($ids, fn ($id) => $id > 0)));
+}
+
+/** Proveedores pedidos: ids_proveedores=1,2,3 (uno, varios o ninguno = todos) o el id_proveedor antiguo. */
+function idsProveedoresSolicitados(): array
+{
+    $ids = array_map('intval', explode(',', (string)($_GET['ids_proveedores'] ?? '')));
+    $ids[] = (int)($_GET['id_proveedor'] ?? 0);
+
+    return array_values(array_unique(array_filter($ids, fn ($id) => $id > 0)));
 }
 
 /** Condiciones SQL sobre el producto (alias $p) según categoría, proveedor y búsqueda. */
@@ -111,11 +130,19 @@ function condicionesProducto(array $f, Parametros $par, string $p = 'p'): array
         $donde[] = "$p.id_categoria = " . $par->agregar($f['id_categoria']);
     }
 
-    if ($f['id_proveedor'] > 0) {
+    // Solo productos relacionados (activamente) con alguno de los proveedores elegidos.
+    if (!empty($f['ids_proveedores'])) {
+        $marcas = array_map(fn ($id) => $par->agregar($id), $f['ids_proveedores']);
         $donde[] = "EXISTS (SELECT 1 FROM producto_proveedor pp
                             WHERE pp.id_producto = $p.id_producto
-                              AND pp.id_proveedor = " . $par->agregar($f['id_proveedor']) . '
+                              AND pp.id_proveedor IN (" . implode(',', $marcas) . ')
                               AND pp.estado = TRUE)';
+    }
+
+    // Productos elegidos de forma explícita (se combinan con los proveedores: ambos deben cumplirse).
+    if (!empty($f['ids_productos'])) {
+        $marcas = array_map(fn ($id) => $par->agregar($id), $f['ids_productos']);
+        $donde[] = "$p.id_producto IN (" . implode(',', $marcas) . ')';
     }
 
     if ($f['busqueda'] !== '') {
@@ -168,9 +195,39 @@ function accionFiltros(PDO $pdo): void
         'categorias'   => json_decode($fila['categorias'], true),
         'proveedores'  => json_decode($fila['proveedores'], true),
         'puede_elegir_tienda' => count($tiendas) > 1,
+        'puede_ver_todas'     => esAdministradorOGerente(),
         'puede_ver_utilidad'  => esAdministradorOGerente(),
+        'puede_exportar'      => esAdministradorOGerente(),
         'nayax_disponible'    => in_array($fila['nayax'], [true, 't', 1, '1'], true),
     ]);
+}
+
+/** Productos activos relacionados con los proveedores indicados (para elegirlos en los filtros). */
+function accionProductosProveedor(PDO $pdo): void
+{
+    exigirAccesoReportes();
+
+    $ids = idsProveedoresSolicitados();
+
+    if (!$ids) {
+        respuesta(true, []);
+    }
+
+    $par = new Parametros();
+    $marcas = array_map(fn ($id) => $par->agregar($id), $ids);
+
+    $st = $pdo->prepare('
+        SELECT DISTINCT p.id_producto, p.nombre
+        FROM producto p
+        JOIN producto_proveedor pp ON pp.id_producto = p.id_producto
+        WHERE pp.estado = TRUE
+          AND p.estado = TRUE
+          AND pp.id_proveedor IN (' . implode(',', $marcas) . ')
+        ORDER BY p.nombre, p.id_producto
+    ');
+    $st->execute($par->valores);
+
+    respuesta(true, $st->fetchAll());
 }
 
 /* ==========================================================
@@ -929,6 +986,11 @@ function accionExportarPdf(PDO $pdo): void
 {
     $usuario = exigirAccesoReportes();
 
+    // El Encargado solo consulta y genera reportes en pantalla; no descarga PDF.
+    if (!esAdministradorOGerente()) {
+        respuesta(false, null, 'Solo Administración o Gerencia pueden exportar reportes a PDF.', 403);
+    }
+
     $tipo = (string)($_GET['tipo'] ?? '');
     $titulos = [
         'ventas'     => ['Ventas por tienda y periodo', 'Ingresos, unidades y costo de las ventas confirmadas.'],
@@ -983,14 +1045,46 @@ function accionExportarPdf(PDO $pdo): void
         }
     }
 
+    $cierreVarias = false;
+
     if ($tipo === 'cierre') {
         $fechaCierre = (string)($_GET['fecha'] ?? '');
         $_GET['fecha'] = $fechaCierre;
         $textoPeriodo = 'Día ' . (fechaValida($fechaCierre) ? date('d/m/Y', strtotime($fechaCierre)) : '-');
         $sufijoArchivo = $fechaCierre;
         $idTiendaCierre = (int)($_GET['id_tienda'] ?? 0);
+        $idsCierre = [$idTiendaCierre];
+
+        // Sin tienda concreta: comparativo de varias (o todas) las tiendas, solo para Administración y Gerencia.
+        if ($idTiendaCierre === 0) {
+            if (!esAdministradorOGerente()) {
+                respuesta(false, null, 'Solo Administración o Gerencia pueden exportar el cierre de varias tiendas.', 403);
+            }
+
+            $permitidas = tiendasPermitidas($pdo);
+            $seleccion = idsDeParametro('id_tiendas');
+
+            foreach ($seleccion as $idSeleccion) {
+                if (!isset($permitidas[$idSeleccion])) {
+                    respuesta(false, null, 'No tiene acceso a una de las tiendas seleccionadas.', 403);
+                }
+            }
+
+            $idsCierre = $seleccion ?: array_keys($permitidas);
+
+            if (!$idsCierre) {
+                respuesta(false, null, 'No hay tiendas disponibles para exportar.', 400);
+            }
+
+            if (count($idsCierre) === 1) {
+                $idTiendaCierre = $idsCierre[0];
+            } else {
+                $cierreVarias = true;
+            }
+        }
+
         $_GET['id_tienda'] = $idTiendaCierre;
-        $f = ['ids_tiendas' => [$idTiendaCierre], 'id_categoria' => 0, 'id_proveedor' => 0, 'busqueda' => '', 'estado' => ''];
+        $f = ['ids_tiendas' => $idsCierre, 'id_categoria' => 0, 'id_proveedor' => 0, 'ids_proveedores' => [], 'ids_productos' => [], 'busqueda' => '', 'estado' => ''];
     } else {
         $f = leerFiltros($pdo, $usaPeriodo);
     }
@@ -1006,8 +1100,21 @@ function accionExportarPdf(PDO $pdo): void
     if ($f['id_categoria'] > 0) {
         $filtros[] = 'Categoría: ' . ($nombreDe('SELECT nombre FROM categoria WHERE id_categoria = :id', $f['id_categoria']) ?? '-');
     }
-    if ($f['id_proveedor'] > 0) {
-        $filtros[] = 'Proveedor: ' . ($nombreDe('SELECT nombre FROM proveedor WHERE id_proveedor = :id', $f['id_proveedor']) ?? '-');
+    if (!empty($f['ids_proveedores'])) {
+        $nombres = array_map(
+            fn ($id) => $nombreDe('SELECT nombre FROM proveedor WHERE id_proveedor = :id', $id) ?? '-',
+            $f['ids_proveedores']
+        );
+        $filtros[] = (count($nombres) > 1 ? 'Proveedores: ' : 'Proveedor: ') . implode(', ', $nombres);
+    }
+    if (!empty($f['ids_productos'])) {
+        $nombresProductos = array_map(
+            fn ($id) => $nombreDe('SELECT nombre FROM producto WHERE id_producto = :id', $id) ?? '-',
+            $f['ids_productos']
+        );
+        $filtros[] = (count($nombresProductos) > 3
+            ? 'Productos: ' . count($nombresProductos) . ' seleccionados'
+            : (count($nombresProductos) > 1 ? 'Productos: ' : 'Producto: ') . implode(', ', $nombresProductos));
     }
     if ($f['busqueda'] !== '') {
         $filtros[] = 'Producto: ' . $f['busqueda'];
@@ -1235,6 +1342,64 @@ function accionExportarPdf(PDO $pdo): void
                 'filas' => $d['bajas'],
             ];
         }
+    } elseif ($cierreVarias) {
+        $permitidas = tiendasPermitidas($pdo);
+        $comparativo = [];
+
+        foreach ($idsCierre as $idCierreTienda) {
+            $_GET['id_tienda'] = $idCierreTienda;
+            $datos = capturarReporte('accionCierrePreparar', $pdo);
+            $r = $datos['resumen'];
+            $comparativo[] = [
+                'tienda'       => $permitidas[$idCierreTienda] ?? "#$idCierreTienda",
+                'estado'       => $datos['cierre']['estado'] ?? 'ABIERTO',
+                'ventas'       => (int)$r['ventas']['totales']['ventas'],
+                'unidades'     => (int)$r['ventas']['totales']['unidades'],
+                'total'        => (float)$r['ventas']['totales']['total'],
+                'movimientos'  => (int)array_sum(array_column($r['movimientos'], 'movimientos')),
+                'diferencias'  => (int)$r['diferencias']['cantidad'],
+                'alertas'      => (int)$r['alertas']['pendientes'],
+            ];
+        }
+
+        $suma = fn (string $campo) => array_sum(array_column($comparativo, $campo));
+        $cerradas = count(array_filter($comparativo, fn ($x) => $x['estado'] === 'CERRADO'));
+        $colores = ['azul', 'verde', 'naranja', 'morado', 'rojo', 'gris'];
+        $barras = fn (string $campo, callable $texto, ?string $color = null) => array_map(
+            fn ($x, $i) => ['etiqueta' => $x['tienda'], 'valor' => $x[$campo], 'texto' => $texto($x[$campo]), 'color' => $color ?? $colores[$i % 6]],
+            $comparativo,
+            array_keys($comparativo)
+        );
+
+        $resumen = [
+            ['Ventas del día', pdfMoneda($suma('total')), number_format($suma('unidades')) . ' unidad(es) · ' . number_format($suma('ventas')) . ' venta(s)'],
+            ['Movimientos', number_format($suma('movimientos')), 'Entre todas las tiendas'],
+            ['Diferencias', number_format($suma('diferencias')), 'Ventas vs. salidas de inventario'],
+            ['Cierres confirmados', $cerradas . ' de ' . count($comparativo), number_format($suma('alertas')) . ' alerta(s) pendiente(s)'],
+        ];
+
+        $secciones[] = ['tipo' => 'aviso', 'texto' => 'Comparativo del cierre de ' . count($comparativo) . ' tiendas. Los días no cerrados muestran el cálculo en vivo y no un consolidado confirmado.'];
+        $secciones[] = ['tipo' => 'par',
+            'izquierda' => ['tipo' => 'barras', 'titulo' => 'Ventas por tienda', 'descripcion' => 'Ventas confirmadas del día (con IVA).', 'items' => $barras('total', 'pdfMonedaCorta')],
+            'derecha' => ['tipo' => 'barras', 'titulo' => 'Movimientos por tienda', 'descripcion' => 'Movimientos de inventario del día.', 'items' => $barras('movimientos', fn ($v) => number_format($v))],
+        ];
+        $secciones[] = ['tipo' => 'par',
+            'izquierda' => ['tipo' => 'barras', 'titulo' => 'Diferencias por tienda', 'descripcion' => 'Ventas que no coinciden con las salidas.', 'items' => $barras('diferencias', fn ($v) => number_format($v), 'rojo')],
+            'derecha' => ['tipo' => 'barras', 'titulo' => 'Alertas pendientes por tienda', 'descripcion' => 'Alertas sin atender al cierre del día.', 'items' => $barras('alertas', fn ($v) => number_format($v), 'naranja')],
+        ];
+        $secciones[] = ['titulo' => 'Comparativo por tienda', 'descripcion' => 'Cierre diario de cada tienda, lado a lado.', 'vacio' => 'No hay datos.',
+            'columnas' => [
+                ['titulo' => 'Tienda', 'campo' => 'tienda'],
+                ['titulo' => 'Cierre', 'campo' => 'estado', 'tipo' => 'badge', 'etiquetas' => ['CERRADO' => ['Cerrado', 'verde'], 'REABIERTO' => ['Reabierto', 'naranja'], 'ABIERTO' => ['Abierto', 'gris']]],
+                ['titulo' => 'Ventas', 'campo' => 'ventas', 'tipo' => 'entero', 'sumar' => true],
+                ['titulo' => 'Unidades', 'campo' => 'unidades', 'tipo' => 'entero', 'sumar' => true],
+                ['titulo' => 'Total', 'campo' => 'total', 'tipo' => 'moneda', 'sumar' => true],
+                ['titulo' => 'Movimientos', 'campo' => 'movimientos', 'tipo' => 'entero', 'sumar' => true],
+                ['titulo' => 'Diferencias', 'campo' => 'diferencias', 'tipo' => 'entero', 'sumar' => true],
+                ['titulo' => 'Alertas', 'campo' => 'alertas', 'tipo' => 'entero', 'sumar' => true],
+            ],
+            'filas' => $comparativo];
+        $sufijoArchivo .= '_comparativo';
     } else {
         $d = capturarReporte('accionCierrePreparar', $pdo);
         $res = $d['resumen'];
@@ -1334,6 +1499,7 @@ function accionExportarPdf(PDO $pdo): void
 
 $acciones = [
     'filtros'    => 'accionFiltros',
+    'productos_proveedor' => 'accionProductosProveedor',
     'ventas'     => 'accionVentas',
     'utilidad'   => 'accionUtilidad',
     'inventario' => 'accionInventario',

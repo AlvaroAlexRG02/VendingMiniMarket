@@ -17,22 +17,22 @@
         ventas: {
             titulo: 'Ventas por tienda y periodo',
             descripcion: 'Compara el desempeño comercial de cada punto de venta.',
-            filtros: ['tienda', 'periodo', 'busqueda', 'categoria', 'proveedor']
+            filtros: ['tienda', 'periodo', 'proveedor', 'productos']
         },
         utilidad: {
             titulo: 'Utilidad bruta estimada',
             descripcion: 'Ingresos por ventas confirmadas menos el costo de los productos vendidos.',
-            filtros: ['tienda', 'periodo', 'busqueda', 'categoria', 'proveedor', 'ubicacion']
+            filtros: ['tienda', 'periodo', 'proveedor', 'productos']
         },
         inventario: {
             titulo: 'Inventario por ubicación',
             descripcion: 'Existencias actuales por tienda, bodega y exhibición, con los productos críticos primero.',
-            filtros: ['tienda', 'busqueda', 'categoria', 'proveedor', 'ubicacion', 'estado']
+            filtros: ['tienda', 'proveedor', 'productos', 'estado']
         },
         rotacion: {
             titulo: 'Rotación, bajas y pérdidas',
             descripcion: 'Lo que más y menos se vende, y el valor estimado de lo que se pierde.',
-            filtros: ['tienda', 'periodo', 'busqueda', 'categoria', 'proveedor']
+            filtros: ['tienda', 'periodo', 'proveedor', 'productos']
         },
         cierre: {
             titulo: 'Cierre operativo diario',
@@ -454,7 +454,9 @@
         return aviso(`El cierre del ${fecha} fue reabierto por un Administrador. Corrige lo necesario y vuelve a cerrar el día.`, 'fa-lock-open', 'aviso-advertencia');
     }
 
-    function reporteCierre(d) {
+    /** multi = { sufijo, tienda } cuando se muestran varias tiendas: solo lectura, sin confirmar ni reabrir. */
+    function reporteCierre(d, multi = null) {
+        const suf = multi ? multi.sufijo : '';
         const r = d.resumen;
         const t = r.ventas.totales;
         const movimientos = r.movimientos.reduce((n, m) => n + m.movimientos, 0);
@@ -478,21 +480,21 @@
             </section>`;
 
         const ventas = panel('Ventas del día', 'Ventas confirmadas por origen.',
-            tabla('tablaCierreVentas', 'Ventas del día', [
+            tabla('tablaCierreVentas' + suf, 'Ventas del día', [
                 { titulo: 'Origen', campo: 'fuente', formato: (v) => (v === 'NAYAX' ? 'Nayax' : 'Manual')},
                 colEntero('Ventas', 'ventas'), colEntero('Unidades', 'unidades'), colMoneda('Subtotal', 'subtotal'),
                 colMoneda('IVA', 'impuesto'), colMoneda('Total', 'total'), colMoneda('Costo', 'costo')
             ], r.ventas.por_fuente, { vacio: 'No hubo ventas confirmadas en este día.' }));
 
         const movs = panel('Movimientos de inventario', 'Entradas, salidas, ajustes, bajas y traslados del día.',
-            tabla('tablaCierreMovimientos', 'Movimientos del día', [
+            tabla('tablaCierreMovimientos' + suf, 'Movimientos del día', [
                 colTexto('Tipo', 'tipo'),
                 { titulo: 'Estado', campo: 'estado', formato: (v) => `<span class="badge badge-${v === 'CONFIRMADO' ? 'verde' : 'naranja'}">${v === 'CONFIRMADO' ? 'Confirmado' : 'Pendiente'}</span>`},
                 colEntero('Movimientos', 'movimientos'), colEntero('Unidades', 'unidades')
             ], r.movimientos, { vacio: 'No hubo movimientos de inventario en este día.' }));
 
         const difs = panel('Diferencias del día', 'Unidades vendidas que no coinciden con las salidas de inventario registradas por venta.',
-            tabla('tablaCierreDiferencias', 'Diferencias del día', [
+            tabla('tablaCierreDiferencias' + suf, 'Diferencias del día', [
                 colTexto('Producto', 'producto'), colEntero('Vendidas', 'vendida'), colEntero('Salidas de inventario', 'salida'),
                 {
                     titulo: 'Diferencia', campo: 'diferencia', numerica: true,
@@ -546,6 +548,11 @@
             dona(Object.entries(tiposMov).map(([tipo, cantidad], i) => ({ etiqueta: tipo, valor: cantidad, texto: entero(cantidad), color: PALETA[i % PALETA.length] })),
                 { valor: entero(movimientos), texto: 'movimientos' }));
 
+        if (multi) {
+            return bloque(`Tienda: ${multi.tienda}`, 'fa-store',
+                avisos.join('') + kpis + ventas + movs + difs);
+        }
+
         const cierre = observacion + eventos + accion;
 
         return avisos.join('') +
@@ -560,7 +567,7 @@
         if (!contenedor) return;
 
         try {
-            const filas = await pedir('cierre_historial', { id_tienda: $('tiendaReporte').value });
+            const filas = await pedir('cierre_historial', { id_tienda: idTiendaUnica() });
             contenedor.innerHTML = separador('Historial', 'fa-clock-rotate-left') + panel('Historial de cierres', 'Últimos 30 días. Usa "Ver" para abrir el consolidado de un día.',
                 tabla('tablaHistorialCierres', 'Historial de cierres', [
                     { titulo: 'Día', campo: 'fecha', formato: (v) => formatearFecha(v)},
@@ -587,7 +594,7 @@
         const accion = boton.dataset.accionCierre;
 
         if (accion === 'ver') {
-            $('tiendaReporte').value = boton.dataset.tienda;
+            establecerSelector('tiendaReporte', [boton.dataset.tienda]);
             $('fechaCierreReporte').value = boton.dataset.fecha;
             window.scrollTo({ top: 0, behavior: 'smooth' });
             await generar();
@@ -610,7 +617,7 @@
 
                 boton.disabled = true;
                 const resultado = await enviar('cierre_confirmar', {
-                    id_tienda: Number($('tiendaReporte').value),
+                    id_tienda: Number(idTiendaUnica()),
                     fecha: $('fechaCierreReporte').value,
                     observaciones
                 });
@@ -652,15 +659,153 @@
 
     function leerFiltros() {
         return {
-            id_tienda: $('tiendaReporte').value,
+            id_tiendas: valoresSelector('tiendaReporte').join(','),
+            id_tienda: idTiendaUnica(),
             fecha_inicio: $('fechaInicioReporte').value,
             fecha_fin: $('fechaFinReporte').value,
-            busqueda: $('busquedaReporte').value.trim(),
-            id_categoria: $('categoriaReporte').value,
-            id_proveedor: $('proveedorReporte').value,
-            id_ubicacion: $('ubicacionReporte').value,
+            ids_proveedores: valoresSelector('proveedorReporte').join(','),
+            ids_productos: valoresSelector('productosReporte').join(','),
             estado: $('estadoReporte').value
         };
+    }
+
+    /* ---------- selector múltiple (casillas dentro de un desplegable) ---------- */
+
+    /** Ids marcados; arreglo vacío = "Todos". */
+    function valoresSelector(id) {
+        return [...$(id).querySelectorAll('input[data-item]:checked')].map((c) => c.value);
+    }
+
+    function resumenSelector(contenedor) {
+        const marcados = [...contenedor.querySelectorAll('input[data-item]:checked')];
+        const texto = contenedor.querySelector('.selector-multiple-texto');
+
+        if (contenedor.dataset.deshabilitado) {
+            texto.textContent = contenedor.dataset.textoDeshabilitado;
+        } else if (!marcados.length) {
+            texto.textContent = contenedor.dataset.textoTodos;
+        } else if (marcados.length === 1) {
+            texto.textContent = marcados[0].closest('label').textContent.trim();
+        } else {
+            texto.textContent = `${marcados.length} ${contenedor.dataset.plural} seleccionad${contenedor.dataset.plural.endsWith('as') ? 'as' : 'os'}`;
+        }
+    }
+
+    function establecerSelector(id, valores) {
+        const contenedor = $(id);
+        const elegidos = new Set(valores.map(String));
+
+        contenedor.querySelectorAll('input[data-item]').forEach((c) => { c.checked = elegidos.has(c.value); });
+        contenedor.querySelector('input[data-todos]').checked = valoresSelector(id).length === 0;
+        resumenSelector(contenedor);
+    }
+
+    /** Redibuja las opciones conservando las que siguen existiendo marcadas. */
+    function llenarOpcionesSelector(id, items, valor, texto) {
+        const contenedor = $(id);
+        const previos = new Set(valoresSelector(id));
+        const lista = contenedor.querySelector('.selector-multiple-opciones');
+
+        lista.innerHTML = items.map((i) => `
+            <label class="selector-multiple-opcion">
+                <input type="checkbox" data-item value="${i[valor]}" ${previos.has(String(i[valor])) ? 'checked' : ''}><span>${escapar(i[texto])}</span>
+            </label>`).join('');
+
+        contenedor.querySelector('input[data-todos]').checked = valoresSelector(id).length === 0;
+        resumenSelector(contenedor);
+    }
+
+    /** Bloquea el selector (con un texto guía) o lo vuelve a habilitar. */
+    function bloquearSelector(id, bloqueado, textoGuia = '') {
+        const contenedor = $(id);
+
+        if (bloqueado) {
+            contenedor.dataset.deshabilitado = '1';
+            contenedor.dataset.textoDeshabilitado = textoGuia;
+            contenedor.querySelector('details').open = false;
+        } else {
+            delete contenedor.dataset.deshabilitado;
+        }
+
+        contenedor.classList.toggle('selector-multiple-bloqueado', bloqueado);
+        resumenSelector(contenedor);
+    }
+
+    function crearSelectorMultiple(contenedor, textoTodos, items, valor, texto, plural = 'elementos', conBusqueda = false) {
+        contenedor.dataset.textoTodos = textoTodos;
+        contenedor.dataset.plural = plural;
+        contenedor.innerHTML = `
+            <details>
+                <summary><span class="selector-multiple-texto">${escapar(textoTodos)}</span><i class="fa-solid fa-chevron-down"></i></summary>
+                <div class="selector-multiple-lista">
+                    ${conBusqueda ? '<input type="search" class="selector-multiple-buscar" placeholder="Buscar..." autocomplete="off">' : ''}
+                    <label class="selector-multiple-opcion selector-multiple-todos">
+                        <input type="checkbox" data-todos checked><span>${escapar(textoTodos)}</span>
+                    </label>
+                    <div class="selector-multiple-opciones"></div>
+                </div>
+            </details>`;
+
+        llenarOpcionesSelector(contenedor.id, items, valor, texto);
+
+        contenedor.querySelector('summary').addEventListener('click', (evento) => {
+            if (contenedor.dataset.deshabilitado) evento.preventDefault();
+        });
+
+        contenedor.querySelector('.selector-multiple-buscar')?.addEventListener('input', (evento) => {
+            const termino = evento.target.value.trim().toLowerCase();
+            contenedor.querySelectorAll('.selector-multiple-opciones .selector-multiple-opcion').forEach((fila) => {
+                fila.hidden = termino !== '' && !fila.textContent.toLowerCase().includes(termino);
+            });
+        });
+
+        contenedor.addEventListener('change', (evento) => {
+            const caja = evento.target;
+
+            if (caja.matches('input[data-todos]')) {
+                // "Todos" limpia la selección; no se puede desmarcar sin elegir un elemento.
+                establecerSelector(contenedor.id, []);
+            } else if (caja.matches('input[data-item]')) {
+                contenedor.querySelector('input[data-todos]').checked = !valoresSelector(contenedor.id).length;
+                resumenSelector(contenedor);
+            }
+        });
+
+        document.addEventListener('click', (evento) => {
+            const detalle = contenedor.querySelector('details');
+            if (detalle && !contenedor.contains(evento.target)) detalle.open = false;
+        });
+    }
+
+    /** Productos activos de los proveedores marcados; sin proveedores el selector queda bloqueado. */
+    let secuenciaProductos = {};
+
+    async function cargarProductosDeProveedores(idProveedores, idProductos) {
+        const proveedores = valoresSelector(idProveedores);
+        const numero = (secuenciaProductos[idProductos] = (secuenciaProductos[idProductos] || 0) + 1);
+
+        if (!proveedores.length) {
+            llenarOpcionesSelector(idProductos, [], 'id_producto', 'nombre');
+            establecerSelector(idProductos, []);
+            bloquearSelector(idProductos, true, 'Elige uno o más proveedores');
+            return;
+        }
+
+        try {
+            const productos = await pedir('productos_proveedor', { ids_proveedores: proveedores.join(',') });
+
+            if (numero !== secuenciaProductos[idProductos]) return;
+
+            bloquearSelector(idProductos, false);
+            llenarOpcionesSelector(idProductos, productos, 'id_producto', 'nombre');
+        } catch (error) {
+            if (numero === secuenciaProductos[idProductos]) mensaje(error.message);
+        }
+    }
+
+    function vincularProductosAProveedores(idProveedores, idProductos) {
+        $(idProveedores).addEventListener('change', () => cargarProductosDeProveedores(idProveedores, idProductos));
+        cargarProductosDeProveedores(idProveedores, idProductos);
     }
 
     function llenarSelect(select, primera, items, valor, texto) {
@@ -668,13 +813,6 @@
             items.map((i) => `<option value="${i[valor]}">${escapar(i[texto])}</option>`).join('');
     }
 
-    function llenarUbicaciones() {
-        const idTienda = Number($('tiendaReporte').value) || 0;
-        const ubicaciones = catalogos.ubicaciones.filter((u) => !idTienda || Number(u.id_tienda) === idTienda);
-        llenarSelect($('ubicacionReporte'), 'Todas las ubicaciones', ubicaciones.map((u) => ({
-            id_ubicacion: u.id_ubicacion, nombre: `${u.nombre} (${u.tipo})`
-        })), 'id_ubicacion', 'nombre');
-    }
 
     function aplicarAtajo(atajo) {
         const hoy = new Date();
@@ -701,29 +839,17 @@
             elemento.hidden = !visibles.includes(elemento.dataset.filtro);
         });
 
-        // El cierre es siempre de una tienda concreta.
-        const select = $('tiendaReporte');
-        const opcionTodas = select.querySelector('option[value=""]');
-        if (opcionTodas) opcionTodas.disabled = tipoActual === 'cierre';
-        if (tipoActual === 'cierre' && !select.value && catalogos.tiendas.length) {
-            select.value = catalogos.tiendas[0].id_tienda;
-            llenarUbicaciones();
-        }
-
         mostrarVista('reportes');
     }
 
-    // Reportes, Conciliación y Resumen programado son vistas de la misma página.
+    // Reportes y Resumen programado son vistas de la misma página.
     function mostrarVista(vista) {
         const esReporte = vista === 'reportes';
 
         $('vistaReportes').hidden = !esReporte;
-        if ($('vistaConciliacion')) $('vistaConciliacion').hidden = vista !== 'conciliacion';
         if ($('vistaResumen')) $('vistaResumen').hidden = vista !== 'resumen';
 
-        // Exportar PDF e Imprimir solo aplican a los reportes (el cierre se imprime, no se exporta).
-        const botonExportar = $('botonExportarReporte');
-        if (botonExportar) botonExportar.hidden = !esReporte;
+        // Imprimir solo aplica a los reportes (Exportar PDF vive junto a "Generar reporte").
         const botonImprimir = $('botonImprimirReporte');
         if (botonImprimir) botonImprimir.hidden = !esReporte;
 
@@ -736,9 +862,17 @@
 
     /* ---------- generación ---------- */
 
+    /** Id de la tienda cuando hay exactamente una elegida ('' si son varias o todas). */
+    function idTiendaUnica() {
+        const ids = valoresSelector('tiendaReporte');
+        if (!ids.length && catalogos.tiendas.length === 1) return String(catalogos.tiendas[0].id_tienda);
+        return ids.length === 1 ? ids[0] : '';
+    }
+
     function textoTienda() {
-        const select = $('tiendaReporte');
-        return select.selectedOptions[0]?.textContent || 'Todas las tiendas';
+        const nombres = [...$('tiendaReporte').querySelectorAll('input[data-item]:checked')]
+            .map((c) => c.closest('label').textContent.trim());
+        return nombres.length ? nombres.join(', ') : $('tiendaReporte').dataset.textoTodos;
     }
 
     function encabezadoResultado(f) {
@@ -768,10 +902,14 @@
         evento?.preventDefault();
 
         const filtros = leerFiltros();
+        const firma = firmaActual();
+        const fechaCierre = $('fechaCierreReporte').value;
         const usaPeriodo = REPORTES[tipoActual].filtros.includes('periodo');
 
+        actualizarBotonExportar();
+
         if (tipoActual === 'cierre') {
-            await generarCierre(filtros);
+            await generarCierre(filtros, firma);
             return;
         }
 
@@ -791,7 +929,7 @@
             delete consulta.fecha_fin;
         }
         if (tipoActual !== 'inventario') delete consulta.estado;
-        if (!['inventario', 'utilidad'].includes(tipoActual)) delete consulta.id_ubicacion;
+        if (tipoActual !== 'cierre') delete consulta.id_tienda;
 
         try {
             const datos = await pedir(tipoActual, consulta);
@@ -799,6 +937,7 @@
 
             area.innerHTML = encabezadoResultado(filtros) + DIBUJAR[tipoActual](datos, filtros);
             paginarTablas(area);
+            registrarConsultaGenerada(filtros, firma, fechaCierre);
         } catch (error) {
             if (numero !== secuencia) return;
             area.innerHTML = '';
@@ -808,18 +947,16 @@
         }
     }
 
-    async function generarCierre(filtros) {
+    async function generarCierre(filtros, firma) {
         const fecha = $('fechaCierreReporte').value;
-
-        if (!filtros.id_tienda) {
-            mensaje('Selecciona la tienda cuyo día quieres cerrar.');
-            return;
-        }
 
         if (!fecha) {
             mensaje('Selecciona el día a cerrar.');
             return;
         }
+
+        const elegidas = valoresSelector('tiendaReporte');
+        const tiendas = catalogos.tiendas.filter((t) => !elegidas.length || elegidas.includes(String(t.id_tienda)));
 
         mensaje('');
         const area = $('areaReporte');
@@ -827,11 +964,24 @@
         area.classList.add('cargando-reporte');
 
         try {
-            const datos = await pedir('cierre_preparar', { id_tienda: filtros.id_tienda, fecha });
-            if (numero !== secuencia) return;
+            if (tiendas.length === 1) {
+                const datos = await pedir('cierre_preparar', { id_tienda: tiendas[0].id_tienda, fecha });
+                if (numero !== secuencia) return;
 
-            area.innerHTML = encabezadoResultado(filtros) + reporteCierre(datos);
+                filtros = { ...filtros, id_tienda: String(tiendas[0].id_tienda) };
+                area.innerHTML = encabezadoResultado(filtros) + reporteCierre(datos);
+            } else {
+                const respuestas = await Promise.all(tiendas.map((t) =>
+                    pedir('cierre_preparar', { id_tienda: t.id_tienda, fecha }).then((datos) => ({ t, datos }))));
+                if (numero !== secuencia) return;
+
+                area.innerHTML = encabezadoResultado(filtros) + resumenCierreVarias(respuestas, fecha) +
+                    respuestas.map(({ t, datos }) => reporteCierre(datos, { sufijo: `_${t.id_tienda}`, tienda: t.nombre })).join('') +
+                    '<div id="historialCierres"></div>';
+            }
+
             paginarTablas(area);
+            registrarConsultaGenerada(filtros, firma, fecha);
             await cargarHistorialCierres();
         } catch (error) {
             if (numero !== secuencia) return;
@@ -842,201 +992,82 @@
         }
     }
 
+    /** Totales del día sumando todas las tiendas elegidas. */
+    function resumenCierreVarias(respuestas, fecha) {
+        const suma = (extraer) => respuestas.reduce((n, { datos }) => n + (Number(extraer(datos.resumen)) || 0), 0);
+        const ventas = suma((r) => r.ventas.totales.total);
+        const unidades = suma((r) => r.ventas.totales.unidades);
+        const movimientos = suma((r) => r.movimientos.reduce((n, m) => n + m.movimientos, 0));
+        const diferencias = suma((r) => r.diferencias.cantidad);
+        const alertas = suma((r) => r.alertas.pendientes);
+        const cerradas = respuestas.filter(({ datos }) => datos.cierre && datos.cierre.estado === 'CERRADO').length;
+
+        return aviso(`Cierre del ${formatearFecha(fecha)} de ${respuestas.length} tiendas (${cerradas} cerrada(s)). Para confirmar o reabrir un cierre, elige una sola tienda.`, 'fa-store') +
+            bloque('Resumen de todas las tiendas', 'fa-gauge-high', `
+                <section class="grilla-estadisticas">
+                    ${tarjeta('Ventas del día', moneda(ventas), `${entero(unidades)} unidad(es)`, 'fa-cash-register', 'verde')}
+                    ${tarjeta('Movimientos de inventario', entero(movimientos), 'Todas las tiendas', 'fa-right-left')}
+                    ${tarjeta('Diferencias', entero(diferencias), 'Ventas vs. salidas de inventario', 'fa-scale-unbalanced', diferencias ? 'rojo' : 'verde')}
+                    ${tarjeta('Alertas', entero(alertas), 'Pendientes', 'fa-bell', alertas ? 'naranja' : 'verde')}
+                </section>`);
+    }
+
     /* ---------- exportar a PDF ---------- */
 
-    const TIPOS_EXPORTAR = {
-        ventas: { titulo: 'Ventas', icono: 'fa-cash-register', color: 'color-azul', descripcion: 'Ingresos, unidades y costo por tienda y producto.', filtros: ['categoria', 'proveedor', 'busqueda'], detalle: 'productos vendidos', periodo: true },
-        utilidad: { titulo: 'Utilidad', icono: 'fa-sack-dollar', color: 'color-verde', descripcion: 'Ingresos menos costo: utilidad y margen.', filtros: ['categoria', 'proveedor', 'busqueda'], detalle: 'utilidad por producto', periodo: true },
-        inventario: { titulo: 'Inventario', icono: 'fa-boxes-stacked', color: 'color-naranja', descripcion: 'Existencias por ubicación y productos críticos.', filtros: ['categoria', 'proveedor', 'busqueda', 'estado'], detalle: 'existencias por producto', periodo: false },
-        rotacion: { titulo: 'Rotación y pérdidas', icono: 'fa-arrows-rotate', color: 'color-morado', descripcion: 'Más y menos vendidos, bajas y pérdidas.', filtros: ['categoria', 'proveedor', 'busqueda', 'limite'], detalle: 'detalle de bajas', periodo: true },
-        cierre: { titulo: 'Cierre diario', icono: 'fa-lock', color: 'color-teal', descripcion: 'Consolidado de un día de una tienda.', filtros: [], detalle: null, periodo: false, dia: true, unaTienda: true }
-    };
+    /** Reporte generado por última vez: el PDF se arma con exactamente estos filtros. */
+    let consultaGenerada = null;
 
-    let tipoExportar = 'ventas';
-
-    function iniciarModalExportar() {
-        if (!$('modalExportarReporte')) return;
-
-        const anio = new Date().getFullYear();
-        $('anioExportarReporte').innerHTML = Array.from({ length: 6 }, (_, i) => anio - i)
-            .map((a) => `<option value="${a}">${a}</option>`).join('');
-
-        llenarSelect($('categoriaExportarReporte'), 'Todas las categorías', catalogos.categorias, 'id_categoria', 'nombre');
-        llenarSelect($('proveedorExportarReporte'), 'Todos los proveedores', catalogos.proveedores, 'id_proveedor', 'nombre');
-
-        const permitidos = Object.keys(TIPOS_EXPORTAR).filter((t) => t !== 'utilidad' || catalogos.puede_ver_utilidad);
-        $('tiposExportarReporte').innerHTML = permitidos.map((t) => `
-            <label class="exportar-tipo ${TIPOS_EXPORTAR[t].color}">
-                <input type="radio" name="tipoExportarReporte" value="${t}">
-                <i class="fa-solid ${TIPOS_EXPORTAR[t].icono}"></i>
-                <strong>${escapar(TIPOS_EXPORTAR[t].titulo)}</strong>
-                <span>${escapar(TIPOS_EXPORTAR[t].descripcion)}</span>
-            </label>`).join('');
-
-        $('tiposExportarReporte').addEventListener('change', (evento) => {
-            if (evento.target.name === 'tipoExportarReporte') {
-                tipoExportar = evento.target.value;
-                actualizarCamposExportar();
-            }
-        });
-
-        document.querySelectorAll('input[name="modoPeriodoExportar"]').forEach((radio) => {
-            radio.addEventListener('change', actualizarCamposExportar);
-        });
-
-        $('formularioExportarReporte').addEventListener('submit', descargarPdf);
-        $('botonCancelarExportarReporte').addEventListener('click', cerrarModalExportar);
-        $('botonCerrarExportarReporte').addEventListener('click', cerrarModalExportar);
-        document.querySelector('[data-cerrar-modal-exportar-reporte]').addEventListener('click', cerrarModalExportar);
-        $('modalExportarReporte').addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModalExportar(); });
-
-        $('tiendasExportarReporte').addEventListener('change', (evento) => {
-            const maestra = evento.target.closest('[data-todas]');
-            const cajas = [...document.querySelectorAll('#tiendasExportarReporte input[data-tienda]')];
-
-            if (maestra) {
-                cajas.forEach((c) => { c.checked = maestra.checked; });
-            } else {
-                const todas = $('tiendasExportarReporte').querySelector('[data-todas]');
-                if (todas) todas.checked = cajas.every((c) => c.checked);
-            }
-        });
+    function firmaActual() {
+        return JSON.stringify([tipoActual, leerFiltros(), $('fechaCierreReporte').value]);
     }
 
-    function dibujarTiendasExportar() {
-        const unaSola = TIPOS_EXPORTAR[tipoExportar].unaTienda;
-        const seleccionada = $('tiendaReporte').value || (catalogos.tiendas[0] && String(catalogos.tiendas[0].id_tienda));
-        const unica = catalogos.tiendas.length === 1;
-
-        $('tituloTiendasExportar').textContent = unaSola ? 'Tienda' : 'Tiendas';
-
-        if (unaSola) {
-            $('tiendasExportarReporte').innerHTML = catalogos.tiendas.map((t) => `
-                <label class="opcion-exportar">
-                    <input type="radio" name="tiendaCierreExportar" data-tienda value="${t.id_tienda}"
-                        ${String(t.id_tienda) === seleccionada ? 'checked' : ''} ${unica ? 'disabled' : ''}>
-                    <span>${escapar(t.nombre)}</span>
-                </label>`).join('');
-            return;
-        }
-
-        const filtrada = $('tiendaReporte').value;
-        $('tiendasExportarReporte').innerHTML =
-            (catalogos.tiendas.length > 1
-                ? `<label class="opcion-exportar opcion-exportar-todas"><input type="checkbox" data-todas ${filtrada ? '' : 'checked'}><span>Todas las tiendas</span></label>`
-                : '') +
-            catalogos.tiendas.map((t) => `
-                <label class="opcion-exportar">
-                    <input type="checkbox" data-tienda value="${t.id_tienda}"
-                        ${unica || !filtrada || String(t.id_tienda) === filtrada ? 'checked' : ''} ${unica ? 'disabled' : ''}>
-                    <span>${escapar(t.nombre)}</span>
-                </label>`).join('');
+    function registrarConsultaGenerada(filtros, firma, fechaCierre) {
+        consultaGenerada = { tipo: tipoActual, filtros: { ...filtros }, fechaCierre, firma };
+        actualizarBotonExportar();
     }
 
-    function actualizarCamposExportar() {
-        const tipo = TIPOS_EXPORTAR[tipoExportar];
-        const modo = document.querySelector('input[name="modoPeriodoExportar"]:checked')?.value || 'mes';
+    /** Solo se exporta lo que se ve en pantalla: si los filtros cambian, hay que generar de nuevo. */
+    function actualizarBotonExportar() {
+        const boton = $('botonExportarReporte');
+        if (!boton) return;
 
-        document.querySelectorAll('#tiposExportarReporte input').forEach((r) => {
-            r.checked = r.value === tipoExportar;
-            r.closest('.exportar-tipo').classList.toggle('seleccionado', r.checked);
-        });
+        // El Encargado no exporta: el botón ni se muestra.
+        boton.hidden = !catalogos.puede_exportar;
+        if (boton.hidden) return;
 
-        document.querySelectorAll('[data-exportar="periodo"]').forEach((e) => { e.hidden = !tipo.periodo; });
-        document.querySelectorAll('[data-exportar="dia"]').forEach((e) => { e.hidden = !tipo.dia; });
-        document.querySelectorAll('[data-exportar="sin-periodo"]').forEach((e) => { e.hidden = tipo.periodo || tipo.dia; });
-        document.querySelectorAll('[data-modo]').forEach((e) => { e.hidden = e.dataset.modo !== modo; });
-
-        ['categoria', 'proveedor', 'busqueda', 'estado', 'limite'].forEach((campo) => {
-            document.querySelectorAll(`[data-exportar="${campo}"]`).forEach((e) => { e.hidden = !tipo.filtros.includes(campo); });
-        });
-
-        document.querySelectorAll('[data-exportar="sin-filtros"]').forEach((e) => { e.hidden = tipo.filtros.length > 0; });
-        document.querySelectorAll('[data-exportar="detalle"]').forEach((e) => { e.hidden = !tipo.detalle; });
-        if (tipo.detalle) $('textoDetalleExportar').textContent = `(${tipo.detalle})`;
-
-        dibujarTiendasExportar();
+        const variasEnCierre = tipoActual === 'cierre' && !idTiendaUnica() && !catalogos.puede_ver_todas && (valoresSelector('tiendaReporte').length || catalogos.tiendas.length) > 1;
+        const vigente = Boolean(consultaGenerada) && consultaGenerada.firma === firmaActual() && consultaGenerada.tipo === tipoActual && !variasEnCierre;
+        boton.disabled = !vigente;
+        boton.title = vigente
+            ? 'Descargar en PDF el reporte generado'
+            : (variasEnCierre ? 'Solo Administración o Gerencia pueden exportar el cierre de varias tiendas: elige una sola' : consultaGenerada ? 'Los filtros cambiaron: genera el reporte de nuevo para exportarlo' : 'Genera el reporte para poder exportarlo');
     }
 
-    function abrirModalExportar() {
-        if (!catalogos) return;
+    async function exportarPdf() {
+        if (!consultaGenerada || consultaGenerada.firma !== firmaActual()) return;
 
-        tipoExportar = TIPOS_EXPORTAR[tipoActual] && (tipoActual !== 'utilidad' || catalogos.puede_ver_utilidad) ? tipoActual : 'ventas';
-
-        // Valores iniciales tomados de lo que se está viendo en pantalla.
-        const fechaBase = $('fechaInicioReporte').value ? new Date(`${$('fechaInicioReporte').value}T00:00:00`) : new Date();
-        $('mesExportarReporte').value = String(fechaBase.getMonth() + 1).padStart(2, '0');
-        $('anioExportarReporte').value = String(fechaBase.getFullYear());
-        $('desdeExportarReporte').value = $('fechaInicioReporte').value;
-        $('hastaExportarReporte').value = $('fechaFinReporte').value;
-        $('diaExportarReporte').value = $('fechaCierreReporte').value || fechaLocal(new Date());
-        $('diaExportarReporte').max = fechaLocal(new Date());
-
-        $('categoriaExportarReporte').value = $('categoriaReporte').value;
-        $('proveedorExportarReporte').value = $('proveedorReporte').value;
-        $('busquedaExportarReporte').value = $('busquedaReporte').value;
-        $('estadoExportarReporte').value = $('estadoReporte').value;
-        $('mensajeExportarReporte').textContent = '';
-
-        actualizarCamposExportar();
-        $('modalExportarReporte').hidden = false;
-    }
-
-    function cerrarModalExportar() {
-        $('modalExportarReporte').hidden = true;
-    }
-
-    async function descargarPdf(evento) {
-        evento.preventDefault();
-
-        const tipo = tipoExportar;
-        const def = TIPOS_EXPORTAR[tipo];
-        const tiendas = [...document.querySelectorAll('#tiendasExportarReporte input[data-tienda]:checked')].map((c) => c.value);
-        const error = (texto) => { $('mensajeExportarReporte').textContent = texto; };
-
-        if (!tiendas.length) return error(def.unaTienda ? 'Selecciona la tienda.' : 'Selecciona al menos una tienda.');
-
+        const { tipo, filtros, fechaCierre } = consultaGenerada;
+        const def = REPORTES[tipo];
         const parametros = new URLSearchParams({ accion: 'exportar_pdf', tipo });
 
-        if (def.unaTienda) {
-            parametros.set('id_tienda', tiendas[0]);
-            parametros.set('id_tiendas', tiendas[0]);
-        } else {
-            parametros.set('id_tiendas', tiendas.join(','));
+        if (filtros.id_tiendas) parametros.set('id_tiendas', filtros.id_tiendas);
+        if (filtros.id_tienda) parametros.set('id_tienda', filtros.id_tienda);
+
+        if (def.filtros.includes('periodo')) {
+            parametros.set('fecha_inicio', filtros.fecha_inicio);
+            parametros.set('fecha_fin', filtros.fecha_fin);
         }
 
-        if (def.periodo) {
-            const modo = document.querySelector('input[name="modoPeriodoExportar"]:checked').value;
+        if (tipo === 'cierre') parametros.set('fecha', fechaCierre);
+        if (def.filtros.includes('proveedor') && filtros.ids_proveedores) parametros.set('ids_proveedores', filtros.ids_proveedores);
+        if (def.filtros.includes('productos') && filtros.ids_productos) parametros.set('ids_productos', filtros.ids_productos);
+        if (def.filtros.includes('estado') && filtros.estado) parametros.set('estado', filtros.estado);
 
-            if (modo === 'mes') {
-                parametros.set('mes', `${$('anioExportarReporte').value}-${$('mesExportarReporte').value}`);
-            } else {
-                const desde = $('desdeExportarReporte').value;
-                const hasta = $('hastaExportarReporte').value;
-
-                if (!desde || !hasta) return error('Indica las fechas del rango.');
-                if (desde > hasta) return error('La fecha inicial no puede ser posterior a la final.');
-
-                parametros.set('fecha_inicio', desde);
-                parametros.set('fecha_fin', hasta);
-            }
-        }
-
-        if (def.dia) {
-            if (!$('diaExportarReporte').value) return error('Selecciona el día del cierre.');
-            parametros.set('fecha', $('diaExportarReporte').value);
-        }
-
-        if (def.filtros.includes('categoria') && $('categoriaExportarReporte').value) parametros.set('id_categoria', $('categoriaExportarReporte').value);
-        if (def.filtros.includes('proveedor') && $('proveedorExportarReporte').value) parametros.set('id_proveedor', $('proveedorExportarReporte').value);
-        if (def.filtros.includes('busqueda') && $('busquedaExportarReporte').value.trim()) parametros.set('busqueda', $('busquedaExportarReporte').value.trim());
-        if (def.filtros.includes('estado') && $('estadoExportarReporte').value) parametros.set('estado', $('estadoExportarReporte').value);
-        if (def.filtros.includes('limite')) parametros.set('limite', $('limiteExportarReporte').value);
-        if (def.detalle) parametros.set('detalle', $('detalleExportarReporte').checked ? '1' : '0');
-
-        const boton = $('botonGenerarExportarReporte');
+        const boton = $('botonExportarReporte');
+        const textoOriginal = boton.innerHTML;
         boton.disabled = true;
-        error('Generando el PDF…');
+        boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando PDF…';
+        mensaje('');
 
         try {
             const respuesta = await fetch(`${API}?${parametros}`, { credentials: 'same-origin' });
@@ -1054,12 +1085,12 @@
             enlace.click();
             URL.revokeObjectURL(enlace.href);
 
-            cerrarModalExportar();
             mensaje('El PDF se generó correctamente.', 'exito');
-        } catch (e) {
-            error(e.message);
+        } catch (error) {
+            mensaje(error.message);
         } finally {
-            boton.disabled = false;
+            boton.innerHTML = textoOriginal;
+            actualizarBotonExportar();
         }
     }
 
@@ -1076,13 +1107,16 @@
             return;
         }
 
-        const selectTienda = $('tiendaReporte');
-        llenarSelect(selectTienda, catalogos.puede_elegir_tienda ? 'Todas las tiendas' : '', catalogos.tiendas, 'id_tienda', 'nombre');
-        selectTienda.disabled = !catalogos.puede_elegir_tienda;
+        // Una, varias o todas las tiendas permitidas (Encargado: solo las que tiene asignadas).
+        crearSelectorMultiple($('tiendaReporte'), catalogos.puede_ver_todas ? 'Todas las tiendas' : 'Todas mis tiendas', catalogos.tiendas, 'id_tienda', 'nombre', 'tiendas');
+        if (catalogos.tiendas.length === 1) {
+            establecerSelector('tiendaReporte', [catalogos.tiendas[0].id_tienda]);
+            bloquearSelector('tiendaReporte', true, catalogos.tiendas[0].nombre);
+        }
 
-        llenarSelect($('categoriaReporte'), 'Todas las categorías', catalogos.categorias, 'id_categoria', 'nombre');
-        llenarSelect($('proveedorReporte'), 'Todos los proveedores', catalogos.proveedores, 'id_proveedor', 'nombre');
-        llenarUbicaciones();
+        crearSelectorMultiple($('proveedorReporte'), 'Todos los proveedores', catalogos.proveedores, 'id_proveedor', 'nombre', 'proveedores');
+        crearSelectorMultiple($('productosReporte'), 'Todos los productos', [], 'id_producto', 'nombre', 'productos', true);
+        vincularProductosAProveedores('proveedorReporte', 'productosReporte');
         aplicarAtajo('mes');
         $('fechaCierreReporte').value = fechaLocal(new Date());
         $('fechaCierreReporte').max = fechaLocal(new Date());
@@ -1095,11 +1129,11 @@
 
         actualizarFiltrosVisibles();
 
-        selectTienda.addEventListener('change', llenarUbicaciones);
         $('formularioReporte').addEventListener('submit', generar);
         $('areaReporte').addEventListener('click', manejarAccionCierre);
-        $('botonExportarReporte')?.addEventListener('click', abrirModalExportar);
-        iniciarModalExportar();
+        $('botonExportarReporte')?.addEventListener('click', exportarPdf);
+        $('formularioReporte').addEventListener('input', actualizarBotonExportar);
+        $('formularioReporte').addEventListener('change', actualizarBotonExportar);
         $('botonImprimirReporte')?.addEventListener('click', () => window.print());
 
         document.querySelectorAll('.atajo-periodo').forEach((boton) => {
@@ -1123,8 +1157,9 @@
 
         $('botonLimpiarReporte')?.addEventListener('click', () => {
             $('formularioReporte').reset();
-            if (catalogos.puede_elegir_tienda) selectTienda.value = '';
-            llenarUbicaciones();
+            establecerSelector('proveedorReporte', []);
+            cargarProductosDeProveedores('proveedorReporte', 'productosReporte');
+            establecerSelector('tiendaReporte', catalogos.tiendas.length === 1 ? [catalogos.tiendas[0].id_tienda] : []);
             aplicarAtajo('mes');
             $('fechaCierreReporte').value = fechaLocal(new Date());
             actualizarFiltrosVisibles();

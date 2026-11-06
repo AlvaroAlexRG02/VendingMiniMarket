@@ -45,6 +45,29 @@ const PDF_COLORES = [
     'gris'    => '#6b7280',
 ];
 
+/**
+ * Dompdf arma las fuentes del PDF en un archivo temporal. El usuario del servidor
+ * web no siempre tiene escritura en sys_get_temp_dir(), y entonces falla con
+ * "Path cannot be empty": se usa el primer directorio realmente escribible.
+ */
+function pdfDirectorioTemporal(): string
+{
+    $candidatos = [
+        sys_get_temp_dir(),
+        '/tmp',
+        dirname(__DIR__, 4) . '/temp',
+        __DIR__ . '/../tmp',
+    ];
+
+    foreach ($candidatos as $directorio) {
+        if ($directorio && is_dir($directorio) && is_writable($directorio)) {
+            return rtrim($directorio, '/');
+        }
+    }
+
+    return sys_get_temp_dir();
+}
+
 function pdfEscapar($valor): string
 {
     return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8');
@@ -350,7 +373,11 @@ function pdfReporte(array $doc): void
         ' . $resumen . $secciones . '
     </body></html>';
 
-    $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => false, 'defaultFont' => 'DejaVu Sans']);
+    $dompdf = new \Dompdf\Dompdf([
+        'isRemoteEnabled' => false,
+        'defaultFont'     => 'DejaVu Sans',
+        'tempDir'         => pdfDirectorioTemporal(),
+    ]);
     $dompdf->setPaper('letter', 'landscape');
     $dompdf->loadHtml($html);
     $dompdf->render();
