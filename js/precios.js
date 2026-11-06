@@ -18,6 +18,14 @@
     let catalogos = { productos: [], tiendas: [], margenes: [], impuestos: [] };
     let categorias = [];
     let margenesTodos = [];
+    let escenarios = [];
+    let itemsMasivo = [];
+    let preciosActivos = [];
+    let itemsHistorial = [];
+    let itemsSimulaciones = [];
+    let claveHistorial = null;
+    let claveSimulaciones = null;
+    const pags = {};
     let costoManual = false;
     let numeroPeticionPrecios = 0;
 
@@ -184,6 +192,7 @@
         try {
             await C.cargarSesion();
             await Promise.all([cargarCatalogos(), cargarMargenes()]);
+            crearPaginadores();
             registrarEventos();
             await cargarPrecios();
         } catch (error) {
@@ -192,6 +201,19 @@
         }
     }
 
+
+    function crearPaginadores() {
+        const crear = (clave, ancla, unidad, alCambiar, filtros = []) => {
+            pags[clave] = Paginador.crear({ despuesDe: ancla, unidad, alCambiar, filtros });
+        };
+
+        crear('escenarios', '#contenedorEscenarios', 'escenarios', dibujarEscenarios);
+        crear('margenes', '#contenedorMargenes', 'márgenes', renderMargenes);
+        crear('masivo', '#contenedorMasivo', 'productos', dibujarMasivo);
+        crear('precios', '#contenedorPrecios', 'precios', dibujarPrecios, ['#filtroTienda', '#filtroBusqueda']);
+        crear('historial', '#contenedorHistorial', 'cambios de precio', dibujarHistorial);
+        crear('simulaciones', '#contenedorSimulaciones', 'simulaciones', dibujarSimulaciones);
+    }
 
     async function cargarCatalogos() {
         const [{ data }, resultadoCategorias] = await Promise.all([
@@ -416,12 +438,18 @@
     }
 
     function renderEscenarios(data) {
+        escenarios = data.escenarios;
+        pags.escenarios.reiniciar();
+        dibujarEscenarios();
+    }
+
+    function dibujarEscenarios() {
         const cuerpo = $('cuerpoEscenarios');
         const admin = C.esAdmin();
 
         cuerpo.replaceChildren();
 
-        data.escenarios.forEach((e) => {
+        pags.escenarios.paginar(escenarios).forEach((e) => {
             const fila = document.createElement('tr');
             const diferencia = e.diferencia_actual;
 
@@ -489,7 +517,7 @@
         const cuerpo = $('cuerpoMargenes');
         cuerpo.replaceChildren();
 
-        margenesTodos.forEach((margen) => {
+        pags.margenes.paginar(margenesTodos).forEach((margen) => {
             const fila = document.createElement('tr');
             const etiqueta = document.createElement('td');
             const insignia = document.createElement('span');
@@ -648,19 +676,10 @@
         }
 
         const { data, message } = await llamar('margen_masivo', datos);
-        const cuerpo = $('cuerpoMasivo');
 
-        cuerpo.replaceChildren();
-
-        data.items.forEach((item) => {
-            const fila = document.createElement('tr');
-
-            celda(fila, item.nombre);
-            celda(fila, C.moneda(item.costo), 'celda-numero');
-            celda(fila, C.moneda(item.precio_actual), 'celda-numero');
-            celda(fila, C.moneda(item.precio_nuevo), 'celda-numero');
-            cuerpo.appendChild(fila);
-        });
+        itemsMasivo = data.items;
+        pags.masivo.reiniciar();
+        dibujarMasivo();
 
         $('contenedorMasivo').hidden = false;
         $('resumenMasivo').textContent = `${message} (${data.total} producto(s))`;
@@ -669,6 +688,22 @@
             C.mostrarMensaje(message);
             await cargarPrecios();
         }
+    }
+
+    function dibujarMasivo() {
+        const cuerpo = $('cuerpoMasivo');
+
+        cuerpo.replaceChildren();
+
+        pags.masivo.paginar(itemsMasivo).forEach((item) => {
+            const fila = document.createElement('tr');
+
+            celda(fila, item.nombre);
+            celda(fila, C.moneda(item.costo), 'celda-numero');
+            celda(fila, C.moneda(item.precio_actual), 'celda-numero');
+            celda(fila, C.moneda(item.precio_nuevo), 'celda-numero');
+            cuerpo.appendChild(fila);
+        });
     }
 
 
@@ -692,16 +727,22 @@
             return;
         }
 
-        const cuerpo = $('cuerpoPrecios');
-        const admin = C.esAdmin();
-
-        cuerpo.replaceChildren();
+        preciosActivos = data;
 
         $('resumenPrecios').textContent = data.length
             ? `${data.length} precio(s) activo(s)${data.length === 500 ? ' (se muestran los primeros 500; use los filtros)' : ''}.`
             : 'No hay precios activos con estos filtros.';
 
-        data.forEach((p) => {
+        dibujarPrecios();
+    }
+
+    function dibujarPrecios() {
+        const cuerpo = $('cuerpoPrecios');
+        const admin = C.esAdmin();
+
+        cuerpo.replaceChildren();
+
+        pags.precios.paginar(preciosActivos).forEach((p) => {
             const fila = document.createElement('tr');
             const primera = document.createElement('td');
             const nombre = document.createElement('strong');
@@ -792,6 +833,23 @@
         $('tituloHistorial').textContent =
             `Historial: ${producto ? producto.nombre : 'producto'}${idTienda ? ' · ' + etiquetaTienda(idTienda) : ' · todas las tiendas'}`;
 
+        const clave = `${idProducto}|${idTienda || ''}`;
+
+        if (clave !== claveHistorial) {
+            claveHistorial = clave;
+            pags.historial.reiniciar();
+        }
+
+        itemsHistorial = data;
+        dibujarHistorial();
+
+        if (desplazar) {
+            $('panelHistorial').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function dibujarHistorial() {
+        const data = itemsHistorial;
         const cuerpo = $('cuerpoHistorial');
         cuerpo.replaceChildren();
 
@@ -802,7 +860,7 @@
             cuerpo.appendChild(fila);
         }
 
-        data.forEach((h) => {
+        pags.historial.paginar(data).forEach((h) => {
             const fila = document.createElement('tr');
 
             celda(fila, fechaCorta(h.fecha_cambio));
@@ -814,14 +872,24 @@
             celda(fila, h.usuario || '—');
             cuerpo.appendChild(fila);
         });
-
-        if (desplazar) {
-            $('panelHistorial').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
     }
 
     async function cargarSimulaciones(idProducto, idTienda) {
         const { data } = await llamar('simulaciones', null, { id_producto: idProducto, id_tienda: idTienda || '' });
+        const clave = `${idProducto}|${idTienda || ''}`;
+
+        if (clave !== claveSimulaciones) {
+            claveSimulaciones = clave;
+            pags.simulaciones.reiniciar();
+        }
+
+        itemsSimulaciones = data;
+        dibujarSimulaciones();
+    }
+
+    function dibujarSimulaciones() {
+        const data = itemsSimulaciones;
+        const visibles = pags.simulaciones.paginar(data);
         const cuerpo = $('cuerpoSimulaciones');
 
         cuerpo.replaceChildren();
@@ -834,7 +902,7 @@
             return;
         }
 
-        data.forEach((s) => {
+        visibles.forEach((s) => {
             const fila = document.createElement('tr');
 
             celda(fila, fechaCorta(s.fecha_creacion));

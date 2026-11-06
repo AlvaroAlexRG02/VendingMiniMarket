@@ -976,7 +976,7 @@ function accionListarFacturas(array $in): void
     if ($where) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
     }
-    $sql .= ' ORDER BY f.fecha_registro DESC';
+    $sql .= ' ORDER BY f.fecha_registro DESC, f.id_factura DESC';
 
     $st = db()->prepare($sql);
     $st->execute($params);
@@ -1197,7 +1197,7 @@ function accionExportarHistorial(array $in): void
 
             <div class="encabezado">
                 <h1>Vending Mini Market</h1>
-                <p>Historial de compras y facturas de proveedores</p>
+                <p>Historial de pedidos y facturas de proveedores</p>
             </div>
 
             <table class="meta">

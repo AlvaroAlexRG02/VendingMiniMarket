@@ -10,7 +10,6 @@
     'use strict';
 
     const API = '../api/reportes/reportes.php';
-    const LIMITE_FILAS_PANTALLA = 500;
 
     const $ = (id) => document.getElementById(id);
 
@@ -142,26 +141,19 @@
 
     /**
      * columnas: [{ titulo, campo, formato?(valor, fila) => html, exportar?(valor, fila) => texto, numerica? }]
-     * Devuelve el HTML y registra los datos completos para exportar.
+     * Devuelve el HTML con TODAS las filas; paginarTablas() las reparte de 15 en 15 en pantalla.
      */
     function tabla(id, titulo, columnas, filas, opciones = {}) {
-        const limite = opciones.limite ?? LIMITE_FILAS_PANTALLA;
-        const visibles = filas.slice(0, limite);
-
         if (!filas.length) {
             return `<div class="estado-vacio-reporte"><i class="fa-solid fa-folder-open"></i><span>${escapar(opciones.vacio || 'No hay datos para mostrar.')}</span></div>`;
         }
 
         const encabezado = columnas.map((c) => `<th scope="col"${c.numerica ? ' class="columna-numerica"' : ''}>${escapar(c.titulo)}</th>`).join('');
-        const cuerpo = visibles.map((fila) => `<tr>${columnas.map((c) => {
+        const cuerpo = filas.map((fila) => `<tr>${columnas.map((c) => {
             const valor = fila[c.campo];
             const html = c.formato ? c.formato(valor, fila) : escapar(valor ?? '-');
             return `<td${c.numerica ? ' class="columna-numerica"' : ''}>${html}</td>`;
         }).join('')}</tr>`).join('');
-
-        const pie = filas.length > limite
-            ? `<p class="texto-ayuda nota-limite-reporte">Mostrando ${entero(limite)} de ${entero(filas.length)} filas. Exporta el CSV para ver todas.</p>`
-            : '';
 
         return `
             <div class="contenedor-tabla">
@@ -169,8 +161,56 @@
                     <thead><tr>${encabezado}</tr></thead>
                     <tbody>${cuerpo}</tbody>
                 </table>
-            </div>${pie}`;
+            </div>`;
     }
+
+    /*
+     * Pagina en pantalla (15 por página) las tablas de resultados ya insertadas en `raiz`.
+     * Todas las filas siguen en el DOM; solo se ocultan las de otras páginas. Antes de
+     * imprimir se muestran todas y se ocultan los controles; el PDF lo genera la API.
+     */
+    let tablasPaginadas = [];
+
+    function navDe(contenedor) {
+        const nav = contenedor.nextElementSibling;
+        return nav?.classList.contains('paginador') ? nav : null;
+    }
+
+    function paginarTablas(raiz) {
+        raiz.querySelectorAll('table.tabla-reporte').forEach((tablaHtml) => {
+            const filas = [...tablaHtml.tBodies[0].rows];
+            const contenedor = tablaHtml.closest('.contenedor-tabla');
+            if (filas.length <= 15 || !contenedor) return;
+
+            const pag = Paginador.crear({ despuesDe: contenedor, unidad: 'filas', alCambiar: mostrar });
+
+            function mostrar() {
+                const pagina = new Set(pag.paginar(filas));
+                filas.forEach((fila) => { fila.style.display = pagina.has(fila) ? '' : 'none'; });
+            }
+
+            mostrar();
+            tablasPaginadas.push({ filas, contenedor, mostrar });
+        });
+    }
+
+    window.addEventListener('beforeprint', () => {
+        tablasPaginadas = tablasPaginadas.filter((t) => t.contenedor.isConnected);
+        tablasPaginadas.forEach(({ filas, contenedor }) => {
+            filas.forEach((fila) => { fila.style.display = ''; });
+            const nav = navDe(contenedor);
+            if (nav) nav.style.display = 'none';
+        });
+    });
+
+    window.addEventListener('afterprint', () => {
+        tablasPaginadas.forEach(({ contenedor, mostrar }) => {
+            if (!contenedor.isConnected) return;
+            mostrar();
+            const nav = navDe(contenedor);
+            if (nav) nav.style.display = '';
+        });
+    });
 
     const colMoneda = (titulo, campo) => ({
         titulo, campo, numerica: true,
@@ -531,9 +571,10 @@
                     colMoneda('Ventas', 'ventas_total'), colEntero('Diferencias', 'diferencias'), colEntero('Reaperturas', 'reaperturas'),
                     {
                         titulo: '', campo: 'id_cierre',
-                        formato: (v, f) => `<button type="button" class="boton boton-borde boton-tabla" data-accion-cierre="ver" data-tienda="${f.id_tienda}" data-fecha="${f.fecha}">Ver</button>`
+                        formato: (v, f) => `<div class="acciones-tabla"><button type="button" class="boton-accion accion-ver" data-accion-cierre="ver" data-tienda="${f.id_tienda}" data-fecha="${f.fecha}" title="Ver cierre" aria-label="Ver cierre del ${escapar(f.fecha)}"><i class="fa-solid fa-eye"></i></button></div>`
                     }
                 ], filas, { vacio: 'Todavía no hay cierres registrados.' }));
+            paginarTablas(contenedor);
         } catch (error) {
             contenedor.innerHTML = '';
         }
@@ -757,6 +798,7 @@
             if (numero !== secuencia) return;
 
             area.innerHTML = encabezadoResultado(filtros) + DIBUJAR[tipoActual](datos, filtros);
+            paginarTablas(area);
         } catch (error) {
             if (numero !== secuencia) return;
             area.innerHTML = '';
@@ -789,6 +831,7 @@
             if (numero !== secuencia) return;
 
             area.innerHTML = encabezadoResultado(filtros) + reporteCierre(datos);
+            paginarTablas(area);
             await cargarHistorialCierres();
         } catch (error) {
             if (numero !== secuencia) return;

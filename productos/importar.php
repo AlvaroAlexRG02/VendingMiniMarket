@@ -192,7 +192,7 @@ catalogoLayoutInicio(
                     </div>
                 </div>
 
-                <div class="contenedor-tabla">
+                <div id="contenedorImportaciones" class="contenedor-tabla">
                     <table class="tabla-datos tabla-compacta">
                         <caption class="texto-solo-lectores">Importaciones recientes</caption>
                         <thead>

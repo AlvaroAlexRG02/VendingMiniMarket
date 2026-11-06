@@ -106,7 +106,7 @@
             celda(ok ? actual - cantidad : '—');
             const accion = document.createElement('td');
             const button = document.createElement('button');
-            button.type = 'button'; button.className = 'baja-btn baja-quitar'; button.textContent = 'Quitar'; button.dataset.id = id;
+            button.type = 'button'; button.className = 'boton-accion accion-peligro baja-quitar'; button.title = 'Quitar producto'; button.setAttribute('aria-label', 'Quitar producto'); button.innerHTML = '<i class="fa-solid fa-trash"></i>'; button.dataset.id = id;
             accion.appendChild(button); tr.appendChild(accion); body.appendChild(tr);
         }
         $('bajaResumen').textContent = !estado.items.size ? 'Agrega un producto para visualizar la baja.'
@@ -137,14 +137,24 @@
         elegido(); renderTabla();
         $('bajaCoincidencias').textContent = `${estado.productos.length} producto(s) disponibles.`;
     }
+    let historial = [];
+    const paginador = window.Paginador ? Paginador.crear({
+        despuesDe: $('bajaHistorial').closest('.baja-table-wrap'),
+        unidad: 'bajas',
+        alCambiar: () => renderHistorial()
+    }) : null;
     async function actualizarHistorial() {
-        const rows = await api('historial');
+        historial = await api('historial');
+        renderHistorial();
+    }
+    function renderHistorial() {
+        const rows = historial;
         const body = $('bajaHistorial'); body.replaceChildren();
         if (!rows.length) {
             const tr = document.createElement('tr'), td = document.createElement('td');
-            td.colSpan = 8; td.textContent = 'No hay bajas registradas.'; tr.appendChild(td); body.appendChild(tr); return;
+            td.colSpan = 8; td.textContent = 'No hay bajas registradas.'; tr.appendChild(td); body.appendChild(tr); paginador?.paginar([]); return;
         }
-        for (const r of rows) {
+        for (const r of paginador ? paginador.paginar(rows) : rows) {
             const tr = document.createElement('tr');
             const values = [
                 r.fecha_movimiento ? new Date(r.fecha_movimiento).toLocaleString('es-CR') : '—',

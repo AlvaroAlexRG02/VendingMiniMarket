@@ -248,6 +248,16 @@ try {
     ];
 
     /*
+     * Rol visible para el JS del menú lateral (ver config/session.php):
+     * se envía ya en el login para que las pantallas .html también
+     * oculten las opciones sin acceso desde la primera carga.
+     */
+    setcookie("vm_rol", (string)(int)$usuario["id_rol"], [
+        "path" => "/",
+        "samesite" => "Lax",
+    ]);
+
+    /*
      * Actualizar información de acceso.
      */
     $sqlActualizar = "

@@ -1570,8 +1570,10 @@ function renderizarTablaMovimientoHU21() {
         if (esPedido) tdQuitar.textContent = '—';
         else {
             const button = document.createElement('button'); button.type = 'button';
-            button.className = 'boton boton-borde quitar-item-movimiento';
-            button.dataset.producto = String(item.id_producto); button.textContent = 'Quitar';
+            button.className = 'boton-accion accion-peligro quitar-item-movimiento';
+            button.title = 'Quitar producto'; button.setAttribute('aria-label', 'Quitar producto');
+            button.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            button.dataset.producto = String(item.id_producto);
             tdQuitar.appendChild(button);
         }
     }

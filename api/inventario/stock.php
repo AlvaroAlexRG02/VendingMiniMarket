@@ -333,7 +333,8 @@ try {
         ORDER BY
             t.nombre,
             ui.nombre,
-            p.nombre
+            p.nombre,
+            e.id_existencia
 
         LIMIT :limite
         OFFSET :offset

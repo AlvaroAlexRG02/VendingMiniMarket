@@ -25,18 +25,6 @@
     justify-content: flex-end;
 }
 
-/* Botones de acción de las tablas */
-.boton-editar-producto {
-    background: var(--azul-claro);
-    color: var(--azul);
-    text-decoration: none;
-}
-
-.boton-historial-producto {
-    background: #eef0f5;
-    color: var(--texto-secundario);
-}
-
 /* Lista del historial */
 .lista-historial {
     display: grid;

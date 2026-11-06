@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarPaginaReportesVending();
     inicializarResumenInventarioVending();
     inicializarCambioContrasenaInicialVending();
+    actualizarPerfilSuperiorVending();
 });
 
 function rolDelUsuarioVending() {
@@ -26,8 +27,13 @@ function rolDelUsuarioVending() {
     return coincidencia ? Number(coincidencia[1]) : 0;
 }
 
+/**
+ * Menú lateral de las pantallas estáticas (.html), que no pueden usar PHP.
+ * Las pantallas PHP ya traen el menú desde config/layout.php (vmMenuPrincipal)
+ * y se omiten con data-menu-servidor. Mantener ambas listas sincronizadas.
+ */
 function inicializarNavegacionLateral() {
-    const navegaciones = document.querySelectorAll(".nav-lateral");
+    const navegaciones = document.querySelectorAll(".nav-lateral:not([data-menu-servidor])");
 
     if (navegaciones.length === 0) {
         return;
@@ -58,6 +64,7 @@ function inicializarNavegacionLateral() {
             nombre: "Usuarios",
             ruta: "usuarios/usuarios.php",
             icono: "fa-users",
+            roles: [1, 2],
             rutasActivas: ["usuarios/usuarios.php"]
         },
         {
@@ -122,24 +129,28 @@ function inicializarNavegacionLateral() {
             nombre: "Reportes",
             ruta: "reportes/reportes.php",
             icono: "fa-chart-line",
+            roles: [1, 2, 3],
             rutasActivas: ["reportes/reportes.php"]
         },
         {
             nombre: "Bitácora",
             ruta: "bitacora/bitacora.php",
             icono: "fa-clipboard-list",
+            roles: [1, 2],
             rutasActivas: ["bitacora/bitacora.php"]
         },
         {
             nombre: "Respaldos",
             ruta: "respaldo/respaldo.php",
             icono: "fa-database",
+            roles: [1, 2],
             rutasActivas: ["respaldo/respaldo.php"]
         },
         {
             nombre: "Incidencias",
             ruta: "incidencias/incidencias.php",
             icono: "fa-triangle-exclamation",
+            roles: [1],
             rutasActivas: ["incidencias/incidencias.php"]
         }
     ];
@@ -149,8 +160,10 @@ function inicializarNavegacionLateral() {
         navegacion.setAttribute("aria-label", "Navegación principal");
 
         paginas.forEach((pagina) => {
-            // El Dependiente (rol 4) no tiene acceso a Reportes.
-            if (pagina.ruta === "reportes/reportes.php" && rolDelUsuarioVending() === 4) {
+            // Sin cookie de rol (0) se muestra todo; cada pantalla valida su acceso en el servidor.
+            const rol = rolDelUsuarioVending();
+
+            if (pagina.roles && rol !== 0 && !pagina.roles.includes(rol)) {
                 return;
             }
 
@@ -2119,7 +2132,8 @@ function renderizarCarritoVenta() {
         const celdaAccion = document.createElement("td");
         const boton = document.createElement("button");
         boton.type = "button";
-        boton.className = "boton-accion-producto";
+        boton.className = "boton-accion accion-peligro";
+        boton.title = "Quitar producto";
         boton.setAttribute("aria-label", `Quitar ${producto.nombre}`);
         boton.innerHTML = '<i class="fa-solid fa-trash"></i>';
         boton.addEventListener("click", () => {
@@ -2303,6 +2317,24 @@ async function registrarVentaManual(evento) {
   TABLA Y FILTROS
 =========================================================*/
 
+let paginadorVentasVending = null;
+
+function obtenerPaginadorVentasVending() {
+    if (!paginadorVentasVending) {
+        paginadorVentasVending = Paginador.crear({
+            despuesDe: "#contenedorTablaVentas",
+            unidad: "ventas",
+            filtros: [
+                "#buscarVenta", "#fechaDesdeVenta", "#fechaHastaVenta", "#filtroTiendaVenta",
+                "#filtroOrigenVenta", "#filtroMetodoPagoVenta", "#filtroEstadoVenta"
+            ],
+            alCambiar: mostrarVentas
+        });
+    }
+
+    return paginadorVentasVending;
+}
+
 function mostrarVentas() {
     const cuerpo = document.getElementById(
         "cuerpoTablaVentas"
@@ -2346,7 +2378,7 @@ function mostrarVentas() {
             !hayVentas || hayResultados;
     }
 
-    filtradas.forEach((venta) => {
+    obtenerPaginadorVentasVending().paginar(filtradas).forEach((venta) => {
         cuerpo.appendChild(
             crearFilaVenta(venta)
         );
@@ -2430,8 +2462,9 @@ function crearFilaVenta(venta) {
     const boton = document.createElement("button");
 
     boton.type = "button";
-    boton.className = "boton-accion-producto";
+    boton.className = "boton-accion accion-ver";
     boton.title = "Ver detalle";
+    boton.setAttribute("aria-label", "Ver detalle de la venta");
     boton.innerHTML =
         '<i class="fa-solid fa-eye"></i>';
 
@@ -3339,22 +3372,55 @@ async function cerrarSesionVending(evento) {
     }
 }
 
-function actualizarPerfilSuperiorVending() {
-    const sesion = obtenerSesionVending();
-
-    if (!sesion) {
-        return;
-    }
-
+/**
+ * Pantallas estáticas (.html): el perfil de la barra superior viene escrito
+ * a mano en el HTML, así que se reemplaza con el usuario real de la sesión.
+ * Las pantallas PHP ya lo traen renderizado desde config/layout.php.
+ */
+async function actualizarPerfilSuperiorVending() {
     const nombre = document.getElementById("nombreUsuarioSuperior");
     const correo = document.getElementById("correoUsuarioSuperior");
 
-    if (nombre) {
-        nombre.textContent = sesion.nombre;
+    if (!nombre || !correo || document.querySelector(".nav-lateral[data-menu-servidor]")) {
+        return;
     }
 
-    if (correo) {
-        correo.textContent = `${sesion.correo} · ${sesion.rol}`;
+    try {
+        const scriptAplicacion = Array.from(document.scripts).find((script) => {
+            return script.src && new URL(script.src).pathname.endsWith("/js/app.js");
+        });
+
+        if (!scriptAplicacion) {
+            return;
+        }
+
+        const respuesta = await fetch(
+            new URL("../api/auth/sesion.php", scriptAplicacion.src).href,
+            { credentials: "same-origin", headers: { Accept: "application/json" } }
+        );
+
+        if (respuesta.status === 401) {
+            window.location.href = new URL("../index/index.html", scriptAplicacion.src).href;
+            return;
+        }
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.exito) {
+            return;
+        }
+
+        nombre.textContent = resultado.data.nombre;
+        correo.textContent = resultado.data.correo;
+
+        if (resultado.data.ubicacion && !document.getElementById("ubicacionUsuarioSuperior")) {
+            const ubicacion = document.createElement("span");
+            ubicacion.id = "ubicacionUsuarioSuperior";
+            ubicacion.textContent = `Ubicación: ${resultado.data.ubicacion}`;
+            correo.after(ubicacion);
+        }
+    } catch (error) {
+        console.error("No se pudo cargar el perfil del usuario:", error);
     }
 }
 
@@ -3479,9 +3545,6 @@ function mostrarInventarioVending() {
     const resultado = document.getElementById(
         "resultadoBusquedaInventario"
     );
-    const paginacion = document.getElementById(
-        "textoPaginacionInventario"
-    );
 
     if (tabla) tabla.hidden = !hayResultados;
     if (vacio) vacio.hidden = hayProductos;
@@ -3492,11 +3555,6 @@ function mostrarInventarioVending() {
         resultado.textContent = hayProductos
             ? `${filtrados.length} producto(s) encontrado(s).`
             : "";
-    }
-    if (paginacion) {
-        paginacion.textContent = hayProductos
-            ? `Mostrando ${filtrados.length} de ${productos.length} productos`
-            : "No hay productos registrados";
     }
 }
 
@@ -3573,10 +3631,16 @@ function crearFilaInventarioVending(producto, movimientos) {
 
     enlace.href =
         `movimientos.html?producto=${encodeURIComponent(producto.id)}`;
-    enlace.className = "boton boton-borde boton-tabla";
-    enlace.textContent = "Movimiento";
+    enlace.className = "boton-accion accion-info";
+    enlace.title = "Registrar movimiento";
+    enlace.setAttribute("aria-label", "Registrar movimiento del producto");
+    enlace.innerHTML = '<i class="fa-solid fa-right-left"></i>';
 
-    celdaAcciones.appendChild(enlace);
+    const grupoAcciones = document.createElement("div");
+    grupoAcciones.className = "acciones-tabla";
+    grupoAcciones.appendChild(enlace);
+
+    celdaAcciones.appendChild(grupoAcciones);
     fila.appendChild(celdaAcciones);
 
     return fila;
@@ -3900,9 +3964,11 @@ function mostrarMovimientosVending() {
 
     cuerpo.innerHTML = "";
 
-    filtrados.forEach((movimiento) => {
-        cuerpo.appendChild(crearFilaMovimientoVending(movimiento));
-    });
+    obtenerPaginadorMovimientosVending()
+        .paginar(filtrados)
+        .forEach((movimiento) => {
+            cuerpo.appendChild(crearFilaMovimientoVending(movimiento));
+        });
 
     actualizarResumenMovimientosVending(movimientos);
 
@@ -3917,9 +3983,6 @@ function mostrarMovimientosVending() {
     const resultado = document.getElementById(
         "resultadoBusquedaMovimientos"
     );
-    const paginacion = document.getElementById(
-        "textoPaginacionMovimientos"
-    );
 
     if (tabla) tabla.hidden = !hayResultados;
     if (vacio) vacio.hidden = hayMovimientos;
@@ -3931,11 +3994,26 @@ function mostrarMovimientosVending() {
             ? `${filtrados.length} movimiento(s) encontrado(s).`
             : "";
     }
-    if (paginacion) {
-        paginacion.textContent = hayMovimientos
-            ? `Mostrando ${filtrados.length} de ${movimientos.length} movimientos`
-            : "No hay movimientos registrados";
+}
+
+let paginadorMovimientosVending = null;
+
+function obtenerPaginadorMovimientosVending() {
+    if (!paginadorMovimientosVending) {
+        paginadorMovimientosVending = Paginador.crear({
+            despuesDe: "#contenedorTablaMovimientos",
+            unidad: "movimientos",
+            filtros: [
+                "#buscarMovimiento",
+                "#filtroTipoMovimiento",
+                "#filtroUbicacionMovimiento",
+                "#filtroFecha"
+            ],
+            alCambiar: mostrarMovimientosVending
+        });
     }
+
+    return paginadorMovimientosVending;
 }
 
 function actualizarResumenMovimientosVending(movimientos) {
@@ -4884,6 +4962,21 @@ async function restablecerContrasenaUsuarioVending(id) {
     }
 }
 
+let paginadorUsuariosVending = null;
+
+function obtenerPaginadorUsuariosVending() {
+    if (!paginadorUsuariosVending) {
+        paginadorUsuariosVending = Paginador.crear({
+            despuesDe: "#contenedorTablaUsuarios",
+            unidad: "usuarios",
+            filtros: ["#buscarUsuario", "#filtroRolUsuario", "#filtroTiendaUsuario", "#filtroEstadoUsuario"],
+            alCambiar: renderUsuariosVending
+        });
+    }
+
+    return paginadorUsuariosVending;
+}
+
 async function renderUsuariosVending() {
 
     const cuerpo = document.getElementById("cuerpoTablaUsuarios");
@@ -5020,6 +5113,8 @@ async function renderUsuariosVending() {
         |--------------------------------------------------------------------------
         */
 
+        const visibles = obtenerPaginadorUsuariosVending().paginar(lista);
+
         if (lista.length === 0) {
 
             cuerpo.innerHTML = "";
@@ -5045,7 +5140,7 @@ async function renderUsuariosVending() {
         ).hidden = true;
 
 
-        cuerpo.innerHTML = lista.map(usuario => {
+        cuerpo.innerHTML = visibles.map(usuario => {
 
             const nombreCompleto =
                 `${usuario.nombre || ""} ${usuario.apellido || ""}`.trim();
@@ -5112,30 +5207,33 @@ async function renderUsuariosVending() {
 
                             <button
                                 type="button"
-                                class="boton-tabla"
+                                class="boton-accion accion-editar"
                                 data-usuario="${usuario.id_usuario}"
                                 data-accion="editar"
                                 title="Editar usuario"
+                                aria-label="Editar usuario"
                             >
                                 <i class="fa-solid fa-pen"></i>
                             </button>
 
                             <button
                                 type="button"
-                                class="boton-tabla"
+                                class="boton-accion ${estadoActivo ? "accion-peligro" : "accion-exito"}"
                                 data-usuario="${usuario.id_usuario}"
                                 data-accion="estado"
-                                title="Cambiar estado"
+                                title="${estadoActivo ? "Inactivar usuario" : "Activar usuario"}"
+                                aria-label="${estadoActivo ? "Inactivar usuario" : "Activar usuario"}"
                             >
-                                <i class="fa-solid fa-user-lock"></i>
+                                <i class="fa-solid ${estadoActivo ? "fa-user-lock" : "fa-user-check"}"></i>
                             </button>
 
                             <button
                                 type="button"
-                                class="boton-tabla"
+                                class="boton-accion accion-aviso"
                                 data-usuario="${usuario.id_usuario}"
                                 data-accion="restablecer-contrasena"
                                 title="Enviar contraseña temporal"
+                                aria-label="Enviar contraseña temporal"
                             >
                                 <i class="fa-solid fa-key"></i>
                             </button>
@@ -5287,6 +5385,21 @@ async function cargarAlertasPaginaVending() {
     return resultado.data;
 }
 
+let paginadorAlertasVending = null;
+
+function obtenerPaginadorAlertasVending() {
+    if (!paginadorAlertasVending) {
+        paginadorAlertasVending = Paginador.crear({
+            despuesDe: "#listaAlertas",
+            unidad: "alertas",
+            filtros: ["#buscarAlerta", "#filtroTipoAlerta", "#filtroEstadoAlerta", "#filtroTiendaAlerta"],
+            alCambiar: () => renderAlertasVending(alertasInventarioMostradas)
+        });
+    }
+
+    return paginadorAlertasVending;
+}
+
 function renderAlertasVending(alertas) {
     const contenedor = document.getElementById("listaAlertas");
     if (!contenedor) return;
@@ -5297,7 +5410,10 @@ function renderAlertasVending(alertas) {
     textoVending("alertasCriticas", todos.filter((alerta) => ["negativo", "cero"].includes(alerta.tipo_alerta)).length);
     textoVending("alertasPendientes", todos.filter((alerta) => alerta.tipo_alerta === "bajo").length);
 
-    contenedor.replaceChildren(...todos.map((alerta) => {
+    const paginador = obtenerPaginadorAlertasVending();
+    const visibles = paginador.paginar(todos);
+
+    contenedor.replaceChildren(...visibles.map((alerta) => {
         const prioridadAlerta = prioridadAlertaInventarioVending(alerta.tipo_alerta);
         const tarjeta = document.createElement("article");
         tarjeta.className = `tarjeta-alerta alerta-${normalizarTexto(prioridadAlerta)}`;
@@ -5530,9 +5646,21 @@ function mostrarMensajeResumenInventarioVending(mensaje, error = false) {
     contenedor.classList.toggle("mensaje-exito", !error && Boolean(mensaje));
 }
 
+let paginadorHistorialResumenVending = null;
+let ultimoHistorialResumenVending = [];
+
 function mostrarHistorialResumenInventarioVending(registros) {
     const cuerpo = document.getElementById("historialResumenInventario");
     if (!cuerpo) return;
+    if (!paginadorHistorialResumenVending) {
+        paginadorHistorialResumenVending = Paginador.crear({
+            despuesDe: "#contenedorHistorialResumenInventario",
+            unidad: "envíos",
+            alCambiar: () => mostrarHistorialResumenInventarioVending(ultimoHistorialResumenVending)
+        });
+    }
+    ultimoHistorialResumenVending = registros;
+    registros = paginadorHistorialResumenVending.paginar(registros);
     if (!registros.length) {
         const fila = document.createElement("tr");
         const celda = document.createElement("td");
@@ -5714,6 +5842,7 @@ async function generarConciliacionVending(evento) {
         });
         idConciliacionVending = resultado.id_conciliacion;
         resultadosConciliacionVending = resultado.resultados;
+        obtenerPaginadorConciliacionVending().reiniciar();
         renderizarConciliacionVending();
         mostrarMensajeConciliacionVending(
             `Conciliación ${resultado.id_conciliacion} guardada. Fuente: ${resultado.fuente}.`,
@@ -5726,6 +5855,20 @@ async function generarConciliacionVending(evento) {
     }
 }
 
+let paginadorConciliacionVending = null;
+
+function obtenerPaginadorConciliacionVending() {
+    if (!paginadorConciliacionVending) {
+        paginadorConciliacionVending = Paginador.crear({
+            despuesDe: "#contenedorConciliacion",
+            unidad: "productos",
+            alCambiar: renderizarConciliacionVending
+        });
+    }
+
+    return paginadorConciliacionVending;
+}
+
 function renderizarConciliacionVending() {
     const cuerpo = document.getElementById("cuerpoConciliacion");
     const contenedor = document.getElementById("contenedorConciliacion");
@@ -5733,7 +5876,9 @@ function renderizarConciliacionVending() {
     const resumen = document.getElementById("resumenConciliacion");
     if (!cuerpo || !contenedor || !vacio || !resumen) return;
 
-    cuerpo.innerHTML = resultadosConciliacionVending.map(fila => {
+    const visiblesConciliacion = obtenerPaginadorConciliacionVending().paginar(resultadosConciliacionVending);
+
+    cuerpo.innerHTML = visiblesConciliacion.map(fila => {
         const diferenciaStock = fila.diferencia_existencia === null
             ? "Sin saldo registrado"
             : String(fila.diferencia_existencia);

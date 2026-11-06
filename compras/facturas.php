@@ -2,6 +2,7 @@
 
 require_once __DIR__ . "/../config/session.php";
 require_once __DIR__ . "/../config/permisos.php";
+require_once __DIR__ . "/../config/layout.php";
 
 if (!isset($_SESSION["usuario"])) {
     header("Location: ../index/index.html");
@@ -12,16 +13,10 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
 
-$nombreUsuario = trim(
-    ($_SESSION["usuario"]["nombre"] ?? "") . " " .
-    ($_SESSION["usuario"]["apellido"] ?? "")
-);
-$correoUsuario = $_SESSION["usuario"]["correo"] ?? "";
 $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
 $puedeRevisarFactura = esAdministrador() || esGerenteGeneral() || esEncargado();
 $puedeValidarFactura = esAdministrador() || esGerenteGeneral();
 $puedeAnularFactura = esAdministrador() || esGerenteGeneral();
-$puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
 ?>
 
@@ -42,110 +37,17 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
     <title>Facturas | Vending Mini Market</title>
 
-    <link rel="stylesheet" href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>">
+    <?php vmEstilosGlobales(); ?>
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    >
 </head>
 
-<body class="pagina-app" data-puede-revisar-factura="<?= $puedeRevisarFactura ? '1' : '0' ?>" data-puede-validar-factura="<?= $puedeValidarFactura ? '1' : '0' ?>" data-puede-anular-factura="<?= $puedeAnularFactura ? '1' : '0' ?>" data-puede-exportar-historial="<?= $puedeExportarHistorial ? '1' : '0' ?>" data-id-usuario-actual="<?= $idUsuarioActual ?>">
+<body class="pagina-app" data-puede-revisar-factura="<?= $puedeRevisarFactura ? '1' : '0' ?>" data-puede-validar-factura="<?= $puedeValidarFactura ? '1' : '0' ?>" data-puede-anular-factura="<?= $puedeAnularFactura ? '1' : '0' ?>" data-id-usuario-actual="<?= $idUsuarioActual ?>">
 
     <!-- ==========================================
          BARRA LATERAL
     =========================================== -->
 
-    <aside class="barra-lateral">
-
-        <div class="logo-sistema">
-
-            <a
-                href="../dashboard/dashboard.php"
-                aria-label="Ir al Dashboard"
-            >
-                <img
-                    src="../img/logo/logo-vending.jpeg"
-                    alt="Logo de Vending Mini Market"
-                    class="imagen-logo-sistema"
-                >
-            </a>
-
-        </div>
-
-        <nav
-            class="nav-lateral"
-            aria-label="Navegación principal"
-        >
-
-            <a href="../dashboard/dashboard.php">
-                <i class="fa-solid fa-chart-pie"></i>
-                Dashboard
-            </a>
-
-            <a href="../productos/productos.php">
-                <i class="fa-solid fa-box"></i>
-                Productos
-            </a>
-
-            <a href="../tienda/tienda.php">
-                <i class="fa-solid fa-shop"></i>
-                Tienda
-            </a>
-
-            <a href="../maquinas/maquinas.php">
-                <i class="fa-solid fa-cash-register"></i>
-                Máquinas
-            </a>
-
-            <a href="../inventario/inventario.php">
-                <i class="fa-solid fa-clipboard-list"></i>
-                Inventario
-            </a>
-
-            <a
-                href="compras.php"
-                class="activo"
-            >
-                <i class="fa-solid fa-cart-shopping"></i>
-                Pedidos
-            </a>
-
-            <a href="../ventas/ventas.html">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas
-            </a>
-
-            <a href="../alertas/alertas.html">
-                <i class="fa-solid fa-bell"></i>
-                Alertas
-            </a>
-
-            <a href="../reportes/reportes.html">
-                <i class="fa-solid fa-chart-line"></i>
-                Reportes
-            </a>
-
-            <a href="../usuarios/usuarios.php">
-                <i class="fa-solid fa-users"></i>
-                Usuarios
-            </a>
-
-        </nav>
-
-        <div class="pie-barra-lateral">
-
-            <a
-                href="../index/index.html"
-                id="botonCerrarSesion"
-            >
-                <i class="fa-solid fa-right-from-bracket"></i>
-                Cerrar sesión
-            </a>
-
-        </div>
-
-    </aside>
+    <?php vmBarraLateral(); ?>
 
     <!-- ==========================================
          CONTENIDO PRINCIPAL
@@ -153,69 +55,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
     <div class="columna-principal">
 
-        <header class="barra-superior">
-
-            <button
-                type="button"
-                class="boton-menu"
-                aria-label="Abrir o cerrar menú lateral"
-            >
-                <i class="fa-solid fa-bars"></i>
-            </button>
-
-            <div class="buscador-superior">
-
-                <i class="fa-solid fa-magnifying-glass"></i>
-
-                <input
-                    type="search"
-                    id="buscadorGeneralFacturas"
-                    placeholder="Buscar en el sistema..."
-                    aria-label="Buscar en el sistema"
-                    autocomplete="off"
-                >
-
-            </div>
-
-            <div class="acciones-superiores">
-
-                <button
-                    type="button"
-                    class="boton-notificacion"
-                    aria-label="Consultar notificaciones"
-                >
-                    <i class="fa-regular fa-bell"></i>
-
-                    <span
-                        class="contador"
-                        id="contadorNotificacionesFacturas"
-                    >
-                        0
-                    </span>
-
-                </button>
-
-                <div class="perfil-superior">
-
-                    <div class="perfil-superior-texto">
-
-                        <strong id="nombreUsuarioSuperior">
-                            <?= htmlspecialchars($nombreUsuario) ?>
-                        </strong>
-
-                        <span id="correoUsuarioSuperior">
-                            <?= htmlspecialchars($correoUsuario) ?>
-                        </span>
-
-                    </div>
-
-                    <i class="fa-solid fa-chevron-down"></i>
-
-                </div>
-
-            </div>
-
-        </header>
+        <?php vmBarraSuperior(); ?>
 
         <main class="contenido-app">
 
@@ -241,19 +81,8 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                         class="boton boton-borde"
                     >
                         <i class="fa-solid fa-arrow-left"></i>
-                        Volver a compras
+                        Volver a historial
                     </a>
-
-                    <?php if ($puedeExportarHistorial): ?>
-                    <button
-                        type="button"
-                        id="botonExportarHistorial"
-                        class="boton boton-borde"
-                    >
-                        <i class="fa-solid fa-file-export"></i>
-                        Exportar
-                    </button>
-                    <?php endif; ?>
 
                     <button
                         type="button"
@@ -788,85 +617,7 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
 
     </div>
 
-    <!-- ==========================================
-         MODAL: EXPORTAR HISTORIAL (PDF)
-    =========================================== -->
-
-    <div id="modalExportarHistorial" class="modal-producto" hidden>
-
-        <div class="modal-producto-fondo" data-cerrar-modal-exportar-historial></div>
-
-        <section
-            class="modal-producto-contenido"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tituloModalExportarHistorial"
-        >
-
-            <div class="modal-producto-icono">
-                <i class="fa-solid fa-file-pdf"></i>
-            </div>
-
-            <h2 id="tituloModalExportarHistorial">Exportar historial</h2>
-
-            <p>
-                Elige el mes que quieres incluir en el reporte.
-                Se respetan también los filtros de proveedor, tienda
-                y estado que tengas activos en la tabla.
-            </p>
-
-            <div class="cuadricula-formulario">
-
-                <div class="grupo-formulario">
-                    <label for="selectMesExportarHistorial">Mes</label>
-                    <select id="selectMesExportarHistorial">
-                        <option value="01">Enero</option>
-                        <option value="02">Febrero</option>
-                        <option value="03">Marzo</option>
-                        <option value="04">Abril</option>
-                        <option value="05">Mayo</option>
-                        <option value="06">Junio</option>
-                        <option value="07">Julio</option>
-                        <option value="08">Agosto</option>
-                        <option value="09">Septiembre</option>
-                        <option value="10">Octubre</option>
-                        <option value="11">Noviembre</option>
-                        <option value="12">Diciembre</option>
-                    </select>
-                </div>
-
-                <div class="grupo-formulario">
-                    <label for="selectAnioExportarHistorial">Año</label>
-                    <select id="selectAnioExportarHistorial"></select>
-                </div>
-
-            </div>
-
-            <div class="acciones-modal-producto">
-
-                <button
-                    type="button"
-                    id="botonCancelarExportarHistorial"
-                    class="boton boton-borde"
-                >
-                    Cancelar
-                </button>
-
-                <button
-                    type="button"
-                    id="botonGenerarExportarHistorial"
-                    class="boton boton-azul"
-                >
-                    <i class="fa-solid fa-file-pdf"></i>
-                    Generar PDF
-                </button>
-
-            </div>
-
-        </section>
-
-    </div>
-
+    <script src="../js/paginador.js"></script>
     <script src="../js/app.js"></script>
     <script src="../js/pedido-api.js"></script>
     <script src="../js/factura-api.js"></script>

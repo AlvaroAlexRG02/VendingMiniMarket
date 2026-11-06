@@ -37,6 +37,10 @@ try {
     $accion = $_GET["accion"] ?? "";
     $resultado = $_GET["resultado"] ?? "";
 
+    $paginar = isset($_GET["pagina"]);
+    $porPagina = max(1, min(100, (int) ($_GET["por_pagina"] ?? 15)));
+    $pagina = max(1, (int) ($_GET["pagina"] ?? 1));
+
     $sql = "
         SELECT
             b.id_evento,
@@ -117,19 +121,49 @@ try {
         $parametros[":resultado"] = $resultado;
     }
 
+    $total = null;
+
+    if ($paginar) {
+
+        $sqlTotal = "
+            SELECT COUNT(*)
+            FROM bitacora_auditoria b
+            WHERE 1 = 1
+        " . substr($sql, strpos($sql, "WHERE 1 = 1") + strlen("WHERE 1 = 1"));
+
+        $consultaTotal = $pdo->prepare($sqlTotal);
+        $consultaTotal->execute($parametros);
+        $total = (int) $consultaTotal->fetchColumn();
+
+        $ultimaPagina = max(1, (int) ceil($total / $porPagina));
+        $pagina = min($pagina, $ultimaPagina);
+    }
+
     $sql .= "
-        ORDER BY b.fecha DESC
+        ORDER BY b.fecha DESC, b.id_evento DESC
     ";
+
+    if ($paginar) {
+        $sql .= " LIMIT " . $porPagina . " OFFSET " . (($pagina - 1) * $porPagina);
+    }
 
     $consulta = $pdo->prepare($sql);
     $consulta->execute($parametros);
 
     $registros = $consulta->fetchAll();
 
-    echo json_encode([
+    $respuesta = [
         "success" => true,
         "data" => $registros
-    ]);
+    ];
+
+    if ($paginar) {
+        $respuesta["total"] = $total;
+        $respuesta["pagina"] = $pagina;
+        $respuesta["por_pagina"] = $porPagina;
+    }
+
+    echo json_encode($respuesta);
 
 } catch (PDOException $e) {
 

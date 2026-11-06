@@ -193,7 +193,7 @@ catalogoLayoutInicio(
 
                 </form>
 
-                <div class="contenedor-tabla">
+                <div id="contenedorMargenes" class="contenedor-tabla">
                     <table class="tabla-datos tabla-compacta">
                         <caption class="texto-solo-lectores">Márgenes registrados</caption>
                         <thead>
@@ -359,7 +359,7 @@ catalogoLayoutInicio(
 
                 <p id="resumenPrecios" class="resultado-busqueda-productos" aria-live="polite"></p>
 
-                <div class="contenedor-tabla">
+                <div id="contenedorPrecios" class="contenedor-tabla">
                     <table class="tabla-datos">
                         <caption class="texto-solo-lectores">Precios activos por tienda</caption>
                         <thead>
@@ -399,7 +399,7 @@ catalogoLayoutInicio(
                     </div>
                 </div>
 
-                <div class="contenedor-tabla">
+                <div id="contenedorHistorial" class="contenedor-tabla">
                     <table class="tabla-datos tabla-compacta">
                         <caption class="texto-solo-lectores">Historial de cambios de precio</caption>
                         <thead>
@@ -419,7 +419,7 @@ catalogoLayoutInicio(
 
                 <h3 class="subtitulo-panel">Simulaciones guardadas</h3>
 
-                <div class="contenedor-tabla">
+                <div id="contenedorSimulaciones" class="contenedor-tabla">
                     <table class="tabla-datos tabla-compacta">
                         <caption class="texto-solo-lectores">Simulaciones guardadas</caption>
                         <thead>

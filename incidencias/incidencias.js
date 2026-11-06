@@ -54,6 +54,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let incidencias = [];
 
+    const paginador = Paginador.crear({
+        despuesDe: "#contenedorTablaIncidencias",
+        filtros: ["#buscarIncidencia", "#filtroEstado", "#filtroPrioridad"],
+        unidad: "incidencias",
+        alCambiar: mostrarIncidencias
+    });
+
 
     /*
      * ==========================================
@@ -214,6 +221,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
 
+        const visibles =
+            paginador.paginar(filtradas);
+
         if (filtradas.length === 0) {
 
             tablaIncidencias.innerHTML = `
@@ -230,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         tablaIncidencias.innerHTML =
-            filtradas.map(incidencia => {
+            visibles.map(incidencia => {
 
                 const nombreUsuario =
                     `${incidencia.nombre || ""} ${
@@ -258,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         </td>
 
                         <td>
-                            <span>
+                            <span class="insignia prioridad-${String(incidencia.prioridad || "").toLowerCase()}">
                                 ${formatearPrioridad(
                                     incidencia.prioridad
                                 )}

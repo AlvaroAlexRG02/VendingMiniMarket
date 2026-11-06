@@ -3,6 +3,7 @@
 /** VendingMiniMarket — HU-24 y HU-25 */
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/permisos.php';
+require_once __DIR__ . '/../config/layout.php';
 if (!isset($_SESSION['usuario'])) {
   header('Location: ../index/index.html');
   exit;
@@ -17,8 +18,7 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Conteos y ajustes | VendingMiniMarket</title>
-  <link rel="stylesheet" href="../css/estilos.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <?php vmEstilosGlobales(); ?>
   <style>
     .ca24-page {
       max-width: 1250px;
@@ -373,15 +373,21 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
 </head>
 
 <body class="pagina-app">
+  <?php vmBarraLateral(); ?>
+
+  <div class="columna-principal">
+
+  <?php vmBarraSuperior(); ?>
+
   <div class="ca24-page">
-    <header class="ca24-header">
+    <header class="ca24-header encabezado-pagina">
       <div>
         <h1><i class="fa-solid fa-clipboard-check"></i> Conteos físicos y ajustes</h1>
         <p class="ca24-sub">Usuario: <?= htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') ?></p>
       </div>
       <nav class="ca24-volver" aria-label="Regresar">
-        <a class="ca24-back" href="movimientos.php?tipo=ajuste"><i class="fa-solid fa-arrow-left"></i> Volver a Ajustes</a>
-        <a class="ca24-back" href="inventario.php">Inventario</a>
+        <a class="boton boton-borde" href="movimientos.php?tipo=ajuste"><i class="fa-solid fa-arrow-left"></i> Volver a Ajustes</a>
+        <a class="boton boton-borde" href="inventario.php">Inventario</a>
       </nav>
     </header>
     <div id="ca24Aviso" class="ca24-alert" role="alert" aria-live="assertive"></div>
@@ -489,6 +495,9 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
       </div>
     </section>
   </div>
+  </div>
+  <script src="../js/paginador.js"></script>
+  <script src="../js/app.js"></script>
   <script src="../js/conteos-ajustes.js"></script>
 </body>
 

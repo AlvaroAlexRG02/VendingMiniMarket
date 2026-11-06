@@ -11,6 +11,7 @@
     const $ = (id) => document.getElementById(id);
 
     let categorias = [];
+    let pag = null;
     let idEdicion = null;
     let guardando = false;
 
@@ -28,6 +29,12 @@
             $('formularioCategoria').addEventListener('submit', guardar);
             $('botonCancelarEdicion').addEventListener('click', salirDeEdicion);
             $('cuerpoTablaCategorias').addEventListener('click', alHacerClic);
+
+            pag = Paginador.crear({
+                despuesDe: '#contenedorTablaCategorias',
+                unidad: 'categorías',
+                alCambiar: render
+            });
 
             await cargarCategorias();
         } catch (error) {
@@ -54,7 +61,7 @@
         $('mensajeSinCategorias').hidden = categorias.length > 0;
         $('contenedorTablaCategorias').style.display = categorias.length ? '' : 'none';
 
-        categorias.forEach((categoria) => {
+        pag.paginar(categorias).forEach((categoria) => {
             const fila = document.createElement('tr');
             const nombre = C.escapeHtml(categoria.nombre);
 

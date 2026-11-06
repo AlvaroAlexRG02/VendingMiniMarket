@@ -16,6 +16,7 @@ const API_TIENDA_VENDING = "../api/tienda/tienda.php";
 
 let ubicacionesTiendaVending = [];
 let apiTiendaVending = null;
+let paginadorTiendas = null;
 
 async function inicializarPaginaTiendaVending() {
     if (!document.getElementById("cuerpoTablaTiendas")) {
@@ -28,6 +29,12 @@ async function inicializarPaginaTiendaVending() {
     }
 
     apiTiendaVending = window.MaquinasApi.crearCliente(API_TIENDA_VENDING);
+
+    paginadorTiendas = Paginador.crear({
+        despuesDe: "#contenedorTablaTiendas",
+        unidad: "ubicaciones",
+        alCambiar: () => renderizarTablaTiendaVending(ubicacionesTiendaVending)
+    });
 
     eliminarDatosLocalesObsoletosTienda();
 
@@ -283,7 +290,9 @@ function renderizarTablaTiendaVending(ubicaciones) {
         return;
     }
 
-    cuerpo.innerHTML = ubicaciones.map((ubicacion) => {
+    const visibles = paginadorTiendas ? paginadorTiendas.paginar(ubicaciones) : ubicaciones;
+
+    cuerpo.innerHTML = visibles.map((ubicacion) => {
         const abastecidaPor = textoAbastecidaPorTienda(ubicacion);
         const nombre = escaparHtmlTienda(ubicacion.nombre);
         const id = escaparAtributoTienda(ubicacion.id_tienda);

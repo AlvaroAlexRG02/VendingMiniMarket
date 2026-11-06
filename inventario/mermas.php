@@ -3,6 +3,7 @@
 /** HU-26 — Bajas de inventario. Pantalla independiente para no alterar Movimientos. */
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/permisos.php';
+require_once __DIR__ . '/../config/layout.php';
 if (!isset($_SESSION['usuario'])) {
     header('Location: ../index/index.html');
     exit;
@@ -22,8 +23,7 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Mermas y bajas | VendingMiniMarket</title>
-    <link rel="stylesheet" href="../css/estilos.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <?php vmEstilosGlobales(); ?>
     <style>
         .baja-page {
             max-width: 1250px;
@@ -334,13 +334,19 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
 </head>
 
 <body class="pagina-app">
+    <?php vmBarraLateral(); ?>
+
+    <div class="columna-principal">
+
+    <?php vmBarraSuperior(); ?>
+
     <main class="baja-page">
-        <header class="baja-head">
+        <header class="baja-head encabezado-pagina">
             <div>
                 <h1><i class="fa-solid fa-box-open"></i> Mermas y bajas de inventario</h1>
                 <p class="baja-sub">Usuario: <?= htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') ?></p>
             </div>
-            <nav><a href="movimientos.php?tipo=merma" class="baja-back"><i class="fa-solid fa-arrow-left"></i> Volver a Movimientos</a></nav>
+            <nav><a href="movimientos.php?tipo=merma" class="boton boton-borde"><i class="fa-solid fa-arrow-left"></i> Volver a Movimientos</a></nav>
         </header>
         <div id="bajaAviso" role="alert" aria-live="assertive" class="baja-alert"></div>
         <section class="baja-card">
@@ -430,6 +436,9 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
             <div class="baja-actions"><button type="button" id="bajaCancelar" class="baja-btn">Cancelar</button><button type="button" id="bajaAceptar" class="baja-btn blue">Confirmar baja</button></div>
         </dialog>
     </main>
+    </div>
+    <script src="../js/paginador.js"></script>
+    <script src="../js/app.js"></script>
     <script src="../js/mermas.js?v=20261029-2"></script>
 </body>
 

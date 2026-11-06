@@ -46,7 +46,7 @@
     }
     function renderItems() {
         const tbody = $('ca24Items');
-        tbody.innerHTML = estado.items.length ? estado.items.map(i => `<tr><td>${esc(i.nombre)}</td><td><input data-cantidad="${i.id_producto}" type="number" min="0" step="1" value="${i.cantidad_fisica}" aria-label="Cantidad física de ${esc(i.nombre)}"></td><td><button class="ca24-btn" data-quitar="${i.id_producto}" type="button">Quitar</button></td></tr>`).join('') : '<tr><td colspan="3">Aún no hay productos agregados.</td></tr>';
+        tbody.innerHTML = estado.items.length ? estado.items.map(i => `<tr><td>${esc(i.nombre)}</td><td><input data-cantidad="${i.id_producto}" type="number" min="0" step="1" value="${i.cantidad_fisica}" aria-label="Cantidad física de ${esc(i.nombre)}"></td><td><button class="boton-accion accion-peligro" data-quitar="${i.id_producto}" type="button" title="Quitar producto" aria-label="Quitar producto"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3">Aún no hay productos agregados.</td></tr>';
         $('ca24TotalItems').textContent = `${estado.items.length} producto(s) incluido(s)`;
     }
     function agregar() {
@@ -159,19 +159,24 @@
         const res = await api('resolver_ajuste', { id_movimiento: id, decision });
         aviso(`Ajuste #${id}: ${res.estado}.`); await actualizar();
     }
-    function renderConteos(conteos) {
+    let conteosCache = [], ajustesCache = [];
+    const pagConteos = window.Paginador ? Paginador.crear({ despuesDe: '#ca24HistorialConteos', unidad: 'conteos', alCambiar: () => renderConteos() }) : null;
+    const pagAjustes = window.Paginador ? Paginador.crear({ despuesDe: $('ca24HistorialAjustes').closest('.ca24-scroll'), unidad: 'ajustes', alCambiar: () => renderAjustes() }) : null;
+    function renderConteos(conteos = conteosCache) {
+        conteosCache = conteos;
         const el = $('ca24HistorialConteos');
-        if (!conteos.length) { el.innerHTML = '<p class="ca24-muted">No hay conteos registrados.</p>'; return; }
-        el.innerHTML = conteos.map(c => {
+        if (!conteos.length) { el.innerHTML = '<p class="ca24-muted">No hay conteos registrados.</p>'; pagConteos?.paginar([]); return; }
+        el.innerHTML = (pagConteos ? pagConteos.paginar(conteos) : conteos).map(c => {
             const filas = (c.detalles || []).map(d => {
                 const delta = Number(d.diferencia);
-                const accion = delta !== 0 && !d.id_movimiento_ajuste && estado.puedeSolicitar ? `<button type="button" class="ca24-btn" data-conteo="${c.id_conteo}" data-ubicacion="${c.id_ubicacion}" data-producto="${d.id_producto}" data-objetivo="${d.cantidad_fisica}">Solicitar ajuste</button>` : (d.id_movimiento_ajuste ? `Vinculado a ajuste #${esc(d.id_movimiento_ajuste)}` : '—');
+                const accion = delta !== 0 && !d.id_movimiento_ajuste && estado.puedeSolicitar ? `<button type="button" class="boton-accion accion-aviso" data-conteo="${c.id_conteo}" data-ubicacion="${c.id_ubicacion}" data-producto="${d.id_producto}" data-objetivo="${d.cantidad_fisica}" title="Solicitar ajuste" aria-label="Solicitar ajuste"><i class="fa-solid fa-scale-balanced"></i></button>` : (d.id_movimiento_ajuste ? `Vinculado a ajuste #${esc(d.id_movimiento_ajuste)}` : '—');
                 return `<tr><td>${esc(d.producto)}</td><td>${esc(d.stock_sistema)}</td><td>${esc(d.cantidad_fisica)}</td><td class="${delta < 0 ? 'ca24-negative' : delta > 0 ? 'ca24-positive' : ''}">${delta > 0 ? '+' : ''}${esc(delta)}</td><td>${accion}</td></tr>`;
             }).join('');
             return `<details class="ca24-detail"><summary>Conteo #${esc(c.id_conteo)} — ${esc(c.ubicacion)} · ${esc(c.estado)} <span class="ca24-muted">(${new Date(c.fecha_conteo).toLocaleString('es-CR')})</span></summary><p class="ca24-muted">${esc(c.observaciones || 'Sin observaciones')}</p><div class="ca24-scroll"><table class="ca24-table"><thead><tr><th>Producto</th><th>Stock sistema</th><th>Conteo físico</th><th>Diferencia</th><th>Acción</th></tr></thead><tbody>${filas}</tbody></table></div></details>`;
         }).join('');
     }
-    function renderAjustes(ajustes) {
+    function renderAjustes(ajustes = ajustesCache) {
+        ajustesCache = ajustes;
         const el = $('ca24HistorialAjustes');
         const pendientes = ajustes.filter(a => a.estado === 'PENDIENTE');
         const resueltos = ajustes.filter(a => a.estado !== 'PENDIENTE');
@@ -182,11 +187,12 @@
         const visibles = estado.mostrarHistorial ? [...pendientes, ...resueltos] : pendientes;
         if (!visibles.length) {
             el.innerHTML = `<tr><td colspan="6">${estado.mostrarHistorial ? 'No hay ajustes registrados.' : 'No hay ajustes pendientes. Puede consultar los resueltos en Ver historial.'}</td></tr>`;
+            pagAjustes?.paginar([]);
             return;
         }
-        el.innerHTML = visibles.map(a => {
+        el.innerHTML = (pagAjustes ? pagAjustes.paginar(visibles) : visibles).map(a => {
             const pendiente = a.estado === 'PENDIENTE';
-            const botones = pendiente && estado.puedeAprobar ? `<button type="button" class="ca24-btn blue" data-aprobar="${a.id_movimiento}">Aprobar</button> <button type="button" class="ca24-btn" data-rechazar="${a.id_movimiento}">Rechazar</button>` : '—';
+            const botones = pendiente && estado.puedeAprobar ? `<div class="acciones-tabla"><button type="button" class="boton-accion accion-exito" data-aprobar="${a.id_movimiento}" title="Aprobar ajuste" aria-label="Aprobar ajuste"><i class="fa-solid fa-circle-check"></i></button><button type="button" class="boton-accion accion-peligro" data-rechazar="${a.id_movimiento}" title="Rechazar ajuste" aria-label="Rechazar ajuste"><i class="fa-solid fa-ban"></i></button></div>` : '—';
             return `<tr><td>#${esc(a.id_movimiento)}</td><td>${esc(a.producto)}<br><span class="ca24-muted">${esc(a.ubicacion)}</span></td><td>${esc(a.stock_anterior)} → ${esc(a.stock_objetivo)}</td><td>${esc(a.motivo)}<br><span class="ca24-muted">${esc(a.observaciones || '')}</span></td><td><span class="ca24-badge ${pendiente ? 'pending' : 'done'}">${esc(a.estado)}</span></td><td>${botones}</td></tr>`;
         }).join('');
     }
@@ -224,6 +230,7 @@
     });
     $('ca24MostrarHistorial').addEventListener('click', async () => {
         estado.mostrarHistorial = !estado.mostrarHistorial;
+        pagAjustes?.reiniciar();
         try { await actualizar(); } catch (e) { aviso(e.message, 'error'); }
     });
     $('ca24HistorialAjustes').addEventListener('click', async e => { const a = e.target.closest('[data-aprobar]'); const r = e.target.closest('[data-rechazar]'); try { if (a) await resolver(Number(a.dataset.aprobar), 'APROBAR'); if (r) await resolver(Number(r.dataset.rechazar), 'RECHAZAR'); } catch (err) { aviso(err.message, 'error'); } });

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . "/../config/session.php";
 require_once __DIR__ . "/../config/permisos.php";
+require_once __DIR__ . "/../config/layout.php";
 
 
 if (!isset($_SESSION["usuario"])) {
@@ -15,12 +16,10 @@ if (esDependiente()) {
     exit;
 }
 
-$paginaActual = basename($_SERVER['PHP_SELF']);
 
 /*
  * Ubicación asignada al usuario (HU-19), leída de la base en cada carga.
  */
-$ubicacionUsuario = resumenUbicacionUsuario($pdo);
 
 /*
  * Evitar que el navegador muestre el dashboard
@@ -48,12 +47,8 @@ header("Expires: 0");
 
     <title>Reportes | Vending Mini Market</title>
 
-    <link rel="stylesheet" href="../css/estilos.css?v=20261007-1">
+    <?php vmEstilosGlobales(); ?>
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    >
 </head>
 
 <body class="pagina-app">
@@ -62,131 +57,7 @@ header("Expires: 0");
          BARRA LATERAL
     =========================================== -->
 
-    <aside class="barra-lateral">
-
-    <!-- Logo del sistema -->
-    <div class="logo-sistema">
-        <a
-            href="/VendingMiniMarket/dashboard/dashboard.php"
-            aria-label="Ir al Dashboard"
-        >
-            <img
-                src="/VendingMiniMarket/img/logo/logo-vending.jpeg"
-                alt="Logo de Vending Mini Market"
-                class="imagen-logo-sistema"
-            >
-        </a>
-    </div>
-
-    <!-- Navegación principal -->
-    <nav class="nav-lateral" aria-label="Navegación principal">
-
-        <a href="/VendingMiniMarket/dashboard/dashboard.php"
-           class="<?= $paginaActual === 'dashboard.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'dashboard.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-pie"></i>
-            Dashboard
-        </a>
-
-        <a href="/VendingMiniMarket/usuarios/usuarios.php"
-           class="<?= $paginaActual === 'usuarios.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'usuarios.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-users"></i>
-            Usuarios
-        </a>
-
-        <a href="/VendingMiniMarket/catalogo/catalogo.php"
-           class="<?= $paginaActual === 'catalogo.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'catalogo.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-box"></i>
-            Catálogo
-        </a>
-
-        <a href="/VendingMiniMarket/tienda/tienda.php"
-           class="<?= $paginaActual === 'tienda.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'tienda.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-shop"></i>
-            Tiendas
-        </a>
-
-        <a href="/VendingMiniMarket/maquinas/maquinas.php"
-           class="<?= $paginaActual === 'maquinas.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'maquinas.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-cash-register"></i>
-            Máquinas
-        </a>
-
-        <a href="/VendingMiniMarket/inventario/inventario.php"
-           class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-clipboard-list"></i>
-            Inventario
-        </a>
-
-        <a href="/VendingMiniMarket/compras/compras.php"
-           class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-cart-shopping"></i>
-            Pedidos
-        </a>
-
-        <a href="/VendingMiniMarket/ventas/ventas.html"
-           class="<?= $paginaActual === 'ventas.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'ventas.html' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-column"></i>
-            Ventas
-        </a>
-
-        <a href="/VendingMiniMarket/reportes/reportes.php"
-           class="<?= $paginaActual === 'reportes.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'reportes.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-line"></i>
-            Reportes
-        </a>
-
-        <?php if (esAdministradorOGerente()): ?>
-
-            <a href="/VendingMiniMarket/bitacora/bitacora.php"
-               class="<?= $paginaActual === 'bitacora.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'bitacora.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-clipboard-list"></i>
-                Bitácora
-            </a>
-
-            <a href="/VendingMiniMarket/respaldo/respaldo.php"
-               class="<?= $paginaActual === 'respaldo.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-database"></i>
-                Respaldos
-            </a>
-
-        <?php endif; ?>
-
-        <?php if (esAdministrador()): ?>
-
-            <a href="/VendingMiniMarket/incidencias/incidencias.php"
-               class="<?= $paginaActual === 'incidencias.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'incidencias.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Incidencias
-            </a>
-
-        <?php endif; ?>
-
-    </nav>
-
-    <!-- Cerrar sesión -->
-    <div class="pie-barra-lateral">
-
-        <a href="/VendingMiniMarket/index/index.html"
-           id="botonCerrarSesion">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            Cerrar sesión
-        </a>
-
-    </div>
-
-</aside>
+    <?php vmBarraLateral(); ?>
 
     <!-- ==========================================
          COLUMNA PRINCIPAL
@@ -198,69 +69,7 @@ header("Expires: 0");
              BARRA SUPERIOR
         =========================================== -->
 
-        <header class="barra-superior">
-
-            <button
-                type="button"
-                class="boton-menu"
-                aria-label="Abrir o cerrar menú lateral"
-            >
-                <i class="fa-solid fa-bars"></i>
-            </button>
-
-            <div class="buscador-superior">
-
-                <i class="fa-solid fa-magnifying-glass"></i>
-
-                <input
-                    type="search"
-                    id="buscadorGeneralReportes"
-                    placeholder="Buscar en el sistema..."
-                    aria-label="Buscar en el sistema"
-                    autocomplete="off"
-                >
-
-            </div>
-
-            <div class="acciones-superiores">
-
-                <button
-                    type="button"
-                    class="boton-notificacion"
-                    aria-label="Consultar notificaciones"
-                >
-                    <i class="fa-regular fa-bell"></i>
-
-                    <span
-                        class="contador"
-                        id="contadorNotificacionesReportes"
-                        aria-label="0 notificaciones"
-                    >
-                        0
-                    </span>
-                </button>
-
-                <div class="perfil-superior">
-
-                    <div class="perfil-superior-texto">
-
-                        <strong id="nombreUsuarioSuperior">
-                            Administrador
-                        </strong>
-
-                        <span id="correoUsuarioSuperior">
-                            admin@vending.com
-                        </span>
-
-                    </div>
-
-                    <i class="fa-solid fa-chevron-down"></i>
-
-                </div>
-
-            </div>
-
-        </header>
+        <?php vmBarraSuperior(); ?>
 
         <!-- ==========================================
              CONTENIDO
@@ -559,7 +368,7 @@ header("Expires: 0");
                     </div>
 
                     <h3>Historial de envíos</h3>
-                    <div class="contenedor-tabla">
+                    <div class="contenedor-tabla" id="contenedorHistorialResumenInventario">
                         <table class="tabla-datos">
                             <caption class="texto-solo-lectores">Historial de ejecuciones del resumen periódico</caption>
                             <thead>
@@ -813,6 +622,7 @@ header("Expires: 0");
 
     </div>
 
+    <script src="../js/paginador.js"></script>
     <script src="../js/app.js"></script>
     <script src="../js/vending-comun.js"></script>
     <script src="../js/reportes.js"></script>

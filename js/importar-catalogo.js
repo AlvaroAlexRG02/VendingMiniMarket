@@ -16,6 +16,10 @@
     const MAX_BYTES = 10 * 1024 * 1024;
 
     let enviando = false;
+    let errores = [];
+    let importaciones = [];
+    let pagErrores = null;
+    let pagImportaciones = null;
 
 
 
@@ -34,6 +38,17 @@
             $('formularioImportar').addEventListener('submit', importar);
             $('soloValidar').addEventListener('change', actualizarTextoBoton);
             actualizarTextoBoton();
+
+            pagErrores = Paginador.crear({
+                despuesDe: '#contenedorErrores',
+                unidad: 'errores',
+                alCambiar: renderErrores
+            });
+            pagImportaciones = Paginador.crear({
+                despuesDe: '#contenedorImportaciones',
+                unidad: 'importaciones',
+                alCambiar: renderImportaciones
+            });
 
             await cargarHistorial();
         } catch (error) {
@@ -188,10 +203,25 @@
             resumen.appendChild(caja);
         });
 
+        errores = datos.errores || [];
+        pagErrores.reiniciar();
+        renderErrores();
+
+        const hayErrores = errores.length > 0;
+        const nota = $('notaErrores');
+
+        $('contenedorErrores').hidden = !hayErrores;
+        nota.hidden = !(datos.errores_total > errores.length);
+
+        if (!nota.hidden) {
+            nota.textContent = `Se muestran ${errores.length} de ${datos.errores_total} errores. Corrija estos y vuelva a validar.`;
+        }
+
+    function renderErrores() {
         const cuerpo = $('cuerpoErrores');
         cuerpo.replaceChildren();
 
-        (datos.errores || []).forEach((error) => {
+        pagErrores.paginar(errores).forEach((error) => {
             const fila = document.createElement('tr');
             const celdaFila = document.createElement('td');
             const celdaMotivo = document.createElement('td');
@@ -201,16 +231,7 @@
             fila.append(celdaFila, celdaMotivo);
             cuerpo.appendChild(fila);
         });
-
-        const hayErrores = (datos.errores || []).length > 0;
-        const nota = $('notaErrores');
-
-        $('contenedorErrores').hidden = !hayErrores;
-        nota.hidden = !(datos.errores_total > (datos.errores || []).length);
-
-        if (!nota.hidden) {
-            nota.textContent = `Se muestran ${(datos.errores || []).length} de ${datos.errores_total} errores. Corrija estos y vuelva a validar.`;
-        }
+    }
 
         $('panelResultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -228,14 +249,20 @@
         url.searchParams.set('accion', 'historial');
 
         const { data } = await pedir(url.toString(), { method: 'GET', headers: { Accept: 'application/json' } });
+
+        importaciones = data;
+        $('sinImportaciones').hidden = data.length > 0;
+        renderImportaciones();
+    }
+
+    function renderImportaciones() {
         const cuerpo = $('cuerpoHistorialImportaciones');
 
         cuerpo.replaceChildren();
-        $('sinImportaciones').hidden = data.length > 0;
 
         const estados = { COMPLETADA: 'Completada', CON_ERRORES: 'Con errores', FALLIDA: 'Fallida', INICIADA: 'Iniciada' };
 
-        data.forEach((i) => {
+        pagImportaciones.paginar(importaciones).forEach((i) => {
             const fila = document.createElement('tr');
 
             [

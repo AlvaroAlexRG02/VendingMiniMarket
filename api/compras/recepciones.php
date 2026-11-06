@@ -690,7 +690,7 @@ function accionListarRecepcionesPendientes(array $in): void
         JOIN pedido ped ON ped.id_pedido = m.id_pedido
         JOIN proveedor prov ON prov.id_proveedor = ped.id_proveedor
         WHERE " . implode(' AND ', $where) . "
-        ORDER BY m.fecha_movimiento
+        ORDER BY m.fecha_movimiento, m.id_movimiento
     ";
 
     $st = db()->prepare($sql);
@@ -719,7 +719,7 @@ function accionListarRecepcionesPedido(array $in): void
         JOIN usuario u ON u.id_usuario = m.id_usuario
         LEFT JOIN usuario ua ON ua.id_usuario = m.id_usuario_autoriza
         WHERE m.id_pedido = :id AND m.tipo_movimiento = 'ENTRADA'
-        ORDER BY m.fecha_movimiento DESC
+        ORDER BY m.fecha_movimiento DESC, m.id_movimiento DESC
     ");
     $st->execute([':id' => $idPedido]);
     $movimientos = $st->fetchAll();

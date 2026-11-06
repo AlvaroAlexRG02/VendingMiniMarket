@@ -3,6 +3,7 @@
 require_once __DIR__ . "/../config/session.php";
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/permisos.php";
+require_once __DIR__ . "/../config/layout.php";
 
 if (!isset($_SESSION["usuario"])) {
     header("Location: ../index/index.html");
@@ -21,7 +22,6 @@ header("Expires: 0");
 
 $nombreUsuario = $_SESSION["usuario"]["nombre"] ?? "";
 $apellidoUsuario = $_SESSION["usuario"]["apellido"] ?? "";
-$paginaActual = basename($_SERVER["PHP_SELF"]);
 
 $nombreCompleto = trim(
     $nombreUsuario . " " . $apellidoUsuario
@@ -52,15 +52,8 @@ if ($nombreCompleto === "") {
 
     <title>Bitácora | Vending Mini Market</title>
 
-    <link
-        rel="stylesheet"
-        href="../css/estilos.css?v=<?= filemtime(__DIR__ . '/../css/estilos.css') ?>"
-    >
+    <?php vmEstilosGlobales(); ?>
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    >
 
 </head>
 
@@ -72,131 +65,7 @@ if ($nombreCompleto === "") {
          BARRA LATERAL
     ====================================================== -->
 
-    <aside class="barra-lateral">
-
-    <!-- Logo del sistema -->
-    <div class="logo-sistema">
-        <a
-            href="/VendingMiniMarket/dashboard/dashboard.php"
-            aria-label="Ir al Dashboard"
-        >
-            <img
-                src="/VendingMiniMarket/img/logo/logo-vending.jpeg"
-                alt="Logo de Vending Mini Market"
-                class="imagen-logo-sistema"
-            >
-        </a>
-    </div>
-
-    <!-- Navegación principal -->
-    <nav class="nav-lateral" aria-label="Navegación principal">
-
-        <a href="/VendingMiniMarket/dashboard/dashboard.php"
-           class="<?= $paginaActual === 'dashboard.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'dashboard.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-pie"></i>
-            Dashboard
-        </a>
-
-        <a href="/VendingMiniMarket/usuarios/usuarios.php"
-           class="<?= $paginaActual === 'usuarios.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'usuarios.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-users"></i>
-            Usuarios
-        </a>
-
-        <a href="/VendingMiniMarket/catalogo/catalogo.php"
-           class="<?= $paginaActual === 'catalogo.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'catalogo.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-box"></i>
-            Catálogo
-        </a>
-
-        <a href="/VendingMiniMarket/tienda/tienda.php"
-           class="<?= $paginaActual === 'tienda.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'tienda.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-shop"></i>
-            Tiendas
-        </a>
-
-        <a href="/VendingMiniMarket/maquinas/maquinas.php"
-           class="<?= $paginaActual === 'maquinas.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'maquinas.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-cash-register"></i>
-            Máquinas
-        </a>
-
-        <a href="/VendingMiniMarket/inventario/inventario.php"
-           class="<?= $paginaActual === 'inventario.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'inventario.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-clipboard-list"></i>
-            Inventario
-        </a>
-
-        <a href="/VendingMiniMarket/compras/compras.php"
-           class="<?= $paginaActual === 'compras.php' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'compras.php' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-cart-shopping"></i>
-            Pedidos
-        </a>
-
-        <a href="/VendingMiniMarket/ventas/ventas.html"
-           class="<?= $paginaActual === 'ventas.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'ventas.html' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-column"></i>
-            Ventas
-        </a>
-
-        <a href="/VendingMiniMarket/reportes/reportes.html"
-           class="<?= $paginaActual === 'reportes.html' ? 'activo' : '' ?>"
-           <?= $paginaActual === 'reportes.html' ? 'aria-current="page"' : '' ?>>
-            <i class="fa-solid fa-chart-line"></i>
-            Reportes
-        </a>
-
-        <?php if (esAdministradorOGerente()): ?>
-
-            <a href="/VendingMiniMarket/bitacora/bitacora.php"
-               class="<?= $paginaActual === 'bitacora.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'bitacora.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-clipboard-list"></i>
-                Bitácora
-            </a>
-
-            <a href="/VendingMiniMarket/respaldo/respaldo.php"
-               class="<?= $paginaActual === 'respaldo.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'respaldo.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-database"></i>
-                Respaldos
-            </a>
-
-        <?php endif; ?>
-
-        <?php if (esAdministrador()): ?>
-
-            <a href="/VendingMiniMarket/incidencias/incidencias.php"
-               class="<?= $paginaActual === 'incidencias.php' ? 'activo' : '' ?>"
-               <?= $paginaActual === 'incidencias.php' ? 'aria-current="page"' : '' ?>>
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Incidencias
-            </a>
-
-        <?php endif; ?>
-
-    </nav>
-
-    <!-- Cerrar sesión -->
-    <div class="pie-barra-lateral">
-
-        <a href="/VendingMiniMarket/index/index.html"
-           id="botonCerrarSesion">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            Cerrar sesión
-        </a>
-
-    </div>
-
-</aside>
+    <?php vmBarraLateral(); ?>
 
 
     <!-- =====================================================
@@ -210,85 +79,7 @@ if ($nombreCompleto === "") {
              BARRA SUPERIOR
         ================================================== -->
 
-        <header class="barra-superior">
-
-
-            <button
-                type="button"
-                class="boton-menu"
-                id="botonMenu"
-                aria-label="Abrir menú"
-            >
-
-                <i class="fa-solid fa-bars"></i>
-
-            </button>
-
-
-            <div class="buscador-superior">
-
-                <i class="fa-solid fa-magnifying-glass"></i>
-
-                <input
-                    type="text"
-                    placeholder="Buscar..."
-                    aria-label="Buscar"
-                >
-
-            </div>
-
-
-            <div class="acciones-superiores">
-
-
-                <button
-                    type="button"
-                    class="boton-notificacion"
-                    aria-label="Notificaciones"
-                >
-
-                    <i class="fa-regular fa-bell"></i>
-
-                    <span class="contador">0</span>
-
-                </button>
-
-
-                <div class="perfil-superior">
-
-
-                    <div class="perfil-superior-icono">
-
-                        <i class="fa-solid fa-user"></i>
-
-                    </div>
-
-
-                    <div class="perfil-superior-texto">
-
-                        <strong>
-
-                            <?= htmlspecialchars($nombreCompleto) ?>
-
-                        </strong>
-
-
-                        <span>
-
-                            <?= htmlspecialchars(
-                                $_SESSION["usuario"]["nombre_rol"]
-                                ?? "Usuario"
-                            ) ?>
-
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </header>
+        <?php vmBarraSuperior(); ?>
 
 
         <!-- =================================================
@@ -590,7 +381,7 @@ if ($nombreCompleto === "") {
                 </div>
 
 
-                <div class="contenedor-tabla">
+                <div class="contenedor-tabla" id="contenedorTablaBitacora">
 
 
                     <table class="tabla-datos">
@@ -691,6 +482,7 @@ if ($nombreCompleto === "") {
          JAVASCRIPT
     ====================================================== -->
 
+    <script src="../js/paginador.js"></script>
     <script src="../js/app.js"></script>
 
 
@@ -913,7 +705,19 @@ if ($nombreCompleto === "") {
          * Carga los registros de la bitácora.
          */
 
-        async function cargarBitacora() {
+        let filtrosAplicados = "";
+
+        const paginador = Paginador.crear({
+            despuesDe: "#contenedorTablaBitacora",
+            unidad: "eventos",
+            alCambiar: function (pagina) {
+                cargarBitacora(pagina, true);
+            }
+        });
+
+        async function cargarBitacora(pagina, conservarFiltros) {
+
+            pagina = pagina || 1;
 
 
             tablaBitacora.innerHTML = `
@@ -940,7 +744,9 @@ if ($nombreCompleto === "") {
 
 
             const parametros =
-                new URLSearchParams();
+                new URLSearchParams(
+                    conservarFiltros ? filtrosAplicados : ""
+                );
 
 
             const usuario =
@@ -967,7 +773,7 @@ if ($nombreCompleto === "") {
                 document.getElementById("resultado").value;
 
 
-            if (usuario) {
+            if (!conservarFiltros && usuario) {
 
                 parametros.append(
                     "usuario",
@@ -977,7 +783,7 @@ if ($nombreCompleto === "") {
             }
 
 
-            if (fechaInicio) {
+            if (!conservarFiltros && fechaInicio) {
 
                 parametros.append(
                     "fecha_inicio",
@@ -987,7 +793,7 @@ if ($nombreCompleto === "") {
             }
 
 
-            if (fechaFin) {
+            if (!conservarFiltros && fechaFin) {
 
                 parametros.append(
                     "fecha_fin",
@@ -997,7 +803,7 @@ if ($nombreCompleto === "") {
             }
 
 
-            if (entidad) {
+            if (!conservarFiltros && entidad) {
 
                 parametros.append(
                     "entidad",
@@ -1007,7 +813,7 @@ if ($nombreCompleto === "") {
             }
 
 
-            if (accion) {
+            if (!conservarFiltros && accion) {
 
                 parametros.append(
                     "accion",
@@ -1017,7 +823,7 @@ if ($nombreCompleto === "") {
             }
 
 
-            if (resultado) {
+            if (!conservarFiltros && resultado) {
 
                 parametros.append(
                     "resultado",
@@ -1026,6 +832,13 @@ if ($nombreCompleto === "") {
 
             }
 
+
+            if (!conservarFiltros) {
+                filtrosAplicados = parametros.toString();
+            }
+
+            parametros.set("pagina", pagina);
+            parametros.set("por_pagina", 15);
 
             try {
 
@@ -1076,6 +889,11 @@ if ($nombreCompleto === "") {
 
                 const registros =
                     datos.data || [];
+
+                paginador.actualizar(
+                    Number(datos.total ?? registros.length),
+                    Number(datos.pagina || pagina)
+                );
 
 
                 if (registros.length === 0) {
@@ -1237,7 +1055,9 @@ if ($nombreCompleto === "") {
 
                 evento.preventDefault();
 
-                cargarBitacora();
+                paginador.reiniciar();
+
+                cargarBitacora(1);
 
             }
         );
@@ -1253,7 +1073,9 @@ if ($nombreCompleto === "") {
 
                 formularioFiltros.reset();
 
-                cargarBitacora();
+                paginador.reiniciar();
+
+                cargarBitacora(1);
 
             }
         );

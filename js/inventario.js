@@ -17,10 +17,12 @@
 
 const estadoInventarioHU20 = {
     pagina: 1,
-    porPagina: 25,
+    porPagina: 15,
     totalPaginas: 1,
     temporizadorBusqueda: null
 };
+
+let paginadorInventarioHU20 = null;
 
 
 /*=========================================================
@@ -52,6 +54,15 @@ function inicializarPaginaInventarioVending() {
 
     prepararFiltroEstadoInventarioHU20();
     prepararEtiquetaUbicacionInventarioHU20();
+    paginadorInventarioHU20 = window.Paginador?.crear({
+        despuesDe: "#contenedorTablaInventario",
+        unidad: "productos",
+        alCambiar: (pagina) => {
+            estadoInventarioHU20.pagina = pagina;
+            cargarInventarioHU20();
+        }
+    }) || null;
+
     registrarEventosInventarioHU20();
 
     cargarInventarioHU20();
@@ -95,13 +106,6 @@ function registrarEventosInventarioHU20() {
         "botonLimpiarFiltrosInventario"
     );
 
-    const botonAnterior = document.getElementById(
-        "botonPaginaAnteriorInventario"
-    );
-
-    const botonSiguiente = document.getElementById(
-        "botonPaginaSiguienteInventario"
-    );
 
 
     /*
@@ -115,7 +119,7 @@ function registrarEventosInventarioHU20() {
 
         estadoInventarioHU20.temporizadorBusqueda =
             setTimeout(() => {
-                estadoInventarioHU20.pagina = 1;
+                reiniciarPaginadorInventarioHU20();
                 cargarInventarioHU20();
             }, 300);
     });
@@ -124,7 +128,7 @@ function registrarEventosInventarioHU20() {
     filtroUbicacion?.addEventListener(
         "change",
         () => {
-            estadoInventarioHU20.pagina = 1;
+            reiniciarPaginadorInventarioHU20();
             cargarInventarioHU20();
         }
     );
@@ -133,7 +137,7 @@ function registrarEventosInventarioHU20() {
     filtroCategoria?.addEventListener(
         "change",
         () => {
-            estadoInventarioHU20.pagina = 1;
+            reiniciarPaginadorInventarioHU20();
             cargarInventarioHU20();
         }
     );
@@ -142,7 +146,7 @@ function registrarEventosInventarioHU20() {
     filtroEstado?.addEventListener(
         "change",
         () => {
-            estadoInventarioHU20.pagina = 1;
+            reiniciarPaginadorInventarioHU20();
             cargarInventarioHU20();
         }
     );
@@ -167,38 +171,7 @@ function registrarEventosInventarioHU20() {
                 filtroEstado.value = "";
             }
 
-            estadoInventarioHU20.pagina = 1;
-
-            cargarInventarioHU20();
-        }
-    );
-
-
-    botonAnterior?.addEventListener(
-        "click",
-        () => {
-            if (estadoInventarioHU20.pagina <= 1) {
-                return;
-            }
-
-            estadoInventarioHU20.pagina--;
-
-            cargarInventarioHU20();
-        }
-    );
-
-
-    botonSiguiente?.addEventListener(
-        "click",
-        () => {
-            if (
-                estadoInventarioHU20.pagina >=
-                estadoInventarioHU20.totalPaginas
-            ) {
-                return;
-            }
-
-            estadoInventarioHU20.pagina++;
+            reiniciarPaginadorInventarioHU20();
 
             cargarInventarioHU20();
         }
@@ -537,7 +510,7 @@ async function cargarInventarioHU20() {
  * puedan existir dentro de app.js.
  */
 function mostrarInventarioVending() {
-    estadoInventarioHU20.pagina = 1;
+    reiniciarPaginadorInventarioHU20();
 
     return cargarInventarioHU20();
 }
@@ -768,10 +741,18 @@ function crearFilaInventarioHU20(registro) {
         document.createElement("a");
 
     enlaceMovimiento.className =
-        "boton boton-borde boton-tabla";
+        "boton-accion accion-info";
 
-    enlaceMovimiento.textContent =
-        "Movimiento";
+    enlaceMovimiento.title =
+        "Registrar movimiento";
+
+    enlaceMovimiento.setAttribute(
+        "aria-label",
+        "Registrar movimiento de " + (registro.producto || "producto")
+    );
+
+    enlaceMovimiento.innerHTML =
+        '<i class="fa-solid fa-right-left"></i>';
 
     enlaceMovimiento.href =
         "movimientos.php?" +
@@ -784,8 +765,18 @@ function crearFilaInventarioHU20(registro) {
         }).toString();
 
 
-    celdaAcciones.appendChild(
+    const grupoAcciones =
+        document.createElement("div");
+
+    grupoAcciones.className =
+        "acciones-tabla";
+
+    grupoAcciones.appendChild(
         enlaceMovimiento
+    );
+
+    celdaAcciones.appendChild(
+        grupoAcciones
     );
 
     fila.appendChild(
@@ -902,7 +893,15 @@ function actualizarPaginacionInventarioHU20(
     const pagina =
         Number(paginacion.pagina || 1);
 
-    const totalPaginas =
+    const totalRegistros =
+        Number(
+            paginacion.total_registros || 0
+        );
+
+    estadoInventarioHU20.pagina =
+        pagina;
+
+    estadoInventarioHU20.totalPaginas =
         Math.max(
             1,
             Number(
@@ -910,77 +909,16 @@ function actualizarPaginacionInventarioHU20(
             )
         );
 
-    const totalRegistros =
-        Number(
-            paginacion.total_registros || 0
-        );
+    paginadorInventarioHU20?.actualizar(
+        totalRegistros,
+        pagina
+    );
+}
 
 
-    estadoInventarioHU20.pagina =
-        pagina;
-
-    estadoInventarioHU20.totalPaginas =
-        totalPaginas;
-
-
-    const texto =
-        document.getElementById(
-            "textoPaginacionInventario"
-        );
-
-    const anterior =
-        document.getElementById(
-            "botonPaginaAnteriorInventario"
-        );
-
-    const siguiente =
-        document.getElementById(
-            "botonPaginaSiguienteInventario"
-        );
-
-
-    if (texto) {
-        const hayFiltrosActivos =
-            Boolean(
-                document.getElementById(
-                    "buscarInventario"
-                )?.value.trim()
-            ) ||
-            Boolean(
-                document.getElementById(
-                    "filtroUbicacion"
-                )?.value
-            ) ||
-            Boolean(
-                document.getElementById(
-                    "filtroCategoria"
-                )?.value
-            ) ||
-            Boolean(
-                document.getElementById(
-                    "filtroEstado"
-                )?.value
-            );
-
-        texto.textContent =
-            totalRegistros > 0
-                ? `Página ${pagina} de ${totalPaginas} · ${totalRegistros} registro(s)`
-                : hayFiltrosActivos
-                    ? "Sin resultados para los filtros seleccionados"
-                    : "No hay existencias registradas";
-    }
-
-
-    if (anterior) {
-        anterior.disabled =
-            pagina <= 1;
-    }
-
-
-    if (siguiente) {
-        siguiente.disabled =
-            pagina >= totalPaginas;
-    }
+function reiniciarPaginadorInventarioHU20() {
+    estadoInventarioHU20.pagina = 1;
+    paginadorInventarioHU20?.reiniciar();
 }
 
 

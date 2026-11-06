@@ -30,6 +30,11 @@
     };
 
     let pedidos = [];
+    let paginadorPedidos = null;
+    let paginadorPorAprobar = null;
+    let paginadorRecepciones = null;
+    let porAprobarActuales = [];
+    let recepcionesActuales = [];
     let proveedores = [];
     let ubicaciones = [];
     let productosProveedorActual = [];
@@ -50,6 +55,23 @@
         puedeEditarPedido = document.body.dataset.puedeEditarPedido === '1';
         puedeAprobarPedido = document.body.dataset.puedeAprobarPedido === '1';
         idUsuarioActual = Number(document.body.dataset.idUsuario) || 0;
+
+        paginadorPedidos = Paginador.crear({
+            despuesDe: '#contenedorTablaPedidos',
+            filtros: ['#buscarPedido', '#filtroProveedorPedido', '#filtroTiendaPedido', '#filtroEstadoPedido', '#filtroFechaPedido'],
+            unidad: 'pedidos',
+            alCambiar: renderPedidos
+        });
+        paginadorPorAprobar = Paginador.crear({
+            despuesDe: '#contenedorTablaPedidosPorAprobar',
+            unidad: 'pedidos',
+            alCambiar: renderPedidosPorAprobar
+        });
+        paginadorRecepciones = Paginador.crear({
+            despuesDe: '#contenedorRecepcionesPendientes',
+            unidad: 'entregas',
+            alCambiar: renderRecepcionesPendientes
+        });
 
         registrarEventos();
 
@@ -315,7 +337,12 @@
             const pedido = resultado.data;
 
             if (pedido.estado === 'EN_CAMINO'
-                && !window.confirm('Este pedido ya está aprobado. Si lo edita volverá a Pendiente y deberá aprobarse de nuevo. ¿Continuar?')) {
+                && !await confirmarVending({
+                    titulo: 'Pedido aprobado',
+                    mensaje: 'Este pedido ya está aprobado. Si lo edita volverá a Pendiente y deberá aprobarse de nuevo. ¿Continuar?',
+                    icono: 'fa-solid fa-triangle-exclamation',
+                    textoConfirmar: 'Continuar'
+                })) {
                 return;
             }
 
@@ -442,9 +469,15 @@
         const porAprobar = (resultado.data || [])
             .filter((p) => p.estado === 'PENDIENTE' && p.estado_aprobacion === 'POR_APROBAR');
 
+        porAprobarActuales = porAprobar;
         mostrarElemento('panelPedidosPorAprobar', porAprobar.length > 0);
+        renderPedidosPorAprobar();
+    }
 
-        $('cuerpoTablaPedidosPorAprobar').innerHTML = porAprobar.map((p) => `
+    function renderPedidosPorAprobar() {
+        const visibles = paginadorPorAprobar.paginar(porAprobarActuales);
+
+        $('cuerpoTablaPedidosPorAprobar').innerHTML = visibles.map((p) => `
             <tr>
                 <td>${p.numero_pedido}</td>
                 <td>${new Date(p.fecha_pedido).toLocaleDateString('es-CR')}</td>
@@ -455,11 +488,11 @@
                 <td>${escaparHTML(`${p.solicita_nombre} ${p.solicita_apellido || ''}`.trim())}</td>
                 <td>
                     <div class="acciones-tabla">
-                        <button type="button" class="boton boton-borde boton-tabla boton-ver-pedido" data-pedido="${p.id_pedido}">
-                            Ver
+                        <button type="button" class="boton-accion accion-ver boton-ver-pedido" data-pedido="${p.id_pedido}" title="Ver pedido" aria-label="Ver pedido ${p.numero_pedido}">
+                            <i class="fa-solid fa-eye"></i>
                         </button>
-                        <button type="button" class="boton boton-azul boton-tabla boton-aprobar-pedido" data-pedido="${p.id_pedido}">
-                            Aprobar
+                        <button type="button" class="boton-accion accion-exito boton-aprobar-pedido" data-pedido="${p.id_pedido}" title="Aprobar pedido" aria-label="Aprobar pedido ${p.numero_pedido}">
+                            <i class="fa-solid fa-circle-check"></i>
                         </button>
                     </div>
                 </td>
@@ -469,8 +502,9 @@
 
     function renderPedidos() {
         const tabla = $('cuerpoTablaPedidos');
+        const visibles = paginadorPedidos.paginar(pedidos);
 
-        tabla.innerHTML = pedidos.map((p) => `
+        tabla.innerHTML = visibles.map((p) => `
             <tr>
                 <td>${p.numero_pedido}</td>
                 <td>${new Date(p.fecha_pedido).toLocaleDateString('es-CR')}</td>
@@ -506,39 +540,39 @@
         const enAprobacion = pedido.estado === 'PENDIENTE';
         const aprobado = pedido.estado_aprobacion === 'APROBADO';
 
-        const boton = (clase, titulo, icono) => `<button type="button" class="boton-tabla ${clase}" data-pedido="${pedido.id_pedido}" title="${titulo}">
+        const boton = (clase, titulo, icono, color) => `<button type="button" class="boton-accion ${color} ${clase}" data-pedido="${pedido.id_pedido}" title="${titulo}" aria-label="${titulo} ${pedido.numero_pedido}">
                    <i class="fa-solid ${icono}"></i>
                </button>`;
 
-        const botonVer = boton('boton-ver-pedido', 'Ver pedido', 'fa-eye');
+        const botonVer = boton('boton-ver-pedido', 'Ver pedido', 'fa-eye', 'accion-ver');
 
         // Se edita mientras no haya mercadería recibida. El Dependiente solo edita
         // sus pedidos y no mientras esperan aprobación.
         const editable = ['PENDIENTE', 'EN_CAMINO'].includes(pedido.estado);
         const botonEditar = (puedeEditarPedido && editable && (
             puedeAprobarPedido || (esPropio && pedido.estado_aprobacion !== 'POR_APROBAR')
-        )) ? boton('boton-editar-pedido', 'Editar pedido', 'fa-pen') : '';
+        )) ? boton('boton-editar-pedido', 'Editar pedido', 'fa-pen', 'accion-editar') : '';
 
         const botonEnviar = (enAprobacion && pedido.estado_aprobacion === 'BORRADOR' && (puedeAprobarPedido || esPropio))
-            ? boton('boton-enviar-aprobacion-pedido', 'Enviar a aprobación', 'fa-paper-plane')
+            ? boton('boton-enviar-aprobacion-pedido', 'Enviar a aprobación', 'fa-paper-plane', 'accion-info')
             : '';
 
         const botonAprobar = (puedeAprobarPedido && enAprobacion && pedido.estado_aprobacion === 'POR_APROBAR')
-            ? boton('boton-aprobar-pedido', 'Aprobar pedido', 'fa-circle-check')
+            ? boton('boton-aprobar-pedido', 'Aprobar pedido', 'fa-circle-check', 'accion-exito')
             : '';
 
         // Solo se recibe mercadería de pedidos ya aprobados (En camino / Recibido parcial).
         const botonRecibir = (!cerrado && aprobado)
-            ? boton('boton-recibir-pedido', 'Recibir pedido', 'fa-truck-ramp-box')
+            ? boton('boton-recibir-pedido', 'Recibir pedido', 'fa-truck-ramp-box', 'accion-aviso')
             : '';
 
         // Pedido recibido por completo y sin factura: listo para facturar.
         const botonFacturar = (pedido.estado === 'RECIBIDO' && !pedido.numero_factura)
-            ? boton('boton-facturar-pedido', 'Listo para facturar', 'fa-file-invoice-dollar')
+            ? boton('boton-facturar-pedido', 'Listo para facturar', 'fa-file-invoice-dollar', 'accion-teal')
             : '';
 
         const botonCancelar = (puedeActualizarEstado && !cerrado)
-            ? boton('boton-cancelar-pedido', 'Cancelar pedido', 'fa-ban')
+            ? boton('boton-cancelar-pedido', 'Cancelar pedido', 'fa-ban', 'accion-peligro')
             : '';
 
         return `<div class="acciones-tabla">${botonVer}${botonEditar}${botonEnviar}${botonAprobar}${botonRecibir}${botonFacturar}${botonCancelar}</div>`;
@@ -796,11 +830,19 @@
     async function cargarRecepcionesPendientes() {
         try {
             const resultado = await apiRecepciones('listar_recepciones_pendientes');
-            const pendientes = resultado.data || [];
+            recepcionesActuales = resultado.data || [];
 
-            mostrarElemento('panelRecepcionesPendientes', pendientes.length > 0);
+            mostrarElemento('panelRecepcionesPendientes', recepcionesActuales.length > 0);
+            renderRecepcionesPendientes();
+        } catch (error) {
+            mostrarMensaje(error.message, 'error');
+        }
+    }
 
-            $('cuerpoTablaRecepcionesPendientes').innerHTML = pendientes.map((r) => `
+    function renderRecepcionesPendientes() {
+        const visibles = paginadorRecepciones.paginar(recepcionesActuales);
+
+        $('cuerpoTablaRecepcionesPendientes').innerHTML = visibles.map((r) => `
                 <tr>
                     <td>${r.numero_pedido}</td>
                     <td>${new Date(r.fecha_movimiento).toLocaleString('es-CR')}</td>
@@ -810,19 +852,16 @@
                     <td>${escaparHTML(`${r.registrado_por_nombre} ${r.registrado_por_apellido || ''}`.trim())}</td>
                     <td>
                         <div class="acciones-tabla">
-                            <button type="button" class="boton boton-borde boton-tabla boton-ver-recepcion" data-movimiento="${r.id_movimiento}">
-                                Ver
+                            <button type="button" class="boton-accion accion-ver boton-ver-recepcion" data-movimiento="${r.id_movimiento}" title="Ver recepción" aria-label="Ver recepción del pedido ${r.numero_pedido}">
+                                <i class="fa-solid fa-eye"></i>
                             </button>
-                            <button type="button" class="boton boton-azul boton-tabla boton-confirmar-recepcion" data-movimiento="${r.id_movimiento}">
-                                Confirmar
+                            <button type="button" class="boton-accion accion-exito boton-confirmar-recepcion" data-movimiento="${r.id_movimiento}" title="Confirmar recepción" aria-label="Confirmar recepción del pedido ${r.numero_pedido}">
+                                <i class="fa-solid fa-check"></i>
                             </button>
                         </div>
                     </td>
                 </tr>
             `).join('');
-        } catch (error) {
-            mostrarMensaje(error.message, 'error');
-        }
     }
 
     async function manejarClicRecepcionesPendientes(evento) {

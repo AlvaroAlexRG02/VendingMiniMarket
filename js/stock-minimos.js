@@ -53,6 +53,12 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
         $('sm27Minimo').focus();
     }
+    const pag = window.Paginador ? Paginador.crear({
+        despuesDe: $('sm27Filas').closest('.sm27-scroll'),
+        unidad: 'productos',
+        filtros: ['#sm27SoloAlertas', '#sm27Ubicacion'],
+        alCambiar: () => dibujar()
+    }) : null;
     function dibujar() {
         const solo = $('sm27SoloAlertas').checked;
         const tbody = $('sm27Filas'); tbody.replaceChildren();
@@ -60,15 +66,15 @@
         $('sm27Total').textContent = numero(state.registros.length);
         $('sm27Alertas').textContent = numero(state.registros.filter(r => r.estado !== 'NORMAL').length);
         $('sm27Sugeridas').textContent = numero(state.registros.reduce((t, r) => t + r.sugerencia, 0));
-        if (!registros.length) { const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 7; td.textContent = solo ? 'No hay alertas de stock mínimo para esta ubicación.' : 'No hay existencias registradas en esta ubicación.'; tr.appendChild(td); tbody.appendChild(tr); return; }
-        for (const r of registros) {
+        if (!registros.length) { const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 7; td.textContent = solo ? 'No hay alertas de stock mínimo para esta ubicación.' : 'No hay existencias registradas en esta ubicación.'; tr.appendChild(td); tbody.appendChild(tr); pag?.paginar([]); return; }
+        for (const r of pag ? pag.paginar(registros) : registros) {
             const tr = document.createElement('tr');
             const celda = valor => { const td = document.createElement('td'); td.textContent = String(valor); tr.appendChild(td); return td; };
             celda(r.producto); celda(r.codigo_retail || '—'); celda(numero(r.cantidad)); celda(numero(r.stock_minimo));
             const td = document.createElement('td'); const badge = document.createElement('span'); badge.className = 'sm27-badge' + (r.estado === 'AGOTADO' ? ' zero' : r.estado === 'STOCK_BAJO' ? ' low' : ''); badge.textContent = r.estado === 'AGOTADO' ? 'Agotado' : r.estado === 'STOCK_BAJO' ? 'Stock bajo' : 'Normal'; td.appendChild(badge); tr.appendChild(td);
             celda(numero(r.sugerencia));
             const acc = document.createElement('td');
-            if (window.SM27_PUEDE_GUARDAR) { const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'sm27-btn'; btn.textContent = 'Editar'; btn.addEventListener('click', () => editar(r)); acc.appendChild(btn); } else acc.textContent = '—';
+            if (window.SM27_PUEDE_GUARDAR) { const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'boton-accion accion-editar'; btn.title = 'Editar mínimo'; btn.setAttribute('aria-label', 'Editar mínimo'); btn.innerHTML = '<i class="fa-solid fa-pen"></i>'; btn.addEventListener('click', () => editar(r)); acc.appendChild(btn); } else acc.textContent = '—';
             tr.appendChild(acc); tbody.appendChild(tr);
         }
     }

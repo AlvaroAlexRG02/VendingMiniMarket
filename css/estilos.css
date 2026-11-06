@@ -122,9 +122,9 @@ body.pagina-recuperacion #correoRecuperacion::placeholder {
 
 body.pagina-recuperacion #correoRecuperacion:focus {
     outline: none;
-    border-color: var(--azul);
+    border-color: var(--azul-marino);
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    box-shadow: 0 0 0 4px rgba(12, 31, 74, 0.1);
 }
 
 body.pagina-cambio-inicial .panel-login-formulario {
@@ -244,19 +244,32 @@ body.pagina-cambio-inicial .panel-login-formulario {
     max-width: 420px;
     background: var(--fondo-tarjeta);
     border-radius: 20px;
-    box-shadow: 0 20px 45px rgba(12, 31, 74, 0.1);
-    padding: 40px 36px;
+    box-shadow: 0 24px 55px rgba(12, 31, 74, 0.14);
+    padding: 44px 36px 36px;
     position: relative;
     z-index: 2;
+    overflow: hidden;
+}
+
+/* Franja superior marino → turquesa, igual que los acentos del sistema */
+.tarjeta-login::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--azul-marino), var(--teal));
 }
 
 .icono-login {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--azul-claro);
-    color: var(--azul);
-    font-size: 22px;
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: var(--azul-marino);
+    color: var(--teal);
+    box-shadow: 0 10px 22px rgba(12, 31, 74, 0.28);
+    font-size: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -270,7 +283,9 @@ body.pagina-cambio-inicial .panel-login-formulario {
 
 .encabezado-login h2 {
     margin: 0 0 6px;
-    font-size: 24px;
+    color: var(--azul-marino);
+    font-size: 26px;
+    letter-spacing: -0.01em;
 }
 
 .encabezado-login p {
@@ -312,17 +327,23 @@ body.pagina-cambio-inicial .panel-login-formulario {
 
 .campo-con-icono input {
     width: 100%;
-    padding: 12px 42px 12px 46px;
-    border-radius: var(--radio-sm);
+    padding: 14px 42px 14px 46px;
+    border-radius: 12px;
     border: 1px solid var(--borde);
     font-size: 14px;
     background: #fbfcfe;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .campo-con-icono input:focus {
     outline: none;
-    border-color: var(--azul);
+    border-color: var(--azul-marino);
     background: #fff;
+    box-shadow: 0 0 0 4px rgba(12, 31, 74, 0.1);
+}
+
+.campo-con-icono:focus-within > i:first-child {
+    color: var(--azul-marino);
 }
 
 .boton-mostrar-contrasena {
@@ -349,11 +370,22 @@ body.pagina-cambio-inicial .panel-login-formulario {
     align-items: center;
     gap: 8px;
     color: var(--texto-secundario);
+    cursor: pointer;
+}
+
+.opcion-recordar input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--azul-marino);
 }
 
 .enlace-recuperar {
-    color: var(--azul);
+    color: var(--azul-marino);
     font-weight: 600;
+}
+
+.enlace-recuperar:hover {
+    text-decoration: underline;
 }
 
 .mensaje-login {
@@ -377,12 +409,23 @@ body.pagina-cambio-inicial .panel-login-formulario {
 }
 
 .boton-ingresar {
-    background: var(--azul);
+    width: 100%;
+    margin-top: 6px;
+    padding: 15px 20px;
+    border-radius: 12px;
+    background: var(--azul-marino);
+    box-shadow: 0 10px 22px rgba(12, 31, 74, 0.25);
     color: #fff;
+    cursor: pointer;
+}
+
+.boton-ingresar i {
+    color: var(--teal);
 }
 
 .boton-ingresar:hover {
-    background: #1d4fd0;
+    background: var(--azul-marino-hover);
+    box-shadow: 0 12px 26px rgba(12, 31, 74, 0.32);
 }
 
 .boton-ingresar:active {
@@ -616,9 +659,12 @@ body.pagina-app {
     color: #fff;
     font-size: 10px;
     font-weight: 700;
-    width: 17px;
+    min-width: 17px;
     height: 17px;
-    border-radius: 50%;
+    padding: 0 5px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -770,6 +816,57 @@ body.pagina-app {
     margin: 0;
     color: var(--texto-secundario);
     font-size: 14px;
+}
+
+/*==========================================================
+  BOTONES DEL ENCABEZADO DE PÁGINA (todas las pantallas)
+  Mismo estilo que las pestañas de Reportes:
+    .boton-azul  -> principal, como la pestaña activa (marino + icono turquesa)
+    .boton-borde -> secundario, como la pestaña inactiva
+==========================================================*/
+.encabezado-pagina .boton {
+    justify-content: center;
+    padding: 11px 18px;
+    border-radius: var(--radio-sm);
+    box-shadow: var(--sombra);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.encabezado-pagina .boton-borde {
+    background: var(--fondo-tarjeta);
+    border-color: var(--azul-marino);
+    color: var(--texto-secundario);
+}
+
+.encabezado-pagina .boton-borde:hover {
+    background: var(--azul-claro);
+    border-color: var(--azul-marino);
+    color: var(--azul);
+}
+
+.encabezado-pagina .boton-azul {
+    background: var(--azul-marino);
+    border-color: var(--azul-marino);
+    color: #ffffff;
+}
+
+.encabezado-pagina .boton-azul:hover {
+    background: var(--azul-marino-hover);
+    border-color: var(--azul-marino-hover);
+}
+
+.encabezado-pagina .boton-azul i,
+.encabezado-pagina .boton-azul > span:first-child {
+    color: var(--teal);
+}
+
+.encabezado-pagina .boton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .selector-fecha {
@@ -967,8 +1064,9 @@ body.pagina-app {
     border: 1px solid transparent;
 }
 
-.boton-azul { background: var(--azul); color: #fff; }
-.boton-azul:hover { background: #1d4fd0; }
+.boton-azul { background: var(--azul-marino); border-color: var(--azul-marino); color: #fff; }
+.boton-azul:hover { background: var(--azul-marino-hover); border-color: var(--azul-marino-hover); }
+.boton-azul i { color: var(--teal); }
 
 .boton-borde {
     background: #fff;
@@ -1031,39 +1129,94 @@ body.pagina-app {
     min-width: 150px;
 }
 
-/* --- Paginación --- */
-.paginacion {
+/*==========================================================
+  PAGINADOR COMPARTIDO (js/paginador.js)
+  "Mostrando del 1 al 15 de 120 registros" + Anterior, números, Siguiente
+==========================================================*/
+.paginador {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+    gap: 12px 20px;
     margin-top: 18px;
-    font-size: 13px;
+    padding-top: 14px;
+    border-top: 1px solid var(--borde);
     color: var(--texto-secundario);
+    font-size: 13px;
 }
 
-.paginacion-controles {
+.paginador[hidden] {
+    display: none;
+}
+
+.paginador-resumen {
+    margin: 0;
+}
+
+.paginador-controles {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
 }
 
-.paginacion-controles button {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radio-sm);
+.paginador-boton {
+    display: inline-flex;
+    min-width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
     border: 1px solid var(--borde);
-    background: #fff;
-    font-size: 13px;
+    border-radius: var(--radio-sm);
+    background: var(--fondo-tarjeta);
     color: var(--texto-principal);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.paginacion-controles button.activo {
-    background: var(--azul);
-    border-color: var(--azul);
-    color: #fff;
+.paginador-boton:hover:not(:disabled):not(.activo) {
+    border-color: var(--azul-marino);
+    background: var(--azul-claro);
+    color: var(--azul);
 }
 
-.paginacion-controles button:hover:not(.activo) {
-    background: var(--fondo-pagina);
+.paginador-boton:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.25);
+    outline-offset: 2px;
+}
+
+.paginador-boton.activo {
+    border-color: var(--azul-marino);
+    background: var(--azul-marino);
+    color: #ffffff;
+    cursor: default;
+}
+
+.paginador-boton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.paginador-puntos {
+    padding: 0 4px;
+    color: var(--texto-tenue);
+}
+
+@media (max-width: 600px) {
+    .paginador {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .paginador-nav span {
+        display: none;
+    }
 }
 
 /* --- Mini lista de alertas (usada en el Dashboard) --- */
@@ -1611,45 +1764,106 @@ body.pagina-app {
     white-space: nowrap;
 }
 
+/*==========================================================
+  ACCIONES DE TABLA (estándar para todas las pantallas)
+  Botón cuadrado con icono; el color indica la acción:
+    accion-ver (gris) · accion-editar (azul) · accion-exito (verde)
+    accion-peligro (rojo) · accion-aviso (naranja)
+    accion-info (morado) · accion-teal (turquesa)
+  .boton-accion-producto + boton-editar/inactivar/activar/historial-producto
+  son los nombres históricos y siguen funcionando igual.
+==========================================================*/
+.acciones-tabla,
 .acciones-producto-tabla {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
 }
 
+.boton-accion,
 .boton-accion-producto {
     display: inline-flex;
     width: 35px;
     height: 35px;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
+    padding: 0;
     border: none;
     border-radius: 8px;
+    background: #eef0f5;
+    color: var(--texto-secundario);
     cursor: pointer;
     font-size: 14px;
+    text-decoration: none;
     transition:
         transform 0.2s ease,
         background-color 0.2s ease;
 }
 
+.boton-accion:hover,
 .boton-accion-producto:hover {
     transform: translateY(-1px);
 }
 
+.boton-accion:focus-visible,
 .boton-accion-producto:focus-visible {
     outline: 3px solid rgba(37, 99, 235, 0.25);
     outline-offset: 2px;
 }
 
+.boton-accion:disabled,
+.boton-accion-producto:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.accion-ver,
+.boton-historial-producto {
+    background: #eef0f5;
+    color: var(--texto-secundario);
+}
+
+.accion-editar,
+.boton-editar-producto {
+    background: var(--azul-claro);
+    color: var(--azul);
+}
+
+.accion-exito,
+.boton-activar-producto {
+    background: var(--verde-claro);
+    color: var(--verde);
+}
+
+.accion-peligro,
 .boton-inactivar-producto {
     background: var(--rojo-claro);
     color: var(--rojo);
 }
 
-.boton-activar-producto {
-    background: var(--verde-claro);
-    color: var(--verde);
+.accion-aviso {
+    background: var(--naranja-claro);
+    color: #b45309;
 }
+
+.accion-info {
+    background: var(--morado-claro);
+    color: var(--morado);
+}
+
+.accion-teal {
+    background: #dcf7f3;
+    color: #0f766e;
+}
+
+/* Prioridad de incidencias: verde < amarillo < naranja < rojo */
+.prioridad-baja { background: var(--verde-claro); color: #15803d; }
+.prioridad-media { background: #fef3c7; color: #92400e; }
+.prioridad-alta { background: #ffedd5; color: #c2410c; }
+.prioridad-critica { background: #fee2e2; color: #b91c1c; box-shadow: inset 0 0 0 1px #fca5a5; }
 
 .insignia-amarilla {
     background: #fef3c7;
@@ -3002,7 +3216,7 @@ body.pagina-app {
     align-items: center;
     gap: 9px;
     padding: 11px 18px;
-    border: none;
+    border: 1px solid var(--azul-marino);
     border-radius: var(--radio-sm);
     background: transparent;
     color: var(--texto-secundario);

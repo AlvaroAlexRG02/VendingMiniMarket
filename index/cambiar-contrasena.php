@@ -59,6 +59,7 @@ if (empty($_SESSION['usuario']['debe_cambiar_contrasena'])) {
             </div>
         </section>
     </main>
+    <script src="../js/paginador.js"></script>
     <script src="../js/app.js"></script>
 </body>
 </html>

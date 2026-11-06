@@ -51,7 +51,7 @@ function sm27Opciones(PDO $pdo): array
 function sm27Registros(PDO $pdo, int $ubicacion): array
 {
     $u = sm27Ubicacion($pdo, $ubicacion, 'consulta');
-    $st = $pdo->prepare('SELECT e.id_existencia,e.id_producto,e.id_ubicacion,e.cantidad,e.stock_minimo,p.nombre AS producto,p.codigo_articulo_retail,p.codigo_barras FROM existencia e JOIN producto p ON p.id_producto=e.id_producto AND p.estado=TRUE WHERE e.id_ubicacion=:ubi ORDER BY p.nombre');
+    $st = $pdo->prepare('SELECT e.id_existencia,e.id_producto,e.id_ubicacion,e.cantidad,e.stock_minimo,p.nombre AS producto,p.codigo_articulo_retail,p.codigo_barras FROM existencia e JOIN producto p ON p.id_producto=e.id_producto AND p.estado=TRUE WHERE e.id_ubicacion=:ubi ORDER BY p.nombre,e.id_existencia');
     $st->execute([':ubi' => $ubicacion]);
     $filas = [];
     $alertas = 0;

@@ -32,6 +32,7 @@
     };
 
     let maquinas = [];
+    let paginador = null;
     let numeroPeticion = 0;
 
 
@@ -47,6 +48,13 @@
         }
 
         try {
+            paginador = Paginador.crear({
+                despuesDe: '#contenedorTablaMaquinas',
+                unidad: 'máquinas',
+                filtros: ['#buscarMaquina', '#filtroTiendaMaquina', '#filtroEstadoMaquina'],
+                alCambiar: () => renderMaquinas(leerFiltros())
+            });
+
             await cargarTiendas();
             registrarEventos();
             await Promise.all([cargarMaquinas(), cargarResumen()]);
@@ -151,7 +159,7 @@
             ? ''
             : `Mostrando ${maquinas.length} máquina(s).`;
 
-        maquinas.forEach((maquina) => {
+        paginador.paginar(maquinas).forEach((maquina) => {
             const fila = document.createElement('tr');
 
             const ubicacion = C.escapeHtml(maquina.tienda_nombre) +

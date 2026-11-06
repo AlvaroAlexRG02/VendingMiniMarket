@@ -761,7 +761,7 @@ function accionListarPedidos(array $in): void
     if ($where) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
     }
-    $sql .= ' ORDER BY ped.fecha_pedido DESC';
+    $sql .= ' ORDER BY ped.fecha_pedido DESC, ped.id_pedido DESC';
 
     $st = db()->prepare($sql);
     $st->execute($params);

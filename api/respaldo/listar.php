@@ -50,7 +50,7 @@ try {
         FROM respaldo r
         LEFT JOIN usuario u
             ON u.id_usuario = r.id_usuario
-        ORDER BY r.fecha_inicio DESC
+        ORDER BY r.fecha_inicio DESC, r.id_respaldo DESC
     ");
 
     $respaldos = $consulta->fetchAll();

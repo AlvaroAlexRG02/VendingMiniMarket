@@ -13,6 +13,7 @@
     const CAMPOS = ['nombre', 'contacto', 'telefono', 'correo', 'direccion'];
 
     let proveedores = [];
+    let pag = null;
     let idEdicion = null;
     let guardando = false;
 
@@ -30,6 +31,12 @@
             $('formularioProveedor').addEventListener('submit', guardar);
             $('botonCancelarEdicion').addEventListener('click', salirDeEdicion);
             $('cuerpoTablaProveedores').addEventListener('click', alHacerClic);
+
+            pag = Paginador.crear({
+                despuesDe: '#contenedorTablaProveedores',
+                unidad: 'proveedores',
+                alCambiar: render
+            });
 
             await cargarProveedores();
         } catch (error) {
@@ -56,7 +63,7 @@
         $('mensajeSinProveedores').hidden = proveedores.length > 0;
         $('contenedorTablaProveedores').style.display = proveedores.length ? '' : 'none';
 
-        proveedores.forEach((proveedor) => {
+        pag.paginar(proveedores).forEach((proveedor) => {
             const fila = document.createElement('tr');
             const nombre = C.escapeHtml(proveedor.nombre);
 

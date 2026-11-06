@@ -28,6 +28,7 @@
     };
 
     let facturas = [];
+    let paginador = null;
     let pedidos = [];
     let productosProveedorActual = [];
     let productosProveedorDetalle = [];
@@ -50,6 +51,13 @@
         puedeAnularFactura = document.body.dataset.puedeAnularFactura === '1';
         puedeExportarHistorial = document.body.dataset.puedeExportarHistorial === '1';
         idUsuarioActual = Number(document.body.dataset.idUsuarioActual || 0);
+
+        paginador = Paginador.crear({
+            despuesDe: '#contenedorTablaFacturas',
+            unidad: 'facturas',
+            filtros: ['#buscarFactura', '#filtroProveedorFactura', '#filtroTiendaFactura', '#filtroEstadoFactura', '#filtroFechaFactura'],
+            alCambiar: renderFacturas
+        });
 
         registrarEventos();
 
@@ -457,8 +465,9 @@
 
     function renderFacturas() {
         const tabla = $('cuerpoTablaFacturas');
+        const facturasPagina = paginador.paginar(facturas);
 
-        tabla.innerHTML = facturas.map((f) => `
+        tabla.innerHTML = facturasPagina.map((f) => `
             <tr>
                 <td>
                     ${escaparHTML(f.numero_factura)}
@@ -494,9 +503,11 @@
 
     function celdaAcciones(factura) {
         return `
-            <button type="button" class="boton boton-borde boton-tabla boton-ver-factura" data-factura="${factura.id_factura}">
-                Ver
-            </button>
+            <div class="acciones-tabla">
+                <button type="button" class="boton-accion accion-ver boton-ver-factura" data-factura="${factura.id_factura}" title="Ver factura" aria-label="Ver factura ${escaparHTML(factura.numero_factura)}">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+            </div>
         `;
     }
 

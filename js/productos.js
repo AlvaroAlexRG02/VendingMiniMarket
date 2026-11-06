@@ -10,8 +10,6 @@
     const C = window.CatalogoComun;
     const $ = (id) => document.getElementById(id);
 
-    const POR_PAGINA = 25;
-
     const ETIQUETAS_CAMBIO = {
         nombre: 'Nombre',
         codigo_articulo_retail: 'Código interno',
@@ -30,9 +28,8 @@
     };
 
     let productos = [];
-    let paginaActual = 1;
-    let totalPaginas = 1;
     let totalProductos = 0;
+    let pag = null;
     let numeroPeticion = 0;
 
 
@@ -50,6 +47,11 @@
         try {
             await C.cargarSesion();
             await cargarCategorias();
+            pag = Paginador.crear({
+                despuesDe: '#contenedorTablaProductos',
+                unidad: 'productos',
+                alCambiar: (pagina) => cargarProductos(pagina)
+            });
             registrarEventos();
             await recargar();
 
@@ -105,7 +107,7 @@
       CONSULTA (HU-10, HU-15)
     -----------------------------------------------------*/
 
-    async function cargarProductos(pagina = 1) {
+    async function cargarProductos(pagina = pag.pagina) {
         const peticion = ++numeroPeticion;
         const filtros = leerFiltros();
 
@@ -113,7 +115,7 @@
             const resultado = await C.api('listar_productos', null, {
                 ...filtros,
                 pagina,
-                por_pagina: POR_PAGINA
+                por_pagina: pag.porPagina
             });
 
             // Si el usuario siguió escribiendo, se descarta esta respuesta.
@@ -124,12 +126,10 @@
             const datos = resultado.data;
 
             productos = datos.items || [];
-            paginaActual = datos.pagina;
-            totalPaginas = datos.total_paginas;
             totalProductos = datos.total;
 
+            pag.actualizar(datos.total, datos.pagina);
             renderProductos(filtros);
-            renderPaginacion();
         } catch (error) {
             console.error(error);
             C.mostrarMensaje(error.message, 'error');
@@ -165,12 +165,7 @@
         sinProductos.hidden = !(vacio && !conFiltros);
         sinResultados.hidden = !(vacio && conFiltros);
 
-        const desde = (paginaActual - 1) * POR_PAGINA + 1;
-        const hasta = desde + productos.length - 1;
-
-        $('resultadoBusquedaProductos').textContent = vacio
-            ? ''
-            : `Mostrando ${desde}–${hasta} de ${totalProductos} producto(s).`;
+        $('resultadoBusquedaProductos').textContent = '';
 
         productos.forEach((producto) => {
             const fila = document.createElement('tr');
@@ -235,40 +230,27 @@
         });
     }
 
-    function renderPaginacion() {
-        const caja = $('paginacionProductos');
-
-        if (!caja) {
-            return;
-        }
-
-        caja.hidden = totalPaginas <= 1;
-
-        $('textoPaginacionProductos').textContent = `Página ${paginaActual} de ${totalPaginas}`;
-        $('botonPaginaAnterior').disabled = paginaActual <= 1;
-        $('botonPaginaSiguiente').disabled = paginaActual >= totalPaginas;
-    }
-
-
     /*-----------------------------------------------------
       EVENTOS
     -----------------------------------------------------*/
 
+    function reiniciarYCargar() {
+        pag.reiniciar();
+        return cargarProductos(1);
+    }
+
     function registrarEventos() {
-        $('buscarProducto')?.addEventListener('input', C.debounce(() => cargarProductos(1), 300));
-        $('filtroCategoriaProducto')?.addEventListener('change', () => cargarProductos(1));
-        $('filtroEstadoProducto')?.addEventListener('change', () => cargarProductos(1));
+        $('buscarProducto')?.addEventListener('input', C.debounce(() => reiniciarYCargar(), 300));
+        $('filtroCategoriaProducto')?.addEventListener('change', reiniciarYCargar);
+        $('filtroEstadoProducto')?.addEventListener('change', reiniciarYCargar);
 
         $('botonLimpiarFiltrosProductos')?.addEventListener('click', () => {
             $('buscarProducto').value = '';
             $('filtroCategoriaProducto').value = '';
             $('filtroEstadoProducto').value = '';
-            cargarProductos(1);
+            reiniciarYCargar();
             $('buscarProducto').focus();
         });
-
-        $('botonPaginaAnterior')?.addEventListener('click', () => cargarProductos(paginaActual - 1));
-        $('botonPaginaSiguiente')?.addEventListener('click', () => cargarProductos(paginaActual + 1));
 
         $('botonExportarCatalogo')?.addEventListener('click', exportarCatalogo);
 
@@ -333,7 +315,7 @@
             );
 
             C.mostrarMensaje(resultado.message, 'exito');
-            await Promise.all([cargarProductos(paginaActual), cargarResumen()]);
+            await Promise.all([cargarProductos(), cargarResumen()]);
         } catch (error) {
             C.mostrarMensaje(error.message, 'error');
         }

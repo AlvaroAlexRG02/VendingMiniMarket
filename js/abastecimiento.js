@@ -40,6 +40,8 @@
 
     document.addEventListener('DOMContentLoaded', iniciar);
 
+    let paginador = null;
+
     async function iniciar() {
         if (!$('cuerpoTablaRelaciones')) {
             return;
@@ -47,6 +49,13 @@
 
         try {
             opciones = (await api('opciones')).data;
+
+            paginador = Paginador.crear({
+                despuesDe: '#contenedorTablaRelaciones',
+                unidad: 'relaciones',
+                filtros: ['#buscarRelacion', '#filtroOrigenRelacion', '#filtroTipoDestinoRelacion', '#filtroEstadoRelacion'],
+                alCambiar: () => renderRelaciones(leerFiltros())
+            });
 
             llenarFiltroOrigen();
 
@@ -176,7 +185,7 @@
             ? ''
             : `Mostrando ${relaciones.length} relación(es).`;
 
-        relaciones.forEach((relacion) => {
+        paginador.paginar(relaciones).forEach((relacion) => {
             const fila = document.createElement('tr');
             const esMaquina = relacion.destino_tipo === 'MAQUINA';
 

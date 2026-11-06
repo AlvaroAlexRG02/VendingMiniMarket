@@ -56,7 +56,7 @@ try {
         FROM incidencia i
         INNER JOIN usuario u
             ON u.id_usuario = i.id_usuario
-        ORDER BY i.fecha_registro DESC
+        ORDER BY i.fecha_registro DESC, i.id_incidencia DESC
     ");
 
     $incidencias = $consulta->fetchAll();

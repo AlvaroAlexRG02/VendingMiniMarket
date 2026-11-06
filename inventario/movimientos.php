@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/permisos.php';
+require_once __DIR__ . "/../config/layout.php";
 
 
 /* ==========================================================
@@ -23,8 +24,6 @@ $nombreUsuario = trim(
         ($_SESSION['usuario']['apellido'] ?? '')
 );
 
-$correoUsuario =
-    $_SESSION['usuario']['correo'] ?? '';
 
 
 /* ==========================================================
@@ -88,9 +87,7 @@ header('Expires: 0');
     </title>
 
     <!-- Hoja de estilos principal -->
-    <link
-        rel="stylesheet"
-        href="../css/estilos.css?v=20261007-1">
+    <?php vmEstilosGlobales(); ?>
 
     <!-- HU-22 / HU-23: vista previa específica de salida y traslado. -->
     <style>
@@ -126,9 +123,6 @@ header('Expires: 0');
     </style>
 
     <!-- Font Awesome -->
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 </head>
 
@@ -146,180 +140,7 @@ header('Expires: 0');
          BARRA LATERAL
     ======================================================= -->
 
-    <aside class="barra-lateral">
-
-
-        <!-- Logo -->
-
-        <div class="logo-sistema">
-
-            <a
-                href="../dashboard/dashboard.php"
-                aria-label="Ir al Dashboard">
-
-                <img
-                    src="../img/logo/logo-vending.jpeg"
-                    alt="Logo de Vending Mini Market"
-                    class="imagen-logo-sistema">
-
-            </a>
-
-        </div>
-
-
-        <!-- Navegación -->
-
-        <nav
-            class="nav-lateral"
-            aria-label="Navegación principal">
-
-            <a href="../dashboard/dashboard.php">
-
-                <i class="fa-solid fa-chart-pie"></i>
-
-                Dashboard
-
-            </a>
-
-
-            <a href="../usuarios/usuarios.php">
-
-                <i class="fa-solid fa-users"></i>
-
-                Usuarios
-
-            </a>
-
-
-            <a href="../catalogo/catalogo.php">
-
-                <i class="fa-solid fa-box"></i>
-
-                Catálogo
-
-            </a>
-
-
-            <a href="../tienda/tienda.php">
-
-                <i class="fa-solid fa-shop"></i>
-
-                Tiendas
-
-            </a>
-
-
-            <a href="../maquinas/maquinas.php">
-
-                <i class="fa-solid fa-cash-register"></i>
-
-                Máquinas
-
-            </a>
-
-
-            <a
-                href="inventario.php"
-                class="activo"
-                aria-current="page">
-
-                <i class="fa-solid fa-clipboard-list"></i>
-
-                Inventario
-
-            </a>
-
-
-            <a href="../compras/compras.php">
-
-                <i class="fa-solid fa-cart-shopping"></i>
-
-                Compras
-
-            </a>
-
-
-            <a href="../ventas/ventas.php">
-
-                <i class="fa-solid fa-chart-column"></i>
-
-                Ventas
-
-            </a>
-
-
-            <a href="../alertas/alertas.php">
-
-                <i class="fa-solid fa-bell"></i>
-
-                Alertas
-
-            </a>
-
-
-            <a href="../reportes/reportes.php">
-
-                <i class="fa-solid fa-chart-line"></i>
-
-                Reportes
-
-            </a>
-
-
-            <?php if (esAdministradorOGerente()): ?>
-
-                <a href="../bitacora/bitacora.php">
-
-                    <i class="fa-solid fa-clipboard-list"></i>
-
-                    Bitácora
-
-                </a>
-
-
-                <a href="../respaldo/respaldo.php">
-
-                    <i class="fa-solid fa-database"></i>
-
-                    Respaldos
-
-                </a>
-
-            <?php endif; ?>
-
-
-            <?php if (esAdministrador()): ?>
-
-                <a href="../incidencias/incidencias.php">
-
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-
-                    Incidencias
-
-                </a>
-
-            <?php endif; ?>
-
-        </nav>
-
-
-        <!-- Cerrar sesión -->
-
-        <div class="pie-barra-lateral">
-
-            <a
-                href="../index/index.html"
-                id="botonCerrarSesion">
-
-                <i class="fa-solid fa-right-from-bracket"></i>
-
-                Cerrar sesión
-
-            </a>
-
-        </div>
-
-    </aside>
+    <?php vmBarraLateral(); ?>
 
 
     <!-- ======================================================
@@ -333,96 +154,7 @@ header('Expires: 0');
              BARRA SUPERIOR
         =================================================== -->
 
-        <header class="barra-superior">
-
-
-            <!-- Menú -->
-
-            <button
-                type="button"
-                class="boton-menu"
-                aria-label="Abrir o cerrar menú lateral">
-
-                <i class="fa-solid fa-bars"></i>
-
-            </button>
-
-
-            <!-- Buscador general -->
-
-            <div class="buscador-superior">
-
-                <i class="fa-solid fa-magnifying-glass"></i>
-
-                <input
-                    type="search"
-                    id="buscadorGeneralMovimientos"
-                    placeholder="Buscar en el sistema..."
-                    aria-label="Buscar en el sistema"
-                    autocomplete="off">
-
-            </div>
-
-
-            <!-- Acciones superiores -->
-
-            <div class="acciones-superiores">
-
-
-                <!-- Notificaciones -->
-
-                <button
-                    type="button"
-                    class="boton-notificacion"
-                    aria-label="Consultar notificaciones">
-
-                    <i class="fa-regular fa-bell"></i>
-
-                    <span
-                        class="contador"
-                        id="contadorNotificacionesMovimientos"
-                        aria-label="0 notificaciones">
-                        0
-                    </span>
-
-                </button>
-
-
-                <!-- Perfil -->
-
-                <div class="perfil-superior">
-
-                    <div class="perfil-superior-texto">
-
-                        <strong id="nombreUsuarioSuperior">
-
-                            <?= htmlspecialchars(
-                                $nombreUsuario,
-                                ENT_QUOTES,
-                                'UTF-8'
-                            ) ?>
-
-                        </strong>
-
-                        <span id="correoUsuarioSuperior">
-
-                            <?= htmlspecialchars(
-                                $correoUsuario,
-                                ENT_QUOTES,
-                                'UTF-8'
-                            ) ?>
-
-                        </span>
-
-                    </div>
-
-                    <i class="fa-solid fa-chevron-down"></i>
-
-                </div>
-
-            </div>
-
-        </header>
+        <?php vmBarraSuperior(); ?>
 
 
         <!-- ==================================================
@@ -1613,54 +1345,6 @@ header('Expires: 0');
 
                 </div>
 
-
-                <!-- ==================================================
-                     PAGINACIÓN
-                =================================================== -->
-
-                <div class="paginacion">
-
-                    <span id="textoPaginacionMovimientos">
-                        No hay movimientos registrados
-                    </span>
-
-
-                    <div class="paginacion-controles">
-
-                        <button
-                            type="button"
-                            id="botonPaginaAnteriorMovimientos"
-                            disabled
-                            aria-label="Página anterior">
-
-                            <i class="fa-solid fa-chevron-left"></i>
-
-                        </button>
-
-
-                        <button
-                            type="button"
-                            id="paginaActualMovimientos"
-                            class="activo"
-                            disabled>
-                            1
-                        </button>
-
-
-                        <button
-                            type="button"
-                            id="botonPaginaSiguienteMovimientos"
-                            disabled
-                            aria-label="Página siguiente">
-
-                            <i class="fa-solid fa-chevron-right"></i>
-
-                        </button>
-
-                    </div>
-
-                </div>
-
             </section>
 
         </main>
@@ -1672,7 +1356,9 @@ header('Expires: 0');
          JAVASCRIPT
     ======================================================= -->
 
+    <script src="../js/paginador.js"></script>
     <script src="../js/app.js"></script>
+
 
     <script src="../js/movimientos.js"></script>
     <!-- Solo lectura: paneles de Salida y Traslado (HU-22/HU-23) -->
