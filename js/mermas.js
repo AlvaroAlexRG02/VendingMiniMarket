@@ -205,22 +205,25 @@
         if (archivo.size < 1 || archivo.size > 2 * 1024 * 1024) throw new Error('La evidencia debe pesar 2 MB o menos.');
         return archivo;
     }
-    function confirmar() {
-        try {
-            const payload = datosARegistrar();
-            const cantidad = payload.items.reduce((total, item) => total + item.cantidad, 0);
-            const texto = Array.from($('bajaUbicacion').selectedOptions)[0]?.textContent || 'ubicación seleccionada';
-            $('bajaConfirmarTexto').textContent = `Se retirarán ${cantidad} unidad(es) de ${payload.items.length} producto(s) en ${texto}. Motivo: ${payload.motivo}. ¿Confirmar?`;
-            const modal = $('bajaConfirmar');
-            modal.showModal();
-        } catch (err) { aviso(err.message, 'error'); }
+    async function confirmar() {
+        let payload;
+        try { payload = datosARegistrar(); } catch (err) { aviso(err.message, 'error'); return; }
+        const cantidad = payload.items.reduce((total, item) => total + item.cantidad, 0);
+        const texto = Array.from($('bajaUbicacion').selectedOptions)[0]?.textContent || 'ubicación seleccionada';
+        // Popup estándar del sistema (app.js), igual que en el resto de pantallas.
+        const confirmado = await confirmarVending({
+            titulo: 'Confirmar baja de inventario',
+            mensaje: `Se retirarán ${cantidad} unidad(es) de ${payload.items.length} producto(s) en ${texto}. Motivo: ${payload.motivo}.`,
+            textoConfirmar: 'Confirmar baja',
+            peligro: true
+        });
+        if (confirmado) await registrar();
     }
     async function registrar() {
         if (estado.guardando) return;
         let payload;
-        try { payload = datosARegistrar(); } catch (err) { $('bajaConfirmar').close(); aviso(err.message, 'error'); return; }
+        try { payload = datosARegistrar(); } catch (err) { aviso(err.message, 'error'); return; }
         estado.guardando = true;
-        $('bajaAceptar').disabled = true;
         $('bajaGuardar').disabled = true;
         try {
             const form = new FormData();
@@ -228,13 +231,12 @@
             const evidencia = comprobarEvidencia();
             if (evidencia) form.append('evidencia', evidencia, evidencia.name);
             const res = await api('registrar', form);
-            $('bajaConfirmar').close();
             limpiar();
             await cargar();
             await actualizarHistorial();
             aviso(`Movimiento #${res.id_movimiento} registrado: ${res.unidades} unidad(es) descontadas.`, 'ok');
-        } catch (err) { $('bajaConfirmar').close(); aviso(err.message, 'error'); }
-        finally { estado.guardando = false; $('bajaAceptar').disabled = false; $('bajaGuardar').disabled = false; }
+        } catch (err) { aviso(err.message, 'error'); }
+        finally { estado.guardando = false; $('bajaGuardar').disabled = false; }
     }
     function iniciarEventos() {
         $('bajaBuscar').addEventListener('input', () => { estado.seleccionado = ''; elegido(); opciones(); });
@@ -278,8 +280,6 @@
         });
         $('bajaLimpiar').addEventListener('click', () => { limpiar(); aviso('Formulario limpio.'); });
         $('bajaGuardar').addEventListener('click', confirmar);
-        $('bajaCancelar').addEventListener('click', () => $('bajaConfirmar').close());
-        $('bajaAceptar').addEventListener('click', registrar);
         $('bajaActualizar').addEventListener('click', async () => {
             try { await actualizarHistorial(); await cargar(); aviso('Información actualizada.'); }
             catch (err) { aviso(err.message, 'error'); }

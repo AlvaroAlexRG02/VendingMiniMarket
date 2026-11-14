@@ -37,6 +37,12 @@ catalogoLayoutInicio(
                 .subtitulo-panel { margin: 18px 0 6px; font-size: 1rem; }
                 .celda-numero { text-align: right; white-space: nowrap; }
                 .fila-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+                /* Escenarios simulados y márgenes: títulos y valores centrados en la misma columna */
+                .tabla-centrada th,
+                .tabla-centrada td,
+                .tabla-centrada td.celda-numero { text-align: center; vertical-align: middle; }
+                .tabla-centrada .acciones-producto-tabla { justify-content: center; }
             </style>
 
             <!-- ======================================================
@@ -119,7 +125,7 @@ catalogoLayoutInicio(
                 </div>
 
                 <div id="contenedorEscenarios" class="contenedor-tabla" hidden>
-                    <table class="tabla-datos tabla-compacta">
+                    <table class="tabla-datos tabla-compacta tabla-centrada">
                         <caption class="texto-solo-lectores">Escenarios simulados</caption>
                         <thead>
                             <tr>
@@ -194,7 +200,7 @@ catalogoLayoutInicio(
                 </form>
 
                 <div id="contenedorMargenes" class="contenedor-tabla">
-                    <table class="tabla-datos tabla-compacta">
+                    <table class="tabla-datos tabla-compacta tabla-centrada">
                         <caption class="texto-solo-lectores">Márgenes registrados</caption>
                         <thead>
                             <tr>

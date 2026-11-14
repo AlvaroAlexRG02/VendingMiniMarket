@@ -190,3 +190,24 @@ function hoyCostaRica(): string
     return (new DateTimeImmutable('now', new DateTimeZone(ZONA_REPORTES)))->format('Y-m-d');
 }
 
+
+/**
+ * Fecha y hora de la base de datos (TIMESTAMPTZ, p. ej. "2026-11-13 01:16:20+00")
+ * mostrada en hora de Costa Rica. date()/strtotime() usan la zona del servidor
+ * (UTC en Supabase, Europe/Berlin en XAMPP) y mostraban horas corridas en los PDF.
+ */
+function fechaHoraCostaRica($valor, string $formato = 'd/m/Y H:i'): string
+{
+    if ($valor === null || $valor === '') {
+        return '-';
+    }
+
+    try {
+        return (new DateTimeImmutable((string)$valor))
+            ->setTimezone(new DateTimeZone(ZONA_REPORTES))
+            ->format($formato);
+    } catch (Exception $e) {
+        return (string)$valor;
+    }
+}
+

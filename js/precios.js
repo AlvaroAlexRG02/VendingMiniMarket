@@ -14,6 +14,7 @@
 
     const API = '../api/catalogo/precios.php';
     const PAGINA_LOGIN = '../index/index.html';
+    const POR_PAGINA_HISTORIAL = 10;
 
     let catalogos = { productos: [], tiendas: [], margenes: [], impuestos: [] };
     let categorias = [];
@@ -191,8 +192,11 @@
 
         try {
             await C.cargarSesion();
-            await Promise.all([cargarCatalogos(), cargarMargenes()]);
+            // Los paginadores deben existir ANTES de cargar datos: cargarMargenes() dibuja
+            // la tabla con pags.margenes. Antes se creaban después y la pantalla se caía al
+            // abrir ("Cannot read properties of undefined (reading 'paginar')").
             crearPaginadores();
+            await Promise.all([cargarCatalogos(), cargarMargenes()]);
             registrarEventos();
             await cargarPrecios();
         } catch (error) {
@@ -203,16 +207,18 @@
 
 
     function crearPaginadores() {
-        const crear = (clave, ancla, unidad, alCambiar, filtros = []) => {
-            pags[clave] = Paginador.crear({ despuesDe: ancla, unidad, alCambiar, filtros });
+        const crear = (clave, ancla, unidad, alCambiar, filtros = [], porPagina) => {
+            pags[clave] = Paginador.crear({ despuesDe: ancla, unidad, alCambiar, filtros, porPagina });
         };
 
         crear('escenarios', '#contenedorEscenarios', 'escenarios', dibujarEscenarios);
         crear('margenes', '#contenedorMargenes', 'márgenes', renderMargenes);
         crear('masivo', '#contenedorMasivo', 'productos', dibujarMasivo);
         crear('precios', '#contenedorPrecios', 'precios', dibujarPrecios, ['#filtroTienda', '#filtroBusqueda']);
-        crear('historial', '#contenedorHistorial', 'cambios de precio', dibujarHistorial);
-        crear('simulaciones', '#contenedorSimulaciones', 'simulaciones', dibujarSimulaciones);
+
+        // Historial y simulaciones guardadas: cada tabla con su propia paginación de 10.
+        crear('historial', '#contenedorHistorial', 'cambios de precio', dibujarHistorial, [], POR_PAGINA_HISTORIAL);
+        crear('simulaciones', '#contenedorSimulaciones', 'simulaciones', dibujarSimulaciones, [], POR_PAGINA_HISTORIAL);
     }
 
     async function cargarCatalogos() {

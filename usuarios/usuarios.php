@@ -530,7 +530,7 @@ if (!esAdministradorOGerente()) {
 
                     <!-- Nombre -->
 
-                    <div class="campo-formulario">
+                    <div class="grupo-formulario">
                         <label for="nombreUsuario">Nombre</label>
                         <input
                             type="text"
@@ -542,7 +542,9 @@ if (!esAdministradorOGerente()) {
                         >
                     </div>
 
-                    <div class="campo-formulario">
+                    <!-- Apellido -->
+
+                    <div class="grupo-formulario">
                         <label for="apellidoUsuario">Apellido</label>
                         <input
                             type="text"
