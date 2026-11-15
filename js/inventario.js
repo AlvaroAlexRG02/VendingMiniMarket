@@ -673,12 +673,20 @@ function crearFilaInventarioHU20(registro) {
     );
 
 
-    /* Stock actual */
-    fila.appendChild(
-        crearCeldaInventarioHU20(
-            registro.stock_actual
-        )
+    /* Stock actual: destacar existencias negativas sin alterar el valor */
+    const celdaStockActual = crearCeldaInventarioHU20(
+        registro.stock_actual
     );
+
+    if (Number(registro.stock_actual) < 0) {
+        const indicadorNegativo = document.createElement("span");
+        indicadorNegativo.className = "badge badge-rojo";
+        indicadorNegativo.textContent = String(registro.stock_actual);
+        indicadorNegativo.title = "Stock negativo: revisar existencias";
+        celdaStockActual.replaceChildren(indicadorNegativo);
+    }
+
+    fila.appendChild(celdaStockActual);
 
 
     /* Stock mínimo */
