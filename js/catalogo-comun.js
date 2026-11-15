@@ -219,8 +219,17 @@
         return modal;
     }
 
-    /** Devuelve una promesa con true (confirmó) o false (canceló). */
+    /**
+     * Devuelve una promesa con true (confirmó) o false (canceló).
+     * Usa el popup estándar del sistema (confirmarVending de app.js) para que
+     * todas las confirmaciones tengan el mismo formato.
+     */
     function confirmar({ titulo, texto, textoConfirmar = 'Confirmar', peligro = false }) {
+        if (typeof window.confirmarVending === 'function') {
+            return window.confirmarVending({ titulo, mensaje: texto, textoConfirmar, peligro });
+        }
+
+        // Respaldo por si una pantalla no cargó app.js.
         return new Promise((resolver) => {
             const modal = crearModal(`
                 <div class="modal-producto-icono">

@@ -905,7 +905,9 @@ function accionCierreHistorial(PDO $pdo): void
     }
 
     $ids = $idTienda > 0 ? [$idTienda] : array_keys($tiendas);
-    $inicio = fechaValida((string)($_GET['fecha_inicio'] ?? '')) ? $_GET['fecha_inicio'] : date('Y-m-d', strtotime('-30 days'));
+    $inicio = fechaValida((string)($_GET['fecha_inicio'] ?? ''))
+        ? $_GET['fecha_inicio']
+        : (new DateTimeImmutable('now', new DateTimeZone(ZONA_REPORTES)))->modify('-30 days')->format('Y-m-d');
     $fin = fechaValida((string)($_GET['fecha_fin'] ?? '')) ? $_GET['fecha_fin'] : hoyCostaRica();
 
     $st = $pdo->prepare("
@@ -1301,7 +1303,11 @@ function accionExportarPdf(PDO $pdo): void
 
         $secciones[] = ['tipo' => 'par',
             'izquierda' => ['tipo' => 'barras', 'titulo' => 'Más vendidos', 'descripcion' => 'Productos de mayor rotación.',
-                'items' => array_map(fn ($p) => ['etiqueta' => $p['producto'], 'valor' => $p['unidades'], 'texto' => number_format($p['unidades']) . ' u.', 'color' => 'verde'], array_slice($d['mas_vendidos'], 0, 10))],
+                'items' => array_map(fn ($p) => [
+                    // Con varias tiendas el mismo producto puede repetirse: se indica la tienda, como en pantalla.
+                    'etiqueta' => count($f['ids_tiendas']) > 1 ? $p['producto'] . ' · ' . $p['tienda'] : $p['producto'],
+                    'valor' => $p['unidades'], 'texto' => number_format($p['unidades']) . ' u.', 'color' => 'verde',
+                ], array_slice($d['mas_vendidos'], 0, 10))],
             'derecha' => ['tipo' => 'barras', 'titulo' => 'Bajas y pérdidas por motivo', 'descripcion' => 'Valor estimado de lo dado de baja.',
                 'items' => array_map(fn ($m) => ['etiqueta' => $m['motivo'], 'valor' => $m['valor'], 'texto' => pdfMonedaCorta($m['valor']), 'color' => $m['es_perdida'] ? 'rojo' : 'gris'], $d['bajas_por_motivo'])],
         ];
@@ -1325,7 +1331,7 @@ function accionExportarPdf(PDO $pdo): void
                 ['titulo' => 'Valor estimado', 'campo' => 'valor', 'tipo' => 'moneda', 'sumar' => true],
                 ['titulo' => 'Tipo', 'campo' => 'es_perdida', 'tipo' => 'badge', 'etiquetas' => [0 => ['Devolución', 'gris'], 1 => ['Pérdida', 'rojo']]],
             ],
-            'filas' => array_map(fn ($x) => $x + ['es_perdida' => $x['es_perdida'] ? 1 : 0], $d['bajas_por_motivo']),
+            'filas' => array_map(fn ($x) => array_merge($x, ['es_perdida' => $x['es_perdida'] ? 1 : 0]), $d['bajas_por_motivo']),
         ];
         if ($incluirDetalle) {
             $secciones[] = [
@@ -1414,7 +1420,7 @@ function accionExportarPdf(PDO $pdo): void
         ];
 
         $secciones[] = $c
-            ? ['tipo' => 'aviso', 'texto' => 'Día ' . ($c['estado'] === 'CERRADO' ? 'cerrado' : 'reabierto') . " por {$c['usuario_cierra']} el " . date('d/m/Y H:i', strtotime((string)$c['fecha_cierre'])) . " (versión {$c['version']})." . ($c['observaciones'] ? " Observaciones: {$c['observaciones']}" : '')]
+            ? ['tipo' => 'aviso', 'texto' => 'Día ' . ($c['estado'] === 'CERRADO' ? 'cerrado' : 'reabierto') . " por {$c['usuario_cierra']} el " . fechaHoraCostaRica($c['fecha_cierre']) . " (versión {$c['version']})." . ($c['observaciones'] ? " Observaciones: {$c['observaciones']}" : '')]
             : ['tipo' => 'aviso', 'nivel' => 'alerta', 'texto' => 'Este día aún está abierto: el consolidado es una vista previa y no ha sido cerrado.'];
 
         if ($res['ventas_sin_confirmar']['cantidad'] > 0) {
@@ -1431,7 +1437,7 @@ function accionExportarPdf(PDO $pdo): void
                 ['titulo' => 'Total', 'campo' => 'total', 'tipo' => 'moneda', 'sumar' => true],
                 ['titulo' => 'Costo', 'campo' => 'costo', 'tipo' => 'moneda', 'sumar' => true],
             ],
-            'filas' => array_map(fn ($x) => $x + ['fuente' => $x['fuente'] === 'NAYAX' ? 'Nayax' : 'Manual'], $res['ventas']['por_fuente'])];
+            'filas' => array_map(fn ($x) => array_merge($x, ['fuente' => $x['fuente'] === 'NAYAX' ? 'Nayax' : 'Manual']), $res['ventas']['por_fuente'])];
 
         $secciones[] = ['titulo' => 'Movimientos de inventario', 'descripcion' => 'Entradas, salidas, ajustes, bajas y traslados del día.', 'vacio' => 'No hubo movimientos de inventario en este día.',
             'columnas' => [
@@ -1463,7 +1469,7 @@ function accionExportarPdf(PDO $pdo): void
                 'filas' => array_map(fn ($e) => [
                     'accion' => ['CIERRE' => 'Cierre', 'RECIERRE' => 'Nuevo cierre', 'REAPERTURA' => 'Reapertura'][$e['accion']] ?? $e['accion'],
                     'version' => $e['version'], 'usuario' => $e['usuario'],
-                    'fecha' => date('d/m/Y H:i', strtotime((string)$e['fecha'])),
+                    'fecha' => fechaHoraCostaRica($e['fecha']),
                     'detalle' => $e['justificacion'] ?: ($e['observaciones'] ?? ''),
                 ], $d['eventos'])];
         }

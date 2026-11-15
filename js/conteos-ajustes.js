@@ -111,46 +111,15 @@
         } finally { boton.disabled = false; }
     }
     function confirmarAccion(id, decision) {
-        const modal = $('ca24Confirmacion');
-        const mensaje = $('ca24ConfirmacionTexto');
-        const aceptar = $('ca24ConfirmarAceptar');
-        const cancelar = $('ca24ConfirmarCancelar');
-        const titulo = $('ca24ConfirmacionTitulo');
-        const focoAnterior = document.activeElement;
-        titulo.textContent = decision === 'APROBAR' ? 'Aprobar ajuste' : 'Rechazar ajuste';
-        mensaje.textContent = decision === 'APROBAR'
-            ? `¿Desea aprobar el ajuste #${id}? Las existencias se actualizarán.`
-            : `¿Desea rechazar el ajuste #${id}? Las existencias no cambiarán.`;
-        aceptar.textContent = decision === 'APROBAR' ? 'Aprobar ajuste' : 'Rechazar ajuste';
-        aceptar.classList.toggle('danger', decision === 'RECHAZAR');
-        modal.hidden = false;
-        aceptar.focus();
-        return new Promise(resolve => {
-            const cerrar = resultado => {
-                modal.hidden = true;
-                aceptar.removeEventListener('click', ok);
-                cancelar.removeEventListener('click', no);
-                modal.removeEventListener('click', fuera);
-                document.removeEventListener('keydown', tecla);
-                if (focoAnterior?.isConnected) focoAnterior.focus();
-                resolve(resultado);
-            };
-            const ok = () => cerrar(true);
-            const no = () => cerrar(false);
-            const fuera = e => { if (e.target === modal) cerrar(false); };
-            const tecla = e => {
-                if (e.key === 'Escape') { e.preventDefault(); cerrar(false); }
-                if (e.key === 'Tab') {
-                    const botones = [cancelar, aceptar];
-                    const i = botones.indexOf(document.activeElement);
-                    if (e.shiftKey && i === 0) { e.preventDefault(); aceptar.focus(); }
-                    else if (!e.shiftKey && i === 1) { e.preventDefault(); cancelar.focus(); }
-                }
-            };
-            aceptar.addEventListener('click', ok);
-            cancelar.addEventListener('click', no);
-            modal.addEventListener('click', fuera);
-            document.addEventListener('keydown', tecla);
+        // Popup estándar del sistema (app.js), igual que en el resto de pantallas.
+        const aprobar = decision === 'APROBAR';
+        return confirmarVending({
+            titulo: aprobar ? 'Aprobar ajuste' : 'Rechazar ajuste',
+            mensaje: aprobar
+                ? `¿Desea aprobar el ajuste #${id}? Las existencias se actualizarán.`
+                : `¿Desea rechazar el ajuste #${id}? Las existencias no cambiarán.`,
+            textoConfirmar: aprobar ? 'Aprobar ajuste' : 'Rechazar ajuste',
+            peligro: !aprobar
         });
     }
     async function resolver(id, decision) {

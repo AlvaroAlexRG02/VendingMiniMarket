@@ -293,28 +293,6 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
             margin-top: 5px
         }
 
-        .baja-modal {
-            border: 1px solid #dae4f0;
-            border-radius: 12px;
-            max-width: 470px;
-            width: 90%;
-            padding: 24px;
-            color: #1b3354;
-            box-shadow: 0 25px 65px #12203855
-        }
-
-        .baja-modal::backdrop {
-            background: #14233a8f
-        }
-
-        .baja-modal h3 {
-            margin: 0 0 9px
-        }
-
-        .baja-modal p {
-            line-height: 1.5
-        }
-
         @media(max-width:760px) {
 
             .baja-grid,
@@ -430,16 +408,11 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
                 </table>
             </div>
         </section>
-        <dialog id="bajaConfirmar" class="baja-modal">
-            <h3>Confirmar baja de inventario</h3>
-            <p id="bajaConfirmarTexto"></p>
-            <div class="baja-actions"><button type="button" id="bajaCancelar" class="baja-btn">Cancelar</button><button type="button" id="bajaAceptar" class="baja-btn blue">Confirmar baja</button></div>
-        </dialog>
     </main>
     </div>
     <script src="../js/paginador.js"></script>
     <script src="../js/app.js"></script>
-    <script src="../js/mermas.js?v=20261029-2"></script>
+    <script src="../js/mermas.js?v=20261112-1"></script>
 </body>
 
 </html>

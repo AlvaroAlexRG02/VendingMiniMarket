@@ -241,43 +241,6 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
       border-left-color: #23a565
     }
 
-    .ca24-overlay[hidden] {
-      display: none !important
-    }
-
-    .ca24-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 12000;
-      background: rgba(9, 24, 46, .62);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 18px
-    }
-
-    .ca24-modal {
-      width: min(100%, 420px);
-      border: 1px solid #dce4ef;
-      border-radius: 13px;
-      padding: 22px;
-      background: #fff;
-      box-shadow: 0 16px 55px #081d3c55;
-      color: #20344f
-    }
-
-    .ca24-modal h2 {
-      font-size: 1.18rem;
-      margin: 0 0 10px;
-      color: #102344
-    }
-
-    .ca24-modal p {
-      font-size: .9rem;
-      line-height: 1.5;
-      margin: 0 0 19px
-    }
-
     .ca24-btn.danger {
       background: #b42332;
       border-color: #b42332;
@@ -391,13 +354,6 @@ $nombre = trim(($_SESSION['usuario']['nombre'] ?? '') . ' ' . ($_SESSION['usuari
       </nav>
     </header>
     <div id="ca24Aviso" class="ca24-alert" role="alert" aria-live="assertive"></div>
-    <div id="ca24Confirmacion" class="ca24-overlay" hidden>
-      <div class="ca24-modal" role="dialog" aria-modal="true" aria-labelledby="ca24ConfirmacionTitulo" aria-describedby="ca24ConfirmacionTexto">
-        <h2 id="ca24ConfirmacionTitulo">Confirmar ajuste</h2>
-        <p id="ca24ConfirmacionTexto"></p>
-        <div class="ca24-actions"><button type="button" id="ca24ConfirmarCancelar" class="ca24-btn">Cancelar</button><button type="button" id="ca24ConfirmarAceptar" class="ca24-btn blue">Confirmar</button></div>
-      </div>
-    </div>
     <section class="ca24-panel" id="ca24PanelConteo">
       <h2>1. Registrar conteo físico</h2>
       <p class="ca24-hint">Registra los productos contados y sus cantidades.</p>

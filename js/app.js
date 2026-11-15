@@ -2985,240 +2985,193 @@ function inicializarCambioContrasenaInicialVending() {
 
 function mostrarModalConfirmarCerrarSesionVending() {
 
-    return new Promise((resolve) => {
-
-        let modal = document.getElementById("modalConfirmarCerrarSesion");
-
-        if (!modal) {
-
-            modal = document.createElement("div");
-            modal.id = "modalConfirmarCerrarSesion";
-            modal.className = "modal-producto";
-            modal.hidden = true;
-
-            modal.innerHTML = `
-                <div class="modal-producto-fondo" data-cerrar-modal-cerrar-sesion></div>
-
-                <section
-                    class="modal-producto-contenido"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="tituloModalCerrarSesion"
-                >
-
-                    <div class="modal-producto-icono">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </div>
-
-                    <h2 id="tituloModalCerrarSesion">
-                        Cerrar sesión
-                    </h2>
-
-                    <p>
-                        ¿Deseas cerrar sesión?
-                    </p>
-
-                    <div class="acciones-modal-producto">
-
-                        <button
-                            type="button"
-                            id="botonCancelarCerrarSesion"
-                            class="boton boton-borde"
-                        >
-                            Cancelar
-                        </button>
-
-                        <button
-                            type="button"
-                            id="botonConfirmarCerrarSesion"
-                            class="boton boton-azul"
-                        >
-                            Cerrar sesión
-                        </button>
-
-                    </div>
-
-                </section>
-            `;
-
-            document.body.appendChild(modal);
-        }
-
-        const cerrar = (resultado) => {
-            modal.hidden = true;
-            resolve(resultado);
-        };
-
-        modal.querySelector("[data-cerrar-modal-cerrar-sesion]").onclick = () => cerrar(false);
-        modal.querySelector("#botonCancelarCerrarSesion").onclick = () => cerrar(false);
-        modal.querySelector("#botonConfirmarCerrarSesion").onclick = () => cerrar(true);
-
-        modal.hidden = false;
+    // Mismo popup estándar que el resto del sistema.
+    return confirmarVending({
+        titulo: "Cerrar sesión",
+        mensaje: "¿Deseas cerrar sesión?",
+        icono: "fa-solid fa-right-from-bracket",
+        textoConfirmar: "Cerrar sesión"
     });
 }
 
 
 /*=========================================================
   POPUPS GENÉRICOS CON EL ESTILO DE VENDING
-  (reemplazan a los window.alert()/confirm() nativos del
-  navegador, que rompen el estilo visual de la aplicación)
+  ---------------------------------------------------------
+  Formato ÚNICO para todas las confirmaciones y avisos del
+  sistema. No usar window.alert()/confirm() ni modales propios:
+
+    // Confirmación (devuelve true / false)
+    if (await confirmarVending({
+        titulo: 'Cancelar pedido',
+        mensaje: '¿Cancelar este pedido? Esta acción no se puede deshacer.',
+        textoConfirmar: 'Cancelar pedido',
+        peligro: true            // botón rojo e ícono de advertencia
+    })) { ... }
+
+    // Aviso con un solo botón
+    await mostrarAlertaVending({ titulo: 'Listo', mensaje: 'Se guardó.', tipo: 'exito' });
+
+  Todas usan el mismo diseño .modal-producto: ícono en círculo,
+  título, texto y botones [Cancelar] [Confirmar] centrados.
+  Se cierran con Escape o haciendo clic fuera (= Cancelar).
 =========================================================*/
 
-function confirmarVending({
-    titulo = "Confirmar acción",
-    mensaje = "¿Deseas continuar?",
-    icono = "fa-solid fa-circle-question",
-    textoConfirmar = "Confirmar",
-    textoCancelar = "Cancelar",
-    claseBotonConfirmar = "boton-azul"
-} = {}) {
+const ICONOS_POPUP_VENDING = {
+    pregunta: "fa-solid fa-circle-question",
+    peligro: "fa-solid fa-triangle-exclamation",
+    exito: "fa-solid fa-circle-check",
+    error: "fa-solid fa-circle-xmark",
+    info: "fa-solid fa-circle-info"
+};
+
+/** Crea (una sola vez) el contenedor del popup con el formato estándar. */
+function obtenerPopupVending(id, conCancelar) {
+
+    let modal = document.getElementById(id);
+
+    if (modal) {
+        return modal;
+    }
+
+    modal = document.createElement("div");
+    modal.id = id;
+    modal.className = "modal-producto popup-vending";
+    modal.hidden = true;
+
+    modal.innerHTML = `
+        <div class="modal-producto-fondo" data-popup-cancelar></div>
+
+        <section
+            class="modal-producto-contenido"
+            role="${conCancelar ? "alertdialog" : "dialog"}"
+            aria-modal="true"
+            aria-labelledby="${id}Titulo"
+            aria-describedby="${id}Mensaje"
+        >
+            <div class="modal-producto-icono" data-popup-icono>
+                <i aria-hidden="true"></i>
+            </div>
+
+            <h2 id="${id}Titulo"></h2>
+
+            <p id="${id}Mensaje" class="popup-vending-mensaje"></p>
+
+            <div class="acciones-modal-producto">
+                ${conCancelar ? '<button type="button" class="boton boton-borde" data-popup-cancelar>Cancelar</button>' : ""}
+                <button type="button" class="boton boton-azul" data-popup-aceptar>Aceptar</button>
+            </div>
+        </section>
+    `;
+
+    document.body.appendChild(modal);
+    return modal;
+}
+
+/** Muestra el popup y resuelve con true (aceptar) o false (cancelar / Escape / clic fuera). */
+function abrirPopupVending(modal, { titulo, mensaje, icono, variante, textoAceptar, textoCancelar, claseAceptar }) {
 
     return new Promise((resolve) => {
 
-        let modal = document.getElementById("modalConfirmacionVending");
+        const focoAnterior = document.activeElement;
+        const circulo = modal.querySelector("[data-popup-icono]");
+        const aceptar = modal.querySelector("[data-popup-aceptar]");
+        const cancelar = modal.querySelector("button[data-popup-cancelar]");
 
-        if (!modal) {
+        circulo.className = `modal-producto-icono popup-icono-${variante}`;
+        circulo.querySelector("i").className = icono;
+        modal.querySelector("h2").textContent = titulo;
+        modal.querySelector(".popup-vending-mensaje").textContent = mensaje;
 
-            modal = document.createElement("div");
-            modal.id = "modalConfirmacionVending";
-            modal.className = "modal-producto";
-            modal.hidden = true;
+        aceptar.textContent = textoAceptar;
+        aceptar.className = `boton ${claseAceptar}`;
 
-            modal.innerHTML = `
-                <div class="modal-producto-fondo" data-cerrar-modal-confirmacion-vending></div>
-
-                <section
-                    class="modal-producto-contenido"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="tituloModalConfirmacionVending"
-                >
-
-                    <div class="modal-producto-icono" id="iconoModalConfirmacionVending">
-                        <i></i>
-                    </div>
-
-                    <h2 id="tituloModalConfirmacionVending"></h2>
-
-                    <p id="mensajeModalConfirmacionVending"></p>
-
-                    <div class="acciones-modal-producto">
-
-                        <button
-                            type="button"
-                            id="botonCancelarConfirmacionVending"
-                            class="boton boton-borde"
-                        >
-                            Cancelar
-                        </button>
-
-                        <button
-                            type="button"
-                            id="botonConfirmarConfirmacionVending"
-                            class="boton boton-azul"
-                        >
-                            Confirmar
-                        </button>
-
-                    </div>
-
-                </section>
-            `;
-
-            document.body.appendChild(modal);
+        if (cancelar) {
+            cancelar.textContent = textoCancelar;
         }
-
-        modal.querySelector("#iconoModalConfirmacionVending i").className = icono;
-        modal.querySelector("#tituloModalConfirmacionVending").textContent = titulo;
-        modal.querySelector("#mensajeModalConfirmacionVending").textContent = mensaje;
-
-        const botonCancelar = modal.querySelector("#botonCancelarConfirmacionVending");
-        const botonConfirmar = modal.querySelector("#botonConfirmarConfirmacionVending");
-
-        botonCancelar.textContent = textoCancelar;
-        botonConfirmar.textContent = textoConfirmar;
-        botonConfirmar.className = `boton ${claseBotonConfirmar}`;
 
         const cerrar = (resultado) => {
             modal.hidden = true;
+            document.removeEventListener("keydown", alTeclear, true);
+            modal.querySelectorAll("[data-popup-cancelar]").forEach((el) => { el.onclick = null; });
+            aceptar.onclick = null;
+
+            if (!document.querySelector(".modal-producto:not([hidden])")) {
+                document.body.classList.remove("modal-producto-abierto");
+            }
+
+            if (focoAnterior && focoAnterior.isConnected && typeof focoAnterior.focus === "function") {
+                focoAnterior.focus();
+            }
+
             resolve(resultado);
         };
 
-        modal.querySelector("[data-cerrar-modal-confirmacion-vending]").onclick = () => cerrar(false);
-        botonCancelar.onclick = () => cerrar(false);
-        botonConfirmar.onclick = () => cerrar(true);
+        const alTeclear = (evento) => {
+            if (evento.key === "Escape") {
+                evento.preventDefault();
+                evento.stopPropagation();
+                cerrar(false);
+            }
+        };
 
+        modal.querySelectorAll("[data-popup-cancelar]").forEach((el) => { el.onclick = () => cerrar(false); });
+        aceptar.onclick = () => cerrar(true);
+        document.addEventListener("keydown", alTeclear, true);
+
+        // Siempre encima de cualquier otro modal abierto (por ejemplo, un formulario).
+        document.body.appendChild(modal);
+        document.body.classList.add("modal-producto-abierto");
         modal.hidden = false;
+
+        // El foco inicial va a "Cancelar" para que un Enter accidental no confirme.
+        (cancelar || aceptar).focus();
+    });
+}
+
+function confirmarVending({
+    titulo = "Confirmar acción",
+    mensaje,
+    texto,
+    icono,
+    textoConfirmar = "Confirmar",
+    textoCancelar = "Cancelar",
+    peligro = false,
+    claseBotonConfirmar
+} = {}) {
+
+    const esPeligro = peligro || claseBotonConfirmar === "boton-peligro";
+
+    return abrirPopupVending(obtenerPopupVending("modalConfirmacionVending", true), {
+        titulo,
+        mensaje: mensaje ?? texto ?? "¿Deseas continuar?",
+        icono: icono || (esPeligro ? ICONOS_POPUP_VENDING.peligro : ICONOS_POPUP_VENDING.pregunta),
+        variante: esPeligro ? "peligro" : "pregunta",
+        textoAceptar: textoConfirmar,
+        textoCancelar,
+        claseAceptar: claseBotonConfirmar || (esPeligro ? "boton-peligro" : "boton-azul")
     });
 }
 
 function mostrarAlertaVending({
     titulo = "Aviso",
-    mensaje = "",
-    icono = "fa-solid fa-circle-info"
+    mensaje,
+    texto,
+    tipo = "info",
+    icono,
+    textoBoton = "Entendido"
 } = {}) {
 
-    return new Promise((resolve) => {
+    const variante = ICONOS_POPUP_VENDING[tipo] ? tipo : "info";
 
-        let modal = document.getElementById("modalAlertaVending");
-
-        if (!modal) {
-
-            modal = document.createElement("div");
-            modal.id = "modalAlertaVending";
-            modal.className = "modal-producto";
-            modal.hidden = true;
-
-            modal.innerHTML = `
-                <div class="modal-producto-fondo" data-cerrar-modal-alerta-vending></div>
-
-                <section
-                    class="modal-producto-contenido"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="tituloModalAlertaVending"
-                >
-
-                    <div class="modal-producto-icono" id="iconoModalAlertaVending">
-                        <i></i>
-                    </div>
-
-                    <h2 id="tituloModalAlertaVending"></h2>
-
-                    <p id="mensajeModalAlertaVending"></p>
-
-                    <div class="acciones-modal-producto">
-
-                        <button
-                            type="button"
-                            id="botonAceptarAlertaVending"
-                            class="boton boton-azul"
-                        >
-                            Entendido
-                        </button>
-
-                    </div>
-
-                </section>
-            `;
-
-            document.body.appendChild(modal);
-        }
-
-        modal.querySelector("#iconoModalAlertaVending i").className = icono;
-        modal.querySelector("#tituloModalAlertaVending").textContent = titulo;
-        modal.querySelector("#mensajeModalAlertaVending").textContent = mensaje;
-
-        const cerrar = () => {
-            modal.hidden = true;
-            resolve();
-        };
-
-        modal.querySelector("[data-cerrar-modal-alerta-vending]").onclick = cerrar;
-        modal.querySelector("#botonAceptarAlertaVending").onclick = cerrar;
-
-        modal.hidden = false;
-    });
+    return abrirPopupVending(obtenerPopupVending("modalAlertaVending", false), {
+        titulo,
+        mensaje: mensaje ?? texto ?? "",
+        icono: icono || ICONOS_POPUP_VENDING[variante],
+        variante,
+        textoAceptar: textoBoton,
+        claseAceptar: variante === "error" ? "boton-peligro" : "boton-azul"
+    }).then(() => undefined);
 }
 
 function mostrarDetalleVentaVending(venta) {

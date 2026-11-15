@@ -1962,6 +1962,26 @@ body.pagina-app {
     font-size: 24px;
 }
 
+/* Popups estándar (confirmarVending / mostrarAlertaVending): color del ícono según el tipo */
+.modal-producto-icono.popup-icono-peligro,
+.modal-producto-icono.popup-icono-error {
+    background: #fee2e2;
+    color: var(--rojo);
+}
+
+.modal-producto-icono.popup-icono-exito {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.popup-vending {
+    z-index: 1100;
+}
+
+.popup-vending-mensaje {
+    white-space: pre-line;
+}
+
 .modal-producto-contenido h2 {
     margin: 0 0 9px;
 }
@@ -4021,7 +4041,7 @@ body.pagina-app {
 
 .grafico-dona {
     display: grid;
-    grid-template-columns: minmax(130px, 180px) 1fr;
+    grid-template-columns: minmax(110px, 160px) minmax(0, 1fr);
     align-items: center;
     gap: 22px;
 }
@@ -4078,9 +4098,12 @@ body.pagina-app {
 }
 
 .leyenda-etiqueta {
+    min-width: 0;
     color: var(--texto-principal);
     font-weight: 600;
-    overflow-wrap: anywhere;
+    /* Solo corta entre palabras (antes partía "VENCIMIENTO" en "VENCIMIEN / TO") */
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .leyenda-valor {

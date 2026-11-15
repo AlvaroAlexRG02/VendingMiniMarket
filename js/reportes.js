@@ -611,7 +611,11 @@
                     return;
                 }
 
-                if (!window.confirm('¿Confirmar el cierre del día? Después de cerrarlo no se podrán registrar ni modificar ventas o movimientos de esta tienda en ese día.')) {
+                if (!await confirmarVending({
+                    titulo: 'Confirmar cierre del día',
+                    mensaje: 'Después de cerrarlo no se podrán registrar ni modificar ventas o movimientos de esta tienda en ese día.',
+                    textoConfirmar: 'Cerrar el día'
+                })) {
                     return;
                 }
 
@@ -632,7 +636,12 @@
                     return;
                 }
 
-                if (!window.confirm('¿Reabrir este cierre? Quedará registrado en la bitácora con tu justificación.')) {
+                if (!await confirmarVending({
+                    titulo: 'Reabrir cierre',
+                    mensaje: 'El día volverá a quedar abierto para correcciones. Quedará registrado en la bitácora con tu justificación.',
+                    textoConfirmar: 'Reabrir cierre',
+                    peligro: true
+                })) {
                     return;
                 }
 
@@ -1079,11 +1088,17 @@
 
             const nombre = (respuesta.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || `reporte-${tipo}.pdf`;
             const blob = await respuesta.blob();
+            const url = URL.createObjectURL(blob);
             const enlace = document.createElement('a');
-            enlace.href = URL.createObjectURL(blob);
+            enlace.href = url;
             enlace.download = nombre;
+            enlace.hidden = true;
+            // Firefox solo descarga si el enlace está en la página, y si la URL se revoca
+            // en el mismo instante algunos navegadores cancelan la descarga.
+            document.body.appendChild(enlace);
             enlace.click();
-            URL.revokeObjectURL(enlace.href);
+            enlace.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
 
             mensaje('El PDF se generó correctamente.', 'exito');
         } catch (error) {

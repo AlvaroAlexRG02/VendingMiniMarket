@@ -605,7 +605,13 @@
 
         const botonCancelar = evento.target.closest('button.boton-cancelar-pedido');
         if (botonCancelar) {
-            if (window.confirm('¿Cancelar este pedido? Esta acción no se puede deshacer.')) {
+            if (await confirmarVending({
+                titulo: 'Cancelar pedido',
+                mensaje: '¿Cancelar este pedido? Esta acción no se puede deshacer.',
+                textoConfirmar: 'Cancelar pedido',
+                textoCancelar: 'Volver',
+                peligro: true
+            })) {
                 await cancelarPedido(Number(botonCancelar.dataset.pedido));
             }
             return;
