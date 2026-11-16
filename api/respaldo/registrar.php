@@ -56,6 +56,9 @@ try {
         !isset($resultadoGenerador["success"]) ||
         $resultadoGenerador["success"] !== true
     ) {
+        $detalleError = is_array($resultadoGenerador)
+            ? (string)($resultadoGenerador["error"] ?? "No se pudo generar el archivo de respaldo.")
+            : "El generador no devolvió un resultado válido.";
 
         $pdo->beginTransaction();
 
@@ -87,7 +90,7 @@ try {
         $auditoria->execute([
             ":id_usuario" => $_SESSION["usuario"]["id_usuario"],
             ":valor_nuevo" => json_encode([
-                "mensaje" => "No se pudo generar el archivo de respaldo."
+                "mensaje" => $detalleError
             ]),
             ":ip_origen" => $_SERVER["REMOTE_ADDR"] ?? null
         ]);
@@ -98,7 +101,7 @@ try {
 
         echo json_encode([
             "success" => false,
-            "message" => "No fue posible generar el respaldo."
+            "message" => "No fue posible generar el respaldo. " . $detalleError
         ]);
 
         exit;

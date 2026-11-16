@@ -97,6 +97,7 @@ $rolUsuario = $_SESSION["usuario"]["nombre_rol"] ?? "Usuario";
                 <div>
                     <h1><i class="fa-solid fa-database"></i> Gestión de respaldos</h1>
                     <p>Consulta el historial y genera respaldos de la base de datos.</p>
+                    <p>Para automatizarlos, programe <code>scripts/ejecutar_respaldo_automatico.php</code> en el Programador de tareas de Windows a las 02:00. El equipo debe estar encendido y Docker disponible.</p>
                 </div>
                 <button type="button" id="btnRegistrarRespaldo" class="boton boton-azul">
                     <i class="fa-solid fa-database"></i> Generar respaldo
