@@ -94,6 +94,13 @@ header("Expires: 0");
 
                 <div class="acciones-encabezado-reportes">
 
+                    <?php if (esAdministradorOGerente()): ?>
+                        <a href="../recomendaciones/recomendaciones.php" class="boton boton-azul">
+                            <i class="fa-solid fa-lightbulb"></i>
+                            Recomendaciones
+                        </a>
+                    <?php endif; ?>
+
                     <button
                         type="button"
                         id="botonImprimirReporte"
