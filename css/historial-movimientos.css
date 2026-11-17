@@ -1,0 +1,66 @@
+/* HU-29. Solo modifica la sección del historial; no afecta el formulario de movimientos. */
+#contenedorTablaMovimientos[hidden],
+#hist29Paginacion[hidden],
+#mensajeSinMovimientos[hidden],
+#mensajeSinResultadosMovimientos[hidden],
+#botonExportarMovimientos[hidden] { display: none !important; }
+.hist29-barra { display:flex !important; flex-wrap:wrap; align-items:end; gap:12px; }
+.hist29-barra .campo-busqueda-filtro { flex:2 1 235px; min-width:190px; }
+.hist29-barra .selector-filtro { flex:1 1 140px; min-width:140px; }
+.hist29-barra .selector-filtro select,
+.hist29-barra .selector-filtro input { width:100%; min-width:0; }
+.hist29-barra #botonLimpiarFiltros { flex:0 0 auto; }
+#resultadoBusquedaMovimientos { min-height:1.5em; }
+#resultadoBusquedaMovimientos.hist29-error { color:#b42318; font-weight:600; }
+.hist29-paginacion { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:12px; padding:14px 0 3px; font-size:.86rem; color:#58657a; }
+.hist29-paginacion .hist29-paginas-texto { margin-right:auto; }
+.hist29-paginacion button[disabled] { opacity:.42; cursor:not-allowed; }
+#contenedorTablaMovimientos { overflow-x:auto; }
+#contenedorTablaMovimientos table { min-width:980px; }
+#contenedorTablaMovimientos td { vertical-align:middle; }
+#contenedorTablaMovimientos .hist29-numero { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+#contenedorTablaMovimientos .hist29-negativo { color:#b42318; font-weight:700; }
+#contenedorTablaMovimientos .hist29-ver { padding:6px 12px; font-size:.79rem; }
+.hist29-detalle { position:fixed; inset:0 0 0 auto; margin:0 0 0 auto; width:min(460px,100vw); height:100vh; max-height:100vh; padding:24px; overflow-y:auto; border:0; border-left:1px solid #dfe5f0; box-shadow:-8px 0 30px rgba(14,30,59,.16); background:#fff; color:#203150; }
+.hist29-detalle::backdrop { background:rgba(9,23,46,.45); }
+.hist29-detalle-header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:15px; margin-bottom:12px; border-bottom:1px solid #e2e7ef; }
+.hist29-detalle-header h2 { margin:0; font-size:1.14rem; }
+.hist29-datos { display:grid; gap:0; margin:0; }
+.hist29-campo-detalle { display:grid; grid-template-columns:minmax(0,44%) minmax(0,1fr); gap:12px; padding:11px 0; border-bottom:1px solid #edf0f5; }
+.hist29-campo-detalle dt { color:#67768c; font-size:.81rem; }
+.hist29-campo-detalle dd { margin:0; overflow-wrap:anywhere; font-size:.87rem; font-weight:600; }
+@media(max-width:580px) { .hist29-detalle { padding:16px; } .hist29-campo-detalle { grid-template-columns:1fr; gap:4px; } }
+
+/* Ajustes de lectura: el encabezado y los importes comparten la misma alineación. */
+#contenedorTablaMovimientos table thead th:nth-child(7),
+#contenedorTablaMovimientos table thead th:nth-child(8),
+#contenedorTablaMovimientos table tbody td:nth-child(7),
+#contenedorTablaMovimientos table tbody td:nth-child(8) {
+  text-align: center !important;
+  min-width: 108px;
+  width: 108px;
+  padding: 10px 8px !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+#contenedorTablaMovimientos table tbody td:nth-child(5),
+#contenedorTablaMovimientos table tbody td:nth-child(6) {
+  min-width: 155px;
+  white-space: normal;
+}
+
+/* Cifras y encabezados alineados de manera idéntica (Cantidad / Saldo final). */
+#contenedorTablaMovimientos .hist29-numero { text-align:center!important; }
+#contenedorTablaMovimientos table thead th:nth-child(7),
+#contenedorTablaMovimientos table thead th:nth-child(8) { vertical-align:middle; }
+/* Menú de exportación contextual: no cubre toda la pantalla. */
+.hist29-exportar { display:inline-block;position:relative;isolation:isolate;z-index:20; }
+.hist29-menu-exportar[hidden] {display:none!important;}
+.hist29-menu-exportar {position:absolute;top:calc(100% + 6px);right:0;min-width:215px;padding:6px;
+  background:white;border:1px solid #dbe4f0;border-radius:11px;box-shadow:0 10px 28px rgba(19,36,73,.18);z-index:55;}
+.hist29-opcion-exportar {display:flex;align-items:center;gap:11px;width:100%;padding:12px 13px;
+  background:transparent;border:0;border-radius:7px;color:#1d3554;font-size:.87rem;font-weight:600;font-family:inherit;text-align:left;cursor:pointer;}
+.hist29-opcion-exportar:hover,.hist29-opcion-exportar:focus-visible {background:#ecf3ff;outline:none;}
+.hist29-opcion-exportar .fa-file-excel {color:#137b45;}
+.hist29-opcion-exportar .fa-file-pdf {color:#b42318;}
+.hist29-opcion-exportar .fa-print {color:#2458bc;}

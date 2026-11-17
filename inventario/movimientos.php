@@ -124,6 +124,7 @@ header('Expires: 0');
 
     <!-- Font Awesome -->
 
+    <link rel="stylesheet" href="../css/historial-movimientos.css?v=20261117-4">
 </head>
 
 
@@ -1386,6 +1387,7 @@ header('Expires: 0');
     </script>
 
 
+    <script src="../js/historial-movimientos.js?v=20261117-4"></script>
 </body>
 
 </html>

@@ -1486,7 +1486,7 @@ function inicializarPaginaVentas() {
     }
 
     inicializarRegistroVenta();
-    inicializarImportacionDirectaNayax();
+    inicializarImportacionVentasNayax();
     inicializarFiltrosVentas();
 
     // El Dependiente no tiene acceso a Reportes, donde vive el cierre diario.
