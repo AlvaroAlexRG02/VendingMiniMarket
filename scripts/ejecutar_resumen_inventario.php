@@ -170,7 +170,7 @@ function generarDatosResumen(PDO $pdo, string $inicio, string $fin): array
     ];
 }
 
-function tablaResumen(string $encabezado, array $filas): string
+function tablaResumen(array $encabezado, array $filas): string
 {
     if (!$filas) {
         return '<p>No hay registros para este periodo.</p>';
