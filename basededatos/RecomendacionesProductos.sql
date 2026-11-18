@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS public.recomendacion_producto (
     ventas_por_dia JSONB NOT NULL DEFAULT '[]'::JSONB,
     stock_actual INTEGER NOT NULL DEFAULT 0,
     ubicaciones TEXT,
+    ia_explicacion TEXT,
+    ia_modelo VARCHAR(100),
+    ia_fecha_generacion TIMESTAMPTZ,
+    ia_id_usuario BIGINT
+        REFERENCES public.usuario(id_usuario) ON DELETE SET NULL,
     estado VARCHAR(15) NOT NULL DEFAULT 'PENDIENTE'
         CHECK (estado IN ('PENDIENTE', 'REVISADA', 'ACEPTADA', 'DESCARTADA')),
     fecha_generacion TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -38,6 +43,13 @@ CREATE TABLE IF NOT EXISTS public.recomendacion_producto (
     CONSTRAINT chk_recomendacion_periodo
         CHECK (periodo_inicio <= periodo_fin)
 );
+
+ALTER TABLE public.recomendacion_producto
+    ADD COLUMN IF NOT EXISTS ia_explicacion TEXT,
+    ADD COLUMN IF NOT EXISTS ia_modelo VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS ia_fecha_generacion TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS ia_id_usuario BIGINT
+        REFERENCES public.usuario(id_usuario) ON DELETE SET NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_recomendacion_producto_activa
     ON public.recomendacion_producto (id_tienda, id_producto)

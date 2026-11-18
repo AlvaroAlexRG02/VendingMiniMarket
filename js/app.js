@@ -133,6 +133,13 @@ function inicializarNavegacionLateral() {
             rutasActivas: ["reportes/reportes.php"]
         },
         {
+            nombre: "Recomendaciones",
+            ruta: "recomendaciones/recomendaciones.php",
+            icono: "fa-lightbulb",
+            roles: [1, 2],
+            rutasActivas: ["recomendaciones/recomendaciones.php"]
+        },
+        {
             nombre: "Bitácora",
             ruta: "bitacora/bitacora.php",
             icono: "fa-clipboard-list",

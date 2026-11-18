@@ -42,6 +42,9 @@ header('Expires: 0');
         .recomendacion-filtros { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
         .recomendacion-filtros label { display:grid; gap:6px; font-weight:600; }
         .recomendacion-filtros select { min-height:40px; min-width:180px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; }
+        .recomendacion-ia { margin-top:14px; padding:14px; border-left:4px solid #7c3aed; border-radius:8px; background:#f5f3ff; }
+        .recomendacion-ia p { white-space:pre-line; }
+        .recomendacion-ia small { color:#64748b; }
         @media (max-width:600px) { .recomendacion-item { padding:14px; } }
     </style>
 </head>
@@ -61,6 +64,39 @@ header('Expires: 0');
             </section>
 
             <p id="mensajeRecomendaciones" class="recomendacion-mensaje" role="status" aria-live="polite"></p>
+
+            <section class="grilla-estadisticas" aria-label="Resumen de recomendaciones">
+                <article class="tarjeta-estadistica">
+                    <div class="tarjeta-estadistica-encabezado">
+                        <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-lightbulb"></i></div>
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">Total de sugerencias</div>
+                            <div class="tarjeta-estadistica-valor" id="totalRecomendaciones">0</div>
+                        </div>
+                    </div>
+                    <div class="tarjeta-estadistica-cambio">Registradas en el sistema</div>
+                </article>
+                <article class="tarjeta-estadistica borde-naranja">
+                    <div class="tarjeta-estadistica-encabezado">
+                        <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-clock"></i></div>
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">Pendientes</div>
+                            <div class="tarjeta-estadistica-valor" id="recomendacionesPendientes">0</div>
+                        </div>
+                    </div>
+                    <div class="tarjeta-estadistica-cambio">Esperan revisión</div>
+                </article>
+                <article class="tarjeta-estadistica borde-morado">
+                    <div class="tarjeta-estadistica-encabezado">
+                        <div class="tarjeta-estadistica-icono"><i class="fa-solid fa-magnifying-glass"></i></div>
+                        <div>
+                            <div class="tarjeta-estadistica-titulo">Revisadas</div>
+                            <div class="tarjeta-estadistica-valor" id="recomendacionesRevisadas">0</div>
+                        </div>
+                    </div>
+                    <div class="tarjeta-estadistica-cambio">Atendidas, listas para decisión</div>
+                </article>
+            </section>
 
             <section class="panel">
                 <h2>Umbral global de ventas</h2>
@@ -113,6 +149,9 @@ header('Expires: 0');
         const mensajeRecomendaciones = document.getElementById("mensajeRecomendaciones");
         const umbralUnidades = document.getElementById("umbralUnidades");
         const fechaUmbral = document.getElementById("fechaUmbral");
+        const totalRecomendaciones = document.getElementById("totalRecomendaciones");
+        const recomendacionesPendientes = document.getElementById("recomendacionesPendientes");
+        const recomendacionesRevisadas = document.getElementById("recomendacionesRevisadas");
         const filtroTiendaRecomendacion = document.getElementById("filtroTiendaRecomendacion");
         const filtroEstadoRecomendacion = document.getElementById("filtroEstadoRecomendacion");
         const ordenRecomendaciones = document.getElementById("ordenRecomendaciones");
@@ -201,6 +240,17 @@ header('Expires: 0');
                 const historial = recomendacion.historial.length
                     ? `<ol>${recomendacion.historial.map(evento => `<li>${escaparRecomendacion(evento.estado_anterior || "Nueva")} → ${escaparRecomendacion(evento.estado_nuevo)} · ${escaparRecomendacion(evento.responsable)} · ${escaparRecomendacion(formatearFechaRecomendacion(evento.fecha))}${evento.comentario ? ` — ${escaparRecomendacion(evento.comentario)}` : ""}</li>`).join("")}</ol>`
                     : "<p>Sin cambios registrados.</p>";
+                const explicacionIA = recomendacion.ia_explicacion
+                    ? `<div class="recomendacion-ia">
+                        <strong><i class="fa-solid fa-wand-magic-sparkles"></i> Explicación generada con IA</strong>
+                        <p>${escaparRecomendacion(recomendacion.ia_explicacion)}</p>
+                        <small>Modelo: ${escaparRecomendacion(recomendacion.ia_modelo || "-")} · Generada: ${escaparRecomendacion(formatearFechaRecomendacion(recomendacion.ia_fecha_generacion))}</small>
+                        <div><button type="button" class="boton boton-borde" data-ia="${recomendacion.id_recomendacion}">Regenerar explicación</button></div>
+                    </div>`
+                    : `<div class="recomendacion-ia">
+                        <p>La IA puede explicar los datos de esta sugerencia. La decisión sigue siendo tuya.</p>
+                        <button type="button" class="boton boton-borde" data-ia="${recomendacion.id_recomendacion}">Generar explicación con IA</button>
+                    </div>`;
                 let acciones = "";
                 if (recomendacion.estado === "PENDIENTE") {
                     acciones = `<button type="button" class="boton boton-borde" data-estado="REVISADA" data-id="${recomendacion.id_recomendacion}">Marcar revisada</button>`;
@@ -222,6 +272,7 @@ header('Expires: 0');
                     <p>La rotación está por debajo del umbral. Revisa si conviene reducir compras o considerar la posible sustitución del producto; el sistema no propone un sustituto.</p>
                     <details><summary>Historial de ventas</summary>${ventasDiarias}</details>
                     <details><summary>Historial de revisión y decisiones</summary>${historial}</details>
+                    ${explicacionIA}
                     ${acciones ? `<div class="recomendacion-acciones"><input class="recomendacion-comentario" maxlength="1000" placeholder="Observación / comentario" aria-label="Observación o comentario para ${escaparRecomendacion(recomendacion.producto)}">${acciones}</div>` : ""}
                 </article>`;
             }).join("");
@@ -231,6 +282,9 @@ header('Expires: 0');
             const resultado = await solicitarRecomendaciones();
             umbralUnidades.value = resultado.data.configuracion.umbral_unidades;
             fechaUmbral.textContent = `Actualizado: ${formatearFechaRecomendacion(resultado.data.configuracion.fecha_actualizacion)}`;
+            totalRecomendaciones.textContent = resultado.data.conteos.total;
+            recomendacionesPendientes.textContent = resultado.data.conteos.pendientes;
+            recomendacionesRevisadas.textContent = resultado.data.conteos.revisadas;
             const tiendaActual = filtroTiendaRecomendacion.value;
             const tiendas = new Map(resultado.data.recomendaciones.map(recomendacion => [
                 String(recomendacion.id_tienda),
@@ -283,6 +337,29 @@ header('Expires: 0');
         });
 
         listaRecomendaciones.addEventListener("click", async evento => {
+            const botonIA = evento.target.closest("button[data-ia]");
+            if (botonIA) {
+                botonIA.disabled = true;
+                botonIA.textContent = "Generando explicación...";
+                mensajeRecomendaciones.textContent = "Solicitando explicación a OpenAI...";
+                try {
+                    await solicitarRecomendaciones({
+                        method: "POST",
+                        body: JSON.stringify({
+                            accion: "explicar_ia",
+                            id_recomendacion: botonIA.dataset.ia
+                        })
+                    });
+                    mensajeRecomendaciones.textContent = "Explicación generada y guardada.";
+                    await cargarRecomendaciones();
+                } catch (error) {
+                    mensajeRecomendaciones.textContent = error.message;
+                    botonIA.disabled = false;
+                    botonIA.textContent = "Reintentar explicación con IA";
+                }
+                return;
+            }
+
             const boton = evento.target.closest("button[data-estado]");
             if (!boton) return;
             const articulo = boton.closest(".recomendacion-item");

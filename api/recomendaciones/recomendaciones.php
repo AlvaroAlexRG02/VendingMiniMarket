@@ -52,6 +52,10 @@ function responderRecomendaciones(bool $success, $data = null, string $message =
     exit;
 }
 
+final class ErrorOpenAIRecomendacion extends RuntimeException
+{
+}
+
 function exigirAdministradorRecomendaciones(): int
 {
     if (empty($_SESSION['usuario'])) {
@@ -109,6 +113,27 @@ function leerConfiguracionRecomendaciones(PDO $pdo): array
     return $fila;
 }
 
+function contarRecomendaciones(PDO $pdo): array
+{
+    $fila = $pdo->query("
+        SELECT
+            COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE estado = 'PENDIENTE') AS pendientes,
+            COUNT(*) FILTER (WHERE estado = 'REVISADA') AS revisadas,
+            COUNT(*) FILTER (WHERE estado = 'ACEPTADA') AS aceptadas,
+            COUNT(*) FILTER (WHERE estado = 'DESCARTADA') AS descartadas
+        FROM public.recomendacion_producto
+    ")->fetch();
+
+    return array_map('intval', $fila ?: [
+        'total' => 0,
+        'pendientes' => 0,
+        'revisadas' => 0,
+        'aceptadas' => 0,
+        'descartadas' => 0,
+    ]);
+}
+
 function listarRecomendaciones(PDO $pdo): array
 {
     $recomendaciones = $pdo->query("
@@ -126,6 +151,9 @@ function listarRecomendaciones(PDO $pdo): array
             r.ventas_por_dia,
             r.stock_actual,
             r.ubicaciones,
+            r.ia_explicacion,
+            r.ia_modelo,
+            r.ia_fecha_generacion,
             r.estado,
             r.fecha_generacion,
             r.fecha_actualizacion
@@ -180,6 +208,182 @@ function listarRecomendaciones(PDO $pdo): array
     unset($fila);
 
     return $recomendaciones;
+}
+
+function generarExplicacionOpenAI(PDO $pdo, int $idUsuario, array $entrada): array
+{
+    $idRecomendacion = filter_var(
+        $entrada['id_recomendacion'] ?? null,
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]
+    );
+    if ($idRecomendacion === false) {
+        responderRecomendaciones(false, null, 'La recomendación indicada no es válida.', 400);
+    }
+
+    $apiKey = getenv('OPENAI_API_KEY');
+    if (!is_string($apiKey) || trim($apiKey) === '') {
+        responderRecomendaciones(
+            false,
+            null,
+            'OpenAI no está configurado. Defina OPENAI_API_KEY en el entorno de PHP y reinicie Apache.',
+            503
+        );
+    }
+    if (!function_exists('curl_init')) {
+        throw new ErrorOpenAIRecomendacion('La extensión cURL de PHP es necesaria para conectar con OpenAI.');
+    }
+
+    $consulta = $pdo->prepare("
+        SELECT
+            r.id_recomendacion,
+            r.id_tienda,
+            t.nombre AS tienda,
+            p.nombre AS producto,
+            c.nombre AS categoria,
+            r.periodo_inicio,
+            r.periodo_fin,
+            r.unidades_vendidas,
+            r.umbral_unidades,
+            r.ventas_por_dia,
+            r.stock_actual,
+            r.ubicaciones
+        FROM public.recomendacion_producto r
+        JOIN public.tienda t ON t.id_tienda = r.id_tienda
+        JOIN public.producto p ON p.id_producto = r.id_producto
+        LEFT JOIN public.categoria c ON c.id_categoria = p.id_categoria
+        WHERE r.id_recomendacion = :id
+    ");
+    $consulta->execute([':id' => $idRecomendacion]);
+    $recomendacion = $consulta->fetch();
+    if (!$recomendacion) {
+        responderRecomendaciones(false, null, 'No se encontró la recomendación.', 404);
+    }
+
+    $modelo = trim((string)(getenv('OPENAI_MODEL') ?: ''));
+    if ($modelo === '') {
+        $modelo = 'gpt-4.1-mini';
+    }
+    $datos = [
+        'producto' => $recomendacion['producto'],
+        'categoria' => $recomendacion['categoria'],
+        'tienda' => $recomendacion['tienda'],
+        'periodo' => [
+            'inicio' => $recomendacion['periodo_inicio'],
+            'fin' => $recomendacion['periodo_fin'],
+        ],
+        'unidades_vendidas' => (int)$recomendacion['unidades_vendidas'],
+        'umbral_unidades' => (int)$recomendacion['umbral_unidades'],
+        'stock_actual' => (int)$recomendacion['stock_actual'],
+        'ubicaciones' => $recomendacion['ubicaciones'],
+        'ventas_por_dia' => json_decode((string)$recomendacion['ventas_por_dia'], true) ?: [],
+    ];
+    $payload = json_encode([
+        'model' => $modelo,
+        'store' => false,
+        'instructions' => 'Eres un asistente que explica datos de inventario. Redacta en español una explicación breve, neutral y basada exclusivamente en los datos recibidos. Indica por qué el producto quedó bajo el umbral y menciona el stock solo si es relevante. No inventes causas, tendencias ni datos faltantes. No sugieras productos sustitutos, compras, cambios de precio ni acciones automáticas; aclara que la decisión corresponde al administrador o gerente.',
+        'input' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
+        'max_output_tokens' => 180,
+    ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($payload === false) {
+        throw new ErrorOpenAIRecomendacion('No fue posible preparar los datos para OpenAI.');
+    }
+
+    $curl = curl_init('https://api.openai.com/v1/responses');
+    if ($curl === false) {
+        throw new ErrorOpenAIRecomendacion('No fue posible inicializar la conexión segura con OpenAI.');
+    }
+    curl_setopt_array($curl, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . trim($apiKey),
+            'Content-Type: application/json',
+        ],
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_TIMEOUT => 20,
+    ]);
+
+    $respuesta = curl_exec($curl);
+    $errorCurl = curl_error($curl);
+    $estadoHttp = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    if ($respuesta === false) {
+        error_log('[recomendaciones] Error de conexión OpenAI: ' . $errorCurl);
+        throw new ErrorOpenAIRecomendacion('No se pudo conectar con OpenAI. Revise la conexión e inténtelo de nuevo.');
+    }
+    if ($estadoHttp < 200 || $estadoHttp >= 300) {
+        error_log('[recomendaciones] OpenAI respondió HTTP ' . $estadoHttp . '.');
+        throw new ErrorOpenAIRecomendacion(
+            $estadoHttp === 401 || $estadoHttp === 403
+                ? 'OpenAI rechazó la clave configurada. Revise OPENAI_API_KEY.'
+                : 'OpenAI no pudo generar la explicación (HTTP ' . $estadoHttp . ').'
+        );
+    }
+
+    $respuestaJson = json_decode($respuesta, true);
+    if (!is_array($respuestaJson)) {
+        throw new ErrorOpenAIRecomendacion('OpenAI no devolvió una respuesta válida. Inténtelo de nuevo.');
+    }
+    $fragmentos = [];
+    foreach (($respuestaJson['output'] ?? []) as $salida) {
+        foreach (($salida['content'] ?? []) as $contenido) {
+            if (($contenido['type'] ?? '') === 'output_text' && is_string($contenido['text'] ?? null)) {
+                $fragmentos[] = trim($contenido['text']);
+            }
+        }
+    }
+    $explicacion = trim(implode("\n", $fragmentos));
+    if (json_last_error() !== JSON_ERROR_NONE || $explicacion === '') {
+        throw new ErrorOpenAIRecomendacion('OpenAI no devolvió una explicación válida. Inténtelo de nuevo.');
+    }
+    if (mb_strlen($explicacion, 'UTF-8') > 2000) {
+        $explicacion = mb_substr($explicacion, 0, 2000, 'UTF-8');
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $guardar = $pdo->prepare("
+            UPDATE public.recomendacion_producto
+            SET ia_explicacion = :explicacion,
+                ia_modelo = :modelo,
+                ia_fecha_generacion = NOW(),
+                ia_id_usuario = :usuario
+            WHERE id_recomendacion = :id
+        ");
+        $guardar->execute([
+            ':explicacion' => $explicacion,
+            ':modelo' => $modelo,
+            ':usuario' => $idUsuario,
+            ':id' => $idRecomendacion,
+        ]);
+        auditarRecomendacion(
+            $pdo,
+            $idUsuario,
+            (int)$recomendacion['id_tienda'],
+            'EXPLICACION_IA',
+            [],
+            [
+                'id_recomendacion' => (int)$idRecomendacion,
+                'modelo' => $modelo,
+                'fecha_generacion' => date(DATE_ATOM),
+            ]
+        );
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    return [
+        'id_recomendacion' => (int)$idRecomendacion,
+        'explicacion' => $explicacion,
+        'modelo' => $modelo,
+        'fecha_generacion' => date(DATE_ATOM),
+    ];
 }
 
 function generarRecomendaciones(PDO $pdo, int $idUsuario): array
@@ -472,6 +676,7 @@ try {
     if ($metodo === 'GET') {
         responderRecomendaciones(true, [
             'configuracion' => leerConfiguracionRecomendaciones($pdo),
+            'conteos' => contarRecomendaciones($pdo),
             'recomendaciones' => listarRecomendaciones($pdo),
         ]);
     }
@@ -545,8 +750,16 @@ try {
         responderRecomendaciones(true, null, 'Estado de la recomendación actualizado.');
     }
 
+    if ($accion === 'explicar_ia') {
+        $resultado = generarExplicacionOpenAI($pdo, $idUsuario, $entrada);
+        responderRecomendaciones(true, $resultado, 'Explicación generada con OpenAI.');
+    }
+
     responderRecomendaciones(false, null, 'La acción solicitada no es válida.', 400);
 } catch (Throwable $e) {
     error_log('[recomendaciones] ' . $e->getMessage());
+    if ($e instanceof ErrorOpenAIRecomendacion) {
+        responderRecomendaciones(false, null, $e->getMessage(), 502);
+    }
     responderRecomendaciones(false, null, 'No fue posible procesar las recomendaciones. Revise que la migración esté aplicada.', 500);
 }

@@ -44,6 +44,7 @@ function vmMenuPrincipal(): array
         ["nombre" => "Ventas",      "ruta" => "ventas/ventas.html",        "icono" => "fa-chart-column",          "modulo" => "ventas",      "roles" => null],
         ["nombre" => "Alertas",     "ruta" => "alertas/alertas.html",      "icono" => "fa-bell",                  "modulo" => "alertas",     "roles" => null],
         ["nombre" => "Reportes",    "ruta" => "reportes/reportes.php",     "icono" => "fa-chart-line",            "modulo" => "reportes",    "roles" => [1, 2, 3]],
+        ["nombre" => "Recomendaciones", "ruta" => "recomendaciones/recomendaciones.php", "icono" => "fa-lightbulb", "modulo" => "recomendaciones", "roles" => [1, 2]],
         ["nombre" => "Bitácora",    "ruta" => "bitacora/bitacora.php",     "icono" => "fa-clipboard-list",        "modulo" => "bitacora",    "roles" => [1, 2]],
         ["nombre" => "Respaldos",   "ruta" => "respaldo/respaldo.php",     "icono" => "fa-database",              "modulo" => "respaldo",    "roles" => [1, 2]],
         ["nombre" => "Incidencias", "ruta" => "incidencias/incidencias.php", "icono" => "fa-triangle-exclamation", "modulo" => "incidencias", "roles" => [1]],
