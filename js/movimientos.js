@@ -587,8 +587,15 @@ function cargarProductosHU21(
 =========================================================*/
 function instalarDesplegableProductoHU21() {
     const original = document.getElementById('productoMovimiento');
-    if (!original || document.getElementById('selectorProductoVisibleHU21')) return;
+    const buscador = document.getElementById('buscarProductoMovimiento');
+    if (!original || !buscador || document.getElementById('listaProductoVisibleHU21')) return;
 
+    /*
+     * Unifica el buscador y el selector de producto en un solo
+     * combobox: el input filtra la lista y también sirve para
+     * elegir directamente una opción, en vez de tener dos campos
+     * separados para una misma acción (HU-21).
+     */
     const estilo = document.createElement('style');
     estilo.textContent = `
       #productoMovimiento.hu21-select-nativo-oculto {
@@ -601,20 +608,7 @@ function instalarDesplegableProductoHU21() {
         pointer-events: none !important;
         clip-path: inset(50%) !important;
       }
-      #selectorProductoVisibleHU21 { position: relative; width: 100%; }
-      #botonProductoVisibleHU21 {
-        width: 100%; min-height: 37px; padding: 10px 36px 10px 14px;
-        text-align: left; font: inherit; font-size: 14px;
-        border: 1px solid #cbd5e1; border-radius: 6px;
-        background: #fff; color: #0f172a; cursor: pointer;
-        position: relative; white-space: nowrap; overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      #botonProductoVisibleHU21::after {
-        content: '⌄'; position: absolute; right: 14px; top: 50%;
-        transform: translateY(-54%); font-size: 18px; color: #334155;
-      }
-      #botonProductoVisibleHU21:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+      .campo-producto-combo { position: relative; width: 100%; }
       #listaProductoVisibleHU21 {
         position: absolute; z-index: 1100; left: 0; right: 0; top: calc(100% + 3px);
         max-height: 260px; overflow-y: auto; overscroll-behavior: contain;
@@ -639,26 +633,16 @@ function instalarDesplegableProductoHU21() {
 
     original.classList.add('hu21-select-nativo-oculto');
     original.tabIndex = -1;
-    const marco = document.createElement('div');
-    marco.id = 'selectorProductoVisibleHU21';
-    const boton = document.createElement('button');
-    boton.id = 'botonProductoVisibleHU21';
-    boton.type = 'button';
-    boton.setAttribute('aria-haspopup', 'listbox');
-    boton.setAttribute('aria-expanded', 'false');
-    boton.setAttribute('aria-label', 'Seleccionar producto');
+
     const lista = document.createElement('div');
     lista.id = 'listaProductoVisibleHU21';
     lista.setAttribute('role', 'listbox');
     lista.setAttribute('aria-label', 'Productos disponibles');
     lista.hidden = true;
-    boton.setAttribute('aria-controls', lista.id);
-    marco.append(boton, lista);
-    original.insertAdjacentElement('afterend', marco);
+    original.insertAdjacentElement('afterend', lista);
+    buscador.setAttribute('aria-controls', lista.id);
 
     const sincronizar = () => {
-        const opcion = original.selectedOptions?.[0];
-        boton.textContent = opcion?.value ? opcion.textContent.trim() : 'Seleccione un producto';
         if (lista.hidden) return;
         const opciones = Array.from(original.options).filter(op => op.value !== '');
         const fragmento = document.createDocumentFragment();
@@ -680,36 +664,40 @@ function instalarDesplegableProductoHU21() {
         }
         lista.replaceChildren(fragmento);
     };
+    const abrir = () => {
+        if (!lista.hidden) return;
+        lista.hidden = false;
+        buscador.setAttribute('aria-expanded', 'true');
+        sincronizar();
+    };
     const cerrar = () => {
         lista.hidden = true;
-        boton.setAttribute('aria-expanded', 'false');
+        buscador.setAttribute('aria-expanded', 'false');
     };
-    boton.addEventListener('click', () => {
-        if (!lista.hidden) { cerrar(); return; }
-        lista.hidden = false;
-        boton.setAttribute('aria-expanded', 'true');
-        sincronizar();
-    });
+    buscador.addEventListener('focus', abrir);
+    buscador.addEventListener('click', abrir);
     lista.addEventListener('click', event => {
         const opcion = event.target.closest('[data-producto-id]');
         if (!opcion) return;
         original.value = opcion.dataset.productoId;
         original.dispatchEvent(new Event('change', { bubbles: true }));
+        buscador.value = opcion.textContent.trim();
         cerrar();
         sincronizar();
-        boton.focus();
+        buscador.focus();
     });
     document.addEventListener('click', event => {
-        if (!marco.contains(event.target)) cerrar();
+        if (event.target !== buscador && !lista.contains(event.target)) cerrar();
     });
-    marco.addEventListener('keydown', event => {
-        if (event.key === 'Escape') { cerrar(); boton.focus(); }
+    buscador.addEventListener('keydown', event => {
+        if (event.key === 'Escape') cerrar();
     });
     original.addEventListener('change', sincronizar);
     new MutationObserver(sincronizar).observe(original, { childList: true, subtree: true });
-    document.getElementById('buscarProductoMovimiento')?.addEventListener('input', () => {
+    buscador.addEventListener('input', () => {
         // El filtro de HU-21 modifica las opciones del select original.
         // Mostrar inmediatamente las nuevas coincidencias si la lista está abierta.
+        abrir();
         queueMicrotask(sincronizar);
     });
     document.getElementById('formularioMovimientoInventario')?.addEventListener('reset', () => {

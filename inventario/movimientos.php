@@ -520,68 +520,52 @@ header('Expires: 0');
 
 
                         <!-- ==========================================
-                             BUSCAR PRODUCTO
-                        =========================================== -->
-
-                        <div class="grupo-formulario">
-
-                            <label for="buscarProductoMovimiento">
-
-                                Buscar producto
-
-                            </label>
-
-
-                            <input
-                                type="search"
-                                id="buscarProductoMovimiento"
-                                placeholder="Nombre, código retail o código de barras..."
-                                autocomplete="off"
-                                aria-describedby="resultadoBusquedaProductoMovimiento">
-
-
-                            <small
-                                id="resultadoBusquedaProductoMovimiento"
-                                class="texto-secundario"
-                                aria-live="polite">
-                                Escriba para filtrar la lista de productos.
-                            </small>
-
-                        </div>
-
-
-                        <!-- ==========================================
-                             PRODUCTO
+                             PRODUCTO (buscador y selector unificados)
                         =========================================== -->
 
                         <div class="grupo-formulario campo-completo">
 
-                            <label for="productoMovimiento">
+                            <label for="buscarProductoMovimiento">
 
                                 Producto
 
                             </label>
 
 
-                            <select
-                                id="productoMovimiento"
-                                name="productoMovimiento"
-                                required>
+                            <div class="campo-producto-combo">
 
-                                <option value="">
+                                <input
+                                    type="search"
+                                    id="buscarProductoMovimiento"
+                                    placeholder="Escriba el nombre, código retail o código de barras, o selecciónelo de la lista..."
+                                    autocomplete="off"
+                                    role="combobox"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    aria-describedby="resultadoBusquedaProductoMovimiento">
 
-                                    Cargando productos...
 
-                                </option>
+                                <select
+                                    id="productoMovimiento"
+                                    name="productoMovimiento"
+                                    required>
 
-                            </select>
+                                    <option value="">
+
+                                        Cargando productos...
+
+                                    </option>
+
+                                </select>
+
+                            </div>
 
 
-                            <small class="texto-secundario">
-
-                                Puede elegir directamente un producto
-                                o utilizar el buscador para reducir la lista.
-
+                            <small
+                                id="resultadoBusquedaProductoMovimiento"
+                                class="texto-secundario"
+                                aria-live="polite">
+                                Escriba para filtrar o selecciónelo de la lista.
                             </small>
 
                         </div>
