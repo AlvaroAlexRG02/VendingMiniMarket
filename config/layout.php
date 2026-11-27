@@ -44,7 +44,7 @@ function vmMenuPrincipal(): array
         ["nombre" => "Ventas",      "ruta" => "ventas/ventas.html",        "icono" => "fa-chart-column",          "modulo" => "ventas",      "roles" => null],
         ["nombre" => "Alertas",     "ruta" => "alertas/alertas.html",      "icono" => "fa-bell",                  "modulo" => "alertas",     "roles" => null],
         ["nombre" => "Reportes",    "ruta" => "reportes/reportes.php",     "icono" => "fa-chart-line",            "modulo" => "reportes",    "roles" => [1, 2, 3]],
-        ["nombre" => "Recomendaciones", "ruta" => "recomendaciones/recomendaciones.php", "icono" => "fa-lightbulb", "modulo" => "recomendaciones", "roles" => [1, 2]],
+        ["nombre" => "Recomendaciones", "ruta" => "recomendaciones/recomendaciones.php", "icono" => "fa-wand-magic-sparkles", "modulo" => "recomendaciones", "roles" => [1, 2]],
         ["nombre" => "Bitácora",    "ruta" => "bitacora/bitacora.php",     "icono" => "fa-clipboard-list",        "modulo" => "bitacora",    "roles" => [1, 2]],
         ["nombre" => "Respaldos",   "ruta" => "respaldo/respaldo.php",     "icono" => "fa-database",              "modulo" => "respaldo",    "roles" => [1, 2]],
         ["nombre" => "Incidencias", "ruta" => "incidencias/incidencias.php", "icono" => "fa-triangle-exclamation", "modulo" => "incidencias", "roles" => [1]],
@@ -104,6 +104,7 @@ function vmBarraLateral(): void
                 $activa = $opcion["modulo"] === $modulo;
                 ?>
                 <a href="../<?= vmEscapar($opcion["ruta"]) ?>"
+                   data-modulo="<?= vmEscapar($opcion["modulo"]) ?>"
                    <?= $activa ? 'class="activo" aria-current="page"' : "" ?>>
                     <i class="fa-solid <?= vmEscapar($opcion["icono"]) ?>"></i>
                     <?= vmEscapar($opcion["nombre"]) ?>
@@ -137,12 +138,12 @@ function vmBarraSuperior(): void
                 <i class="fa-solid fa-bars"></i>
             </button>
 
-            <div class="buscador-superior">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="search"
-                       placeholder="Buscar en el sistema..."
-                       aria-label="Buscar en el sistema"
-                       autocomplete="off">
+            <div class="reloj-superior" aria-live="off">
+                <i class="fa-regular fa-clock"></i>
+                <div class="reloj-superior-texto">
+                    <strong class="reloj-superior-hora">--:--</strong>
+                    <span class="reloj-superior-fecha">—</span>
+                </div>
             </div>
 
             <div class="acciones-superiores">

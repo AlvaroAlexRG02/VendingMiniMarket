@@ -82,9 +82,20 @@ La interfaz actualmente conserva las opciones **Aceptar** y **Descartar** para r
 La migración inserta el valor inicial 5 solo si no existe configuración; volver a ejecutarla no reemplaza el umbral ya configurado.
 
 La misma migración agrega las columnas de explicación IA con `ADD COLUMN IF NOT EXISTS`, por lo que también se debe volver a ejecutar tras desplegar la integración para actualizar una base existente.
+## Generación automática (cron)
+
+El botón **Analizar ahora** sigue disponible, pero además existe un disparador automático diario:
+
+- `GitHub Actions` ejecuta `.github/workflows/recomendaciones-cron.yml` todos los días a las 00:15 hora de Costa Rica (también se puede ejecutar manualmente desde la pestaña **Actions** del repositorio con "Run workflow").
+- El flujo llama por HTTP a `api/recomendaciones/recomendaciones.php` con `accion: "generar"` y un encabezado `X-Cron-Token`, sin necesidad de una sesión de usuario.
+- El servidor compara ese encabezado contra la variable de entorno `RECOMENDACIONES_CRON_TOKEN` (comparación segura con `hash_equals`). Si no coincide o la variable no está configurada, la petición exige sesión de Administrador/Gerencia como siempre.
+- Configure el mismo valor en dos lugares (nunca lo publique en el código ni en commits):
+  - Variable de entorno `RECOMENDACIONES_CRON_TOKEN` en el servicio de DigitalOcean (o en `SetEnv` de Apache en XAMPP para pruebas locales).
+  - Secret de repositorio `RECOMENDACIONES_CRON_TOKEN` en GitHub (Settings → Secrets and variables → Actions).
+- Las recomendaciones y alternativas generadas automáticamente quedan auditadas igual que las manuales; el historial de cada una indica "Generada automáticamente...".
 
 ## Pendiente antes de considerar completas las HU
 
-- Programar la generación automática y decidir cómo actualizar recomendaciones (y sus alternativas) cuando cambien las ventas o el umbral.
+- Decidir cómo actualizar recomendaciones (y sus alternativas) ya generadas cuando cambien las ventas o el umbral después de su creación.
 - Definir acciones de seguimiento posteriores a una decisión aceptada (de la recomendación o de su alternativa): generar pedido, ajuste de inventario o tarea de revisión según el tipo (HU-56.3). Actualmente ninguna decisión ejecuta acciones automáticas; las tablas `pedido`/`pedido_detalle` ya existen y podrían reutilizarse para esto.
 - Probar el ciclo completo contra la base de datos objetivo con datos reales de uso diario, incluida una llamada real a Groq con una clave configurada.

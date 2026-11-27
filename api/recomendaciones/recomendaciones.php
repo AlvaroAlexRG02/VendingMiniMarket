@@ -71,7 +71,7 @@ function exigirAdministradorRecomendaciones(): int
 
 function auditarRecomendacion(
     PDO $pdo,
-    int $idUsuario,
+    ?int $idUsuario,
     ?int $idTienda,
     string $accion,
     array $anterior,
@@ -134,8 +134,55 @@ function contarRecomendaciones(PDO $pdo): array
     ]);
 }
 
-function listarRecomendaciones(PDO $pdo, ?string $estado = null): array
+function obtenerTiendasActivas(PDO $pdo): array
 {
+    return $pdo->query("
+        SELECT id_tienda, nombre
+        FROM public.tienda
+        WHERE estado = TRUE
+        ORDER BY nombre
+    ")->fetchAll();
+}
+
+const RECOMENDACIONES_LIMITE_TODAS = 5000;
+
+function listarRecomendaciones(
+    PDO $pdo,
+    ?string $estado = null,
+    ?int $idTienda = null,
+    string $orden = 'prioridad',
+    int $pagina = 1,
+    int $porPagina = 15,
+    bool $todas = false
+): array {
+    $condiciones = [];
+    $parametros = [];
+    if ($estado !== null) {
+        $condiciones[] = 'r.estado = :estado';
+        $parametros[':estado'] = $estado;
+    }
+    if ($idTienda !== null) {
+        $condiciones[] = 'r.id_tienda = :id_tienda';
+        $parametros[':id_tienda'] = $idTienda;
+    }
+    $whereSql = $condiciones ? ('WHERE ' . implode(' AND ', $condiciones)) : '';
+
+    $ordenesPermitidos = [
+        'prioridad' => "CASE r.estado WHEN 'PENDIENTE' THEN 0 WHEN 'REVISADA' THEN 1 ELSE 2 END,
+            r.unidades_vendidas ASC, r.fecha_generacion DESC, r.id_recomendacion DESC",
+        'inventario' => 'r.stock_actual DESC, r.unidades_vendidas ASC, p.nombre ASC',
+        'reciente' => 'r.fecha_generacion DESC, r.id_recomendacion DESC',
+        'antigua' => 'r.fecha_generacion ASC, r.id_recomendacion ASC',
+    ];
+    $ordenSql = $ordenesPermitidos[$orden] ?? $ordenesPermitidos['prioridad'];
+
+    $conteoConsulta = $pdo->prepare("SELECT COUNT(*) FROM public.recomendacion_producto r $whereSql");
+    $conteoConsulta->execute($parametros);
+    $total = (int)$conteoConsulta->fetchColumn();
+
+    $limite = $todas ? RECOMENDACIONES_LIMITE_TODAS : max(1, min(100, $porPagina));
+    $desplazamiento = $todas ? 0 : max(0, ($pagina - 1) * $limite);
+
     $sql = "
         SELECT
             r.id_recomendacion,
@@ -161,29 +208,21 @@ function listarRecomendaciones(PDO $pdo, ?string $estado = null): array
         JOIN public.tienda t ON t.id_tienda = r.id_tienda
         JOIN public.producto p ON p.id_producto = r.id_producto
         LEFT JOIN public.categoria c ON c.id_categoria = p.id_categoria
+        $whereSql
+        ORDER BY $ordenSql
+        LIMIT :limite OFFSET :desplazamiento
     ";
-    if ($estado !== null) {
-        $sql .= " WHERE r.estado = :estado";
-    }
-    $sql .= "
-        ORDER BY
-            CASE r.estado WHEN 'PENDIENTE' THEN 0 WHEN 'REVISADA' THEN 1 ELSE 2 END,
-            r.unidades_vendidas ASC,
-            r.fecha_generacion DESC,
-            r.id_recomendacion DESC
-        LIMIT 500
-    ";
-
     $consultaRecomendaciones = $pdo->prepare($sql);
-    if ($estado !== null) {
-        $consultaRecomendaciones->execute([':estado' => $estado]);
-    } else {
-        $consultaRecomendaciones->execute();
+    foreach ($parametros as $marcador => $valor) {
+        $consultaRecomendaciones->bindValue($marcador, $valor);
     }
+    $consultaRecomendaciones->bindValue(':limite', $limite, PDO::PARAM_INT);
+    $consultaRecomendaciones->bindValue(':desplazamiento', $desplazamiento, PDO::PARAM_INT);
+    $consultaRecomendaciones->execute();
     $recomendaciones = $consultaRecomendaciones->fetchAll();
 
     if (!$recomendaciones) {
-        return [];
+        return ['items' => [], 'total' => $total, 'limite' => $limite];
     }
 
     $ids = array_map(static fn(array $fila): int => (int)$fila['id_recomendacion'], $recomendaciones);
@@ -255,7 +294,7 @@ function listarRecomendaciones(PDO $pdo, ?string $estado = null): array
     }
     unset($fila);
 
-    return $recomendaciones;
+    return ['items' => $recomendaciones, 'total' => $total, 'limite' => $limite];
 }
 
 function generarExplicacionIA(PDO $pdo, int $idUsuario, array $entrada): array
@@ -437,7 +476,7 @@ function generarExplicacionIA(PDO $pdo, int $idUsuario, array $entrada): array
     ];
 }
 
-function generarRecomendaciones(PDO $pdo, int $idUsuario): array
+function generarRecomendaciones(PDO $pdo, ?int $idUsuario): array
 {
     $config = leerConfiguracionRecomendaciones($pdo);
     $hoy = hoyCostaRica();
@@ -900,8 +939,35 @@ function decidirAlternativa(PDO $pdo, int $idUsuario, array $entrada): void
     }
 }
 
-$idUsuario = exigirAdministradorRecomendaciones();
+function validarTokenCronRecomendaciones(): bool
+{
+    $tokenEsperado = trim((string)(getenv('RECOMENDACIONES_CRON_TOKEN') ?: ''));
+    if ($tokenEsperado === '') {
+        return false;
+    }
+    $tokenRecibido = trim((string)($_SERVER['HTTP_X_CRON_TOKEN'] ?? ''));
+
+    return $tokenRecibido !== '' && hash_equals($tokenEsperado, $tokenRecibido);
+}
+
 $metodo = $_SERVER['REQUEST_METHOD'] ?? '';
+$entrada = [];
+$cuerpoInvalido = false;
+if ($metodo === 'POST') {
+    $decodificado = json_decode((string)file_get_contents('php://input'), true);
+    if (is_array($decodificado)) {
+        $entrada = $decodificado;
+    } else {
+        $cuerpoInvalido = true;
+    }
+}
+$accion = (string)($entrada['accion'] ?? '');
+// La generación automática (cron) se autentica con un token compartido en
+// vez de sesión, porque no hay un usuario con la sesión iniciada.
+$esGeneracionAutomatica = $metodo === 'POST' && !$cuerpoInvalido && $accion === 'generar'
+    && validarTokenCronRecomendaciones();
+
+$idUsuario = $esGeneracionAutomatica ? null : exigirAdministradorRecomendaciones();
 
 try {
     if ($metodo === 'GET') {
@@ -909,10 +975,44 @@ try {
         if ($estado !== '' && !in_array($estado, ['PENDIENTE', 'REVISADA', 'ACEPTADA', 'DESCARTADA'], true)) {
             responderRecomendaciones(false, null, 'El filtro de estado no es válido.', 400);
         }
+        $idTienda = null;
+        if (trim((string)($_GET['tienda'] ?? '')) !== '') {
+            $idTienda = filter_var($_GET['tienda'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($idTienda === false) {
+                responderRecomendaciones(false, null, 'La tienda indicada no es válida.', 400);
+            }
+        }
+        $orden = strtolower(trim((string)($_GET['orden'] ?? 'prioridad')));
+        if (!in_array($orden, ['prioridad', 'inventario', 'reciente', 'antigua'], true)) {
+            $orden = 'prioridad';
+        }
+        $todas = (($_GET['todas'] ?? '') === '1');
+        $pagina = max(1, (int)($_GET['pagina'] ?? 1));
+        $porPagina = (int)($_GET['por_pagina'] ?? 15);
+        if ($porPagina < 1) {
+            $porPagina = 15;
+        }
+
+        $resultadoLista = listarRecomendaciones(
+            $pdo,
+            $estado !== '' ? $estado : null,
+            $idTienda,
+            $orden,
+            $pagina,
+            $porPagina,
+            $todas
+        );
         responderRecomendaciones(true, [
             'configuracion' => leerConfiguracionRecomendaciones($pdo),
             'conteos' => contarRecomendaciones($pdo),
-            'recomendaciones' => listarRecomendaciones($pdo, $estado !== '' ? $estado : null),
+            'tiendas' => obtenerTiendasActivas($pdo),
+            'recomendaciones' => $resultadoLista['items'],
+            'paginacion' => [
+                'pagina' => $todas ? 1 : $pagina,
+                'por_pagina' => $resultadoLista['limite'],
+                'total' => $resultadoLista['total'],
+                'todas' => $todas,
+            ],
         ]);
     }
 
@@ -920,15 +1020,17 @@ try {
         responderRecomendaciones(false, null, 'Método no permitido.', 405);
     }
 
-    $entrada = json_decode((string)file_get_contents('php://input'), true);
-    if (!is_array($entrada)) {
+    if ($cuerpoInvalido) {
         responderRecomendaciones(false, null, 'La solicitud debe contener JSON válido.', 400);
     }
 
-    $accion = (string)($entrada['accion'] ?? '');
     if ($accion === 'generar') {
         $resultado = generarRecomendaciones($pdo, $idUsuario);
-        responderRecomendaciones(true, $resultado, 'Análisis completado.');
+        responderRecomendaciones(
+            true,
+            $resultado,
+            $esGeneracionAutomatica ? 'Análisis automático completado.' : 'Análisis completado.'
+        );
     }
 
     if ($accion === 'umbral') {

@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarNavegacionLateral();
     inicializarMostrarContrasena();
     inicializarMenuLateral();
+    inicializarRelojSuperiorVending();
     inicializarSesionVending();
     inicializarPaginaInventarioVending();
     inicializarPaginaMovimientosVending();
@@ -25,6 +26,28 @@ document.addEventListener("DOMContentLoaded", () => {
 function rolDelUsuarioVending() {
     const coincidencia = document.cookie.match(/(?:^|;\s*)vm_rol=(\d+)/);
     return coincidencia ? Number(coincidencia[1]) : 0;
+}
+
+/**
+ * Reloj de la barra superior: sustituye el buscador decorativo por la fecha
+ * y hora actuales. Actualiza todas las instancias de .reloj-superior en la
+ * página (normalmente una sola) cada segundo.
+ */
+function inicializarRelojSuperiorVending() {
+    const nodosHora = document.querySelectorAll(".reloj-superior-hora");
+    const nodosFecha = document.querySelectorAll(".reloj-superior-fecha");
+    if (!nodosHora.length && !nodosFecha.length) return;
+
+    function actualizar() {
+        const ahora = new Date();
+        const hora = ahora.toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit" });
+        const fecha = ahora.toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
+        nodosHora.forEach(nodo => { nodo.textContent = hora; });
+        nodosFecha.forEach(nodo => { nodo.textContent = fecha; });
+    }
+
+    actualizar();
+    setInterval(actualizar, 1000 * 30);
 }
 
 /**

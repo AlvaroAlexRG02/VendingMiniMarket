@@ -127,4 +127,15 @@ CREATE TABLE IF NOT EXISTS public.recomendacion_producto_alternativa_historial (
 CREATE INDEX IF NOT EXISTS idx_recomendacion_alternativa_historial
     ON public.recomendacion_producto_alternativa_historial (id_alternativa, fecha DESC, id_historial DESC);
 
+-- Rendimiento de HU-55: la búsqueda de productos alternativos filtra por
+-- categoría; sin este índice cada generación hace un seq scan de producto.
+CREATE INDEX IF NOT EXISTS idx_producto_categoria_estado
+    ON public.producto (id_categoria)
+    WHERE estado = TRUE;
+
+-- Rendimiento del listado paginado (HU-56): filtros habituales por tienda y
+-- estado, usados por el panel de Recomendaciones.
+CREATE INDEX IF NOT EXISTS idx_recomendacion_producto_tienda_estado
+    ON public.recomendacion_producto (id_tienda, estado);
+
 COMMIT;

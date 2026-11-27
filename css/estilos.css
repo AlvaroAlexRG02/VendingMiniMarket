@@ -548,6 +548,12 @@ body.pagina-app {
     font-size: 15px;
 }
 
+/* Ícono del módulo de IA (Recomendaciones) en tono turquesa, en vez del
+   color heredado del enlace, en cualquier estado (normal/hover/activo). */
+.nav-lateral a[data-modulo="recomendaciones"] i {
+    color: var(--teal);
+}
+
 .nav-lateral a:hover {
     background: var(--azul-marino-hover);
     color: #fff;
@@ -607,33 +613,49 @@ body.pagina-app {
     color: var(--texto-secundario);
 }
 
-.buscador-superior {
-    flex: 1;
-    max-width: 480px;
-    position: relative;
-}
-
-.buscador-superior i {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--texto-tenue);
-}
-
-.buscador-superior input {
-    width: 100%;
-    padding: 11px 14px 11px 40px;
+.reloj-superior {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 20px;
     border-radius: 10px;
-    border: 1px solid var(--borde);
-    background: var(--fondo-pagina);
-    font-size: 14px;
+    background: var(--azul-claro);
+    color: var(--azul-marino);
 }
 
-.buscador-superior input:focus {
-    outline: none;
-    border-color: var(--azul);
-    background: #fff;
+.reloj-superior i {
+    font-size: 19px;
+    color: var(--azul-marino);
+}
+
+.reloj-superior-texto {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.reloj-superior-hora {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--azul-marino);
+}
+
+.reloj-superior-fecha {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--azul-marino);
+    opacity: .85;
+    text-transform: capitalize;
+}
+
+.reloj-superior-fecha::before {
+    content: "·";
+    margin-right: 10px;
+    font-weight: 700;
+    opacity: .6;
 }
 
 .acciones-superiores {
