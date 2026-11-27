@@ -3368,6 +3368,50 @@ body.pagina-app {
     cursor: pointer;
 }
 
+.boton-plegar-panel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    margin-left: 12px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--azul-marino);
+    border-radius: 999px;
+    background: var(--azul-claro);
+    color: var(--azul-marino);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.boton-plegar-panel:hover,
+.boton-plegar-panel:focus-visible {
+    background: var(--azul-marino);
+    color: #ffffff;
+    outline: none;
+}
+
+.boton-plegar-panel i {
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.boton-plegar-panel[aria-expanded="false"] i {
+    transform: rotate(-90deg);
+}
+
+.cuerpo-panel-plegable[hidden] {
+    display: none;
+}
+
+.atajo-periodo.activo {
+    border-color: var(--azul-marino);
+    background: var(--azul-marino);
+    color: #ffffff;
+}
+
 .atajo-periodo:hover {
     border-color: var(--azul);
     background: var(--azul-claro);
@@ -4158,6 +4202,14 @@ body.pagina-app {
 }
 
 @media print {
+    .boton-plegar-panel {
+        display: none !important;
+    }
+
+    .cuerpo-panel-plegable[hidden] {
+        display: block !important;
+    }
+
     .barra-lateral,
     .nav-lateral,
     .barra-superior,
@@ -5207,3 +5259,91 @@ body.pagina-bitacora .tabla-bitacora-contenedor td {
 }
 /* FIN_NOTIFICACIONES_LATERALES_VMM_V1 */
 
+
+
+/* ---- Dashboard: tarjetas clicables, ubicación y fecha ---- */
+
+a.tarjeta-enlace {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+a.tarjeta-enlace:hover,
+a.tarjeta-enlace:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(12, 31, 74, 0.14);
+    outline: none;
+}
+
+.etiqueta-ubicacion-dashboard {
+    margin-top: 6px;
+    color: var(--texto-secundario);
+    font-size: 13px;
+}
+
+.etiqueta-ubicacion-dashboard i {
+    margin-right: 4px;
+    color: var(--teal);
+}
+
+.fecha-dashboard-grupo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.alerta-dashboard .boton {
+    margin-top: 10px;
+}
+
+/* ---- Pedidos: guía rápida del flujo de estados ---- */
+
+.flujo-estados-pedido {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    background: var(--fondo-tarjeta);
+    box-shadow: var(--sombra);
+}
+
+.paso-flujo-pedido {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--azul-claro);
+    color: var(--azul-marino);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.flujo-estados-flecha {
+    color: var(--texto-secundario);
+    font-size: 12px;
+}
+
+.flujo-estados-nota {
+    color: var(--texto-secundario);
+    font-size: 12.5px;
+    flex-basis: 100%;
+}
+
+@media (max-width: 720px) {
+    .flujo-estados-pedido {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .flujo-estados-flecha {
+        transform: rotate(90deg);
+    }
+}

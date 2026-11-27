@@ -378,8 +378,21 @@ if ($nombreCompleto === "") {
 
                     </div>
 
+                    <button
+                        type="button"
+                        class="boton-plegar-panel"
+                        data-plegar-panel
+                        aria-expanded="true"
+                        title="Comprimir / expandir"
+                    >
+                        <span>Comprimir</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
                 </div>
 
+
+                <div class="cuerpo-panel-plegable" id="cuerpoRegistrosBitacora">
 
                 <div class="contenedor-tabla" id="contenedorTablaBitacora">
 
@@ -467,6 +480,8 @@ if ($nombreCompleto === "") {
 
 
                     </table>
+
+                </div>
 
                 </div>
 

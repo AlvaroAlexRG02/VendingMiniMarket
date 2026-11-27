@@ -92,19 +92,6 @@ header("Expires: 0");
 
                 </div>
 
-                <div class="acciones-encabezado-reportes">
-
-                    <button
-                        type="button"
-                        id="botonImprimirReporte"
-                        class="boton boton-borde"
-                    >
-                        <i class="fa-solid fa-print"></i>
-                        Imprimir
-                    </button>
-
-                </div>
-
             </div>
 
             <!-- Mensaje -->
@@ -167,7 +154,7 @@ header("Expires: 0");
                 <div class="panel-encabezado">
                     <div>
                         <h2 id="tituloFiltrosReporte">Filtros del reporte</h2>
-                        <p class="descripcion-panel" id="descripcionFiltrosReporte">Elige el periodo, la tienda y los criterios; el reporte se actualiza al generarlo.</p>
+                        <p class="descripcion-panel" id="descripcionFiltrosReporte">Elige el periodo y la tienda; el reporte se actualiza solo al cambiar los filtros.</p>
                     </div>
                 </div>
 
@@ -234,12 +221,16 @@ header("Expires: 0");
                         </button>
                         <button type="submit" class="boton boton-azul">
                             <i class="fa-solid fa-chart-column"></i>
-                            Generar reporte
+                            Actualizar
                         </button>
                         <button type="button" id="botonExportarReporte" class="boton boton-borde" disabled
-                                title="Genera el reporte para poder exportarlo">
+                                title="Espera a que se genere el reporte para exportarlo">
                             <i class="fa-solid fa-file-pdf"></i>
                             Exportar PDF
+                        </button>
+                        <button type="button" id="botonImprimirReporte" class="boton boton-borde">
+                            <i class="fa-solid fa-print"></i>
+                            Imprimir
                         </button>
                     </div>
 

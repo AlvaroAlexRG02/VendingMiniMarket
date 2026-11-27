@@ -198,7 +198,19 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                             dar seguimiento contable y operativo.
                         </p>
                     </div>
+                    <button
+                        type="button"
+                        class="boton-plegar-panel"
+                        data-plegar-panel
+                        aria-expanded="true"
+                        title="Comprimir / expandir"
+                    >
+                        <span data-texto-plegar>Comprimir</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
                 </div>
+
+                <div class="cuerpo-panel-plegable">
 
                 <div class="barra-filtros">
 
@@ -295,6 +307,8 @@ $puedeExportarHistorial = esAdministrador() || esGerenteGeneral();
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <h3>No se encontraron facturas</h3>
                     <p>Cambia los filtros o el texto de búsqueda.</p>
+                </div>
+
                 </div>
 
             </section>

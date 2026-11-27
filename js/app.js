@@ -4,6 +4,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
     inicializarNavegacionLateral();
+    inicializarPanelesPlegablesVending();
     inicializarMostrarContrasena();
     inicializarMenuLateral();
     inicializarRelojSuperiorVending();
@@ -22,6 +23,33 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarCambioContrasenaInicialVending();
     actualizarPerfilSuperiorVending();
 });
+
+/*
+ * Botón "Comprimir / Expandir" de un panel (atributo [data-plegar-panel]).
+ * Funciona con delegación, así sirve también para paneles agregados luego
+ * por JavaScript (por ejemplo, los reportes). El cuerpo a plegar es el
+ * siguiente elemento .cuerpo-panel-plegable dentro del mismo panel.
+ */
+function inicializarPanelesPlegablesVending() {
+    document.addEventListener("click", (evento) => {
+        const boton = evento.target.closest("[data-plegar-panel]");
+        if (!boton) return;
+
+        const panel = boton.closest(".panel");
+        const cuerpo = panel?.querySelector(".cuerpo-panel-plegable");
+        if (!cuerpo) return;
+
+        const abierto = boton.getAttribute("aria-expanded") === "true";
+        cuerpo.hidden = abierto;
+        boton.setAttribute("aria-expanded", abierto ? "false" : "true");
+
+        const texto = boton.querySelector("[data-texto-plegar]") || boton.querySelector("span");
+        if (texto) texto.textContent = abierto ? "Expandir" : "Comprimir";
+
+        const titulo = panel.querySelector("h2")?.textContent?.trim() || "panel";
+        boton.setAttribute("aria-label", `${abierto ? "Expandir" : "Comprimir"} ${titulo}`);
+    });
+}
 
 function rolDelUsuarioVending() {
     const coincidencia = document.cookie.match(/(?:^|;\s*)vm_rol=(\d+)/);

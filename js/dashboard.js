@@ -97,8 +97,34 @@
             </tr>`).join('');
     }
 
+    function dibujarAlertas(alertas) {
+        const lista = $('listaAlertasDashboard');
+        if (!lista) return;
+
+        const pendientes = alertas ? Number(alertas.pendientes) || 0 : 0;
+
+        lista.innerHTML = pendientes
+            ? `<div class="alerta-dashboard">
+                    <strong>${entero(pendientes)} alerta(s) pendiente(s)</strong>
+                    <span>Revísalas para evitar quedarte sin producto.</span>
+                    <a class="boton boton-azul" href="../alertas/alertas.html">Revisar alertas</a>
+               </div>`
+            : `<div class="estado-vacio-tabla">
+                    <i class="fa-regular fa-circle-check"></i>
+                    <strong>Todo en orden</strong>
+                    <span>No hay alertas pendientes.</span>
+               </div>`;
+    }
+
+    function actualizarSubtitulo() {
+        const select = $('filtroTiendaDashboard');
+        const tienda = select.options[select.selectedIndex]?.textContent || 'Todas las tiendas';
+        texto('mensajeBienvenidaDashboard', tienda);
+    }
+
     function dibujar(datos) {
         const v = datos.ventas;
+        actualizarSubtitulo();
 
         texto('totalVentasDashboard', moneda(v.total));
         texto('detalleVentasDashboard', `${entero(v.unidades)} unidad(es) · ${entero(v.ventas)} venta(s) confirmada(s)`);
@@ -113,6 +139,11 @@
         texto('detalleStockDashboard', `${entero(inv.agotados)} agotado(s) · ${entero(inv.bajo_minimo)} bajo mínimo${inv.negativos ? ` · ${entero(inv.negativos)} negativo(s)` : ''}`);
 
         texto('totalMovimientosDashboard', entero(datos.movimientos.total));
+        $('stockCriticoDashboard').closest('.tarjeta-estadistica').classList.toggle('borde-verde', !inv.criticos);
+        $('stockCriticoDashboard').closest('.tarjeta-estadistica').classList.toggle('borde-naranja', inv.criticos > 0);
+        if (!inv.criticos) texto('detalleStockDashboard', 'Todo el inventario está en orden');
+
+        dibujarAlertas(datos.alertas);
 
         dibujarTendencia(datos);
         dibujarVentasPorTienda(datos);
@@ -144,6 +175,13 @@
         await cargar();
 
         fecha.addEventListener('change', cargar);
+        $('botonHoyDashboard').addEventListener('click', () => { fecha.value = fechaLocal(); cargar(); });
+        $('botonAyerDashboard').addEventListener('click', () => {
+            const ayer = new Date();
+            ayer.setDate(ayer.getDate() - 1);
+            fecha.value = fechaLocal(ayer);
+            cargar();
+        });
         $('filtroTiendaDashboard').addEventListener('change', cargar);
     }
 })();

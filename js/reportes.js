@@ -121,7 +121,14 @@
             </article>`;
     }
 
-    function panel(titulo, descripcion, contenido, acciones = '') {
+    function panel(titulo, descripcion, contenido, acciones = '', plegable = false) {
+        const boton = plegable
+            ? `<button type="button" class="boton-plegar-panel" data-plegar-panel aria-expanded="true" aria-label="Comprimir ${escapar(titulo)}" title="Comprimir / expandir">
+                    <span data-texto-plegar>Comprimir</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+               </button>`
+            : '';
+
         return `
             <section class="panel panel-resultado-reporte">
                 <div class="panel-encabezado">
@@ -129,9 +136,9 @@
                         <h2>${escapar(titulo)}</h2>
                         ${descripcion ? `<p class="descripcion-panel">${escapar(descripcion)}</p>` : ''}
                     </div>
-                    ${acciones}
+                    ${acciones}${boton}
                 </div>
-                ${contenido}
+                ${plegable ? `<div class="cuerpo-panel-plegable">${contenido}</div>` : contenido}
             </section>`;
     }
 
@@ -293,7 +300,7 @@
                     colTexto('Tienda', 'tienda'), colTexto('Producto', 'producto'), colTexto('Categoría', 'categoria'),
                     colEntero('Unidades', 'unidades'), colMoneda('Ingresos', 'ingresos'), colMoneda('IVA', 'impuesto'),
                     colMoneda('Total', 'total'), colMoneda('Costo', 'costo'), colTexto('Origen', 'fuente')
-                ], d.detalle, { vacio: 'No hay ventas confirmadas con estos filtros.' }));
+                ], d.detalle, { vacio: 'No hay ventas confirmadas con estos filtros.' }), '', true);
 
         return notas.join('') + bloque('Resumen del periodo', 'fa-gauge-high', kpis) +
             bloque('Análisis', 'fa-chart-pie', graficos) + bloque('Detalle', 'fa-table-list', detalle);
@@ -823,7 +830,7 @@
     }
 
 
-    function aplicarAtajo(atajo) {
+    function rangoAtajo(atajo) {
         const hoy = new Date();
         let inicio = new Date(hoy);
         let fin = new Date(hoy);
@@ -837,8 +844,14 @@
             fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
         }
 
-        $('fechaInicioReporte').value = fechaLocal(inicio);
-        $('fechaFinReporte').value = fechaLocal(fin);
+        return `${fechaLocal(inicio)}|${fechaLocal(fin)}`;
+    }
+
+    function aplicarAtajo(atajo) {
+        const [inicio, fin] = rangoAtajo(atajo).split('|');
+        $('fechaInicioReporte').value = inicio;
+        $('fechaFinReporte').value = fin;
+        marcarAtajo();
     }
 
     function actualizarFiltrosVisibles() {
@@ -848,7 +861,34 @@
             elemento.hidden = !visibles.includes(elemento.dataset.filtro);
         });
 
+        $('tituloFiltrosReporte').textContent = REPORTES[tipoActual].titulo;
+        $('descripcionFiltrosReporte').textContent = tipoActual === 'cierre'
+            ? 'Elige la tienda y el día; pulsa Actualizar para ver el cierre.'
+            : 'Elige el periodo y la tienda; el reporte se actualiza solo al cambiar los filtros.';
+        marcarAtajo();
         mostrarVista('reportes');
+    }
+
+    // Resalta el periodo rápido que coincide con las fechas elegidas.
+    function marcarAtajo() {
+        const actual = `${$('fechaInicioReporte').value}|${$('fechaFinReporte').value}`;
+        document.querySelectorAll('.atajo-periodo').forEach((boton) => {
+            const activo = rangoAtajo(boton.dataset.atajo) === actual;
+            boton.classList.toggle('activo', activo);
+            boton.setAttribute('aria-pressed', activo ? 'true' : 'false');
+        });
+    }
+
+    let temporizadorActualizacion = null;
+
+    // Los reportes de solo lectura se refrescan solos; el cierre diario se pide a mano.
+    function programarActualizacion() {
+        marcarAtajo();
+        clearTimeout(temporizadorActualizacion);
+        if (tipoActual === 'cierre') return;
+        temporizadorActualizacion = setTimeout(() => {
+            if ($('formularioReporte').checkValidity()) generar();
+        }, 500);
     }
 
     // Reportes y Resumen programado son vistas de la misma página.
@@ -1149,6 +1189,7 @@
         $('botonExportarReporte')?.addEventListener('click', exportarPdf);
         $('formularioReporte').addEventListener('input', actualizarBotonExportar);
         $('formularioReporte').addEventListener('change', actualizarBotonExportar);
+        $('formularioReporte').addEventListener('change', programarActualizacion);
         $('botonImprimirReporte')?.addEventListener('click', () => window.print());
 
         document.querySelectorAll('.atajo-periodo').forEach((boton) => {
@@ -1160,6 +1201,7 @@
 
         document.querySelectorAll('.pestana-reporte[data-reporte]').forEach((boton) => {
             boton.addEventListener('click', () => {
+                clearTimeout(temporizadorActualizacion);
                 tipoActual = boton.dataset.reporte;
                 actualizarFiltrosVisibles();
                 generar();

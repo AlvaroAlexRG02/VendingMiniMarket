@@ -95,22 +95,6 @@ header("Expires: 0");
                 Sin ubicación asignada. Solicite al administrador que le asigne una ubicación para poder operar.
             </div>
 
-            <?php elseif ($ubicacionUsuario["todas"]): ?>
-
-            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-exito">
-                <i class="fa-solid fa-location-dot"></i>
-                Tiene acceso a todas las ubicaciones.
-            </div>
-
-            <?php else: ?>
-
-            <div id="ubicacionAsignadaDashboard" class="mensaje-producto mensaje-exito">
-                <i class="fa-solid fa-location-dot"></i>
-                <?= $ubicacionUsuario["cantidad"] > 1 ? "Ubicaciones asignadas" : "Ubicación asignada" ?>:
-                <strong><?= htmlspecialchars($ubicacionUsuario["texto"], ENT_QUOTES, "UTF-8") ?></strong>.
-                Solo puede operar en <?= $ubicacionUsuario["cantidad"] > 1 ? "ellas" : "ella" ?>.
-            </div>
-
             <?php endif; ?>
 
             <!-- ==========================================
@@ -126,6 +110,18 @@ header("Expires: 0");
                     <p id="mensajeBienvenidaDashboard">
                         Bienvenido al sistema Vending Mini Market
                     </p>
+
+                    <?php if (!$ubicacionUsuario["sin_ubicacion"]): ?>
+                    <p class="etiqueta-ubicacion-dashboard" id="ubicacionAsignadaDashboard">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <?php if ($ubicacionUsuario["todas"]): ?>
+                            Acceso a todas las ubicaciones
+                        <?php else: ?>
+                            <?= $ubicacionUsuario["cantidad"] > 1 ? "Ubicaciones" : "Ubicación" ?>:
+                            <strong><?= htmlspecialchars($ubicacionUsuario["texto"], ENT_QUOTES, "UTF-8") ?></strong>
+                        <?php endif; ?>
+                    </p>
+                    <?php endif; ?>
 
                 </div>
 
@@ -149,10 +145,14 @@ header("Expires: 0");
                             Fecha
                         </label>
 
-                        <input
-                            type="date"
-                            id="fechaDashboard"
-                        >
+                        <div class="fecha-dashboard-grupo">
+                            <input
+                                type="date"
+                                id="fechaDashboard"
+                            >
+                            <button type="button" class="atajo-periodo" id="botonHoyDashboard">Hoy</button>
+                            <button type="button" class="atajo-periodo" id="botonAyerDashboard">Ayer</button>
+                        </div>
 
                     </div>
 
@@ -171,7 +171,7 @@ header("Expires: 0");
                 aria-label="Resumen del negocio"
             >
 
-                <article class="tarjeta-estadistica borde-verde">
+                <a href="../reportes/reportes.php" title="Ver reporte de ventas" class="tarjeta-estadistica tarjeta-enlace borde-verde">
                     <div class="tarjeta-estadistica-encabezado">
                         <div class="tarjeta-estadistica-icono">
                             <i class="fa-solid fa-cash-register"></i>
@@ -182,10 +182,10 @@ header("Expires: 0");
                         </div>
                     </div>
                     <div class="tarjeta-estadistica-cambio" id="detalleVentasDashboard">Ventas confirmadas</div>
-                </article>
+                </a>
 
                 <?php if (esAdministradorOGerente()): ?>
-                <article class="tarjeta-estadistica borde-morado">
+                <a href="../reportes/reportes.php?reporte=utilidad" title="Ver reporte de utilidad" class="tarjeta-estadistica tarjeta-enlace borde-morado">
                     <div class="tarjeta-estadistica-encabezado">
                         <div class="tarjeta-estadistica-icono">
                             <i class="fa-solid fa-sack-dollar"></i>
@@ -196,10 +196,10 @@ header("Expires: 0");
                         </div>
                     </div>
                     <div class="tarjeta-estadistica-cambio" id="detalleUtilidadDashboard">Ingresos menos costo</div>
-                </article>
+                </a>
                 <?php endif; ?>
 
-                <article class="tarjeta-estadistica borde-naranja">
+                <a href="../inventario/inventario.php" title="Ver inventario" class="tarjeta-estadistica tarjeta-enlace borde-naranja">
                     <div class="tarjeta-estadistica-encabezado">
                         <div class="tarjeta-estadistica-icono">
                             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -210,9 +210,9 @@ header("Expires: 0");
                         </div>
                     </div>
                     <div class="tarjeta-estadistica-cambio" id="detalleStockDashboard">Productos que requieren atención</div>
-                </article>
+                </a>
 
-                <article class="tarjeta-estadistica">
+                <a href="../inventario/movimientos.html" title="Ver movimientos" class="tarjeta-estadistica tarjeta-enlace">
                     <div class="tarjeta-estadistica-encabezado">
                         <div class="tarjeta-estadistica-icono">
                             <i class="fa-solid fa-right-left"></i>
@@ -223,7 +223,7 @@ header("Expires: 0");
                         </div>
                     </div>
                     <div class="tarjeta-estadistica-cambio">Entradas, salidas, ajustes y traslados</div>
-                </article>
+                </a>
 
             </section>
 

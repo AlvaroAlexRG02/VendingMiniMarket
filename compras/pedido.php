@@ -117,6 +117,30 @@ $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
             ></div>
 
             <!-- ==========================================
+                 FLUJO DE ESTADOS (guía rápida)
+            =========================================== -->
+
+            <div class="flujo-estados-pedido" aria-label="Flujo de un pedido">
+                <span class="paso-flujo-pedido">
+                    <i class="fa-solid fa-file-circle-plus"></i>
+                    Pendiente
+                </span>
+                <i class="fa-solid fa-chevron-right flujo-estados-flecha" aria-hidden="true"></i>
+                <span class="paso-flujo-pedido">
+                    <i class="fa-solid fa-truck"></i>
+                    En camino
+                </span>
+                <i class="fa-solid fa-chevron-right flujo-estados-flecha" aria-hidden="true"></i>
+                <span class="paso-flujo-pedido">
+                    <i class="fa-solid fa-truck-ramp-box"></i>
+                    Recibido parcial / Recibido
+                </span>
+                <span class="flujo-estados-nota">
+                    Un pedido se aprueba, se envía al proveedor, y al llegar la mercadería se confirma la recepción para sumarla al inventario.
+                </span>
+            </div>
+
+            <!-- ==========================================
                  RESUMEN
             =========================================== -->
 
@@ -383,7 +407,20 @@ $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
 
                     </div>
 
+                    <button
+                        type="button"
+                        class="boton-plegar-panel"
+                        data-plegar-panel
+                        aria-expanded="true"
+                        title="Comprimir / expandir"
+                    >
+                        <span data-texto-plegar>Comprimir</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
                 </div>
+
+                <div class="cuerpo-panel-plegable">
 
                 <div class="barra-filtros">
 
@@ -559,6 +596,8 @@ $idUsuarioActual = (int)($_SESSION["usuario"]["id_usuario"] ?? 0);
                     <p>
                         Cambia los filtros o el texto de búsqueda.
                     </p>
+
+                </div>
 
                 </div>
 
