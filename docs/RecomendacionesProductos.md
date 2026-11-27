@@ -46,6 +46,9 @@ Estados almacenados: `PENDIENTE`, `REVISADA`, `ACEPTADA` y `DESCARTADA`.
 - Una recomendación pendiente solo puede pasar a revisada.
 - La revisión exige una observación.
 - Una recomendación revisada puede aceptarse o descartarse.
+- Al marcarla como revisada, el panel selecciona automáticamente el filtro **Revisada** para mostrar las recomendaciones que esperan una decisión.
+- Al cambiar el filtro de estado, la consulta solicita ese estado directamente a la API; así las pendientes no desplazan a las revisadas del máximo de registros de la lista.
+- Aceptar registra la decisión y admite un comentario opcional. Descartar requiere un comentario que indique el motivo.
 - Cada transición almacena usuario, fecha, comentario y estados anterior/nuevo en el historial y registra un evento en `bitacora_auditoria`.
 - Aceptar o descartar solo registra una decisión. No crea pedidos, ajustes, tareas ni modifica productos, inventario o precios.
 
@@ -59,7 +62,9 @@ La interfaz actualmente conserva las opciones **Aceptar** y **Descartar** para r
 4. Abrir **Recomendaciones** en el menú lateral.
 5. Ajustar el umbral global si hace falta y pulsar **Guardar umbral**.
 6. Pulsar **Analizar ahora** para generar las recomendaciones.
-7. Añadir una observación y marcar una recomendación pendiente como revisada. Luego, si corresponde, aceptar o descartar.
+7. En una recomendación pendiente, añadir una observación y pulsar **Marcar revisada**. La lista selecciona el filtro **Revisada** automáticamente.
+8. En el filtro **Revisada**, elegir **Aceptar** para registrar la aprobación (el comentario es opcional) o escribir el motivo y elegir **Descartar**. El motivo de descarte es obligatorio.
+9. Consultar el historial de revisión y decisiones de la tarjeta para ver los comentarios, responsables y fechas. Las decisiones finales se pueden consultar con los filtros **Aceptada** y **Descartada**; no se pueden volver a cambiar.
 
 La migración inserta el valor inicial 5 solo si no existe configuración; volver a ejecutarla no reemplaza el umbral ya configurado.
 

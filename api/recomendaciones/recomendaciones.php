@@ -134,9 +134,9 @@ function contarRecomendaciones(PDO $pdo): array
     ]);
 }
 
-function listarRecomendaciones(PDO $pdo): array
+function listarRecomendaciones(PDO $pdo, ?string $estado = null): array
 {
-    $recomendaciones = $pdo->query("
+    $sql = "
         SELECT
             r.id_recomendacion,
             r.id_tienda,
@@ -161,13 +161,26 @@ function listarRecomendaciones(PDO $pdo): array
         JOIN public.tienda t ON t.id_tienda = r.id_tienda
         JOIN public.producto p ON p.id_producto = r.id_producto
         LEFT JOIN public.categoria c ON c.id_categoria = p.id_categoria
+    ";
+    if ($estado !== null) {
+        $sql .= " WHERE r.estado = :estado";
+    }
+    $sql .= "
         ORDER BY
             CASE r.estado WHEN 'PENDIENTE' THEN 0 WHEN 'REVISADA' THEN 1 ELSE 2 END,
             r.unidades_vendidas ASC,
             r.fecha_generacion DESC,
             r.id_recomendacion DESC
         LIMIT 500
-    ")->fetchAll();
+    ";
+
+    $consultaRecomendaciones = $pdo->prepare($sql);
+    if ($estado !== null) {
+        $consultaRecomendaciones->execute([':estado' => $estado]);
+    } else {
+        $consultaRecomendaciones->execute();
+    }
+    $recomendaciones = $consultaRecomendaciones->fetchAll();
 
     if (!$recomendaciones) {
         return [];
@@ -597,6 +610,9 @@ function cambiarEstadoRecomendacion(PDO $pdo, int $idUsuario, array $entrada): v
     if ($estadoNuevo === 'REVISADA' && $comentario === '') {
         responderRecomendaciones(false, null, 'Agregue una observación para registrar la revisión.', 400);
     }
+    if ($estadoNuevo === 'DESCARTADA' && $comentario === '') {
+        responderRecomendaciones(false, null, 'Agregue un comentario para explicar por qué descarta la recomendación.', 400);
+    }
 
     $pdo->beginTransaction();
     try {
@@ -674,10 +690,14 @@ $metodo = $_SERVER['REQUEST_METHOD'] ?? '';
 
 try {
     if ($metodo === 'GET') {
+        $estado = strtoupper(trim((string)($_GET['estado'] ?? '')));
+        if ($estado !== '' && !in_array($estado, ['PENDIENTE', 'REVISADA', 'ACEPTADA', 'DESCARTADA'], true)) {
+            responderRecomendaciones(false, null, 'El filtro de estado no es válido.', 400);
+        }
         responderRecomendaciones(true, [
             'configuracion' => leerConfiguracionRecomendaciones($pdo),
             'conteos' => contarRecomendaciones($pdo),
-            'recomendaciones' => listarRecomendaciones($pdo),
+            'recomendaciones' => listarRecomendaciones($pdo, $estado !== '' ? $estado : null),
         ]);
     }
 

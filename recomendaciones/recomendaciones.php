@@ -111,6 +111,7 @@ header('Expires: 0');
 
             <section class="panel">
                 <h2>Recomendaciones</h2>
+                <p>Flujo: agrega una observación y marca la sugerencia como revisada. Después aparecerá en el filtro «Revisada», donde podrás aceptarla o descartarla. Para descartarla, el comentario es obligatorio.</p>
                 <div class="recomendacion-filtros">
                     <label for="filtroTiendaRecomendacion">Tienda
                         <select id="filtroTiendaRecomendacion">
@@ -176,9 +177,13 @@ header('Expires: 0');
         }
 
         async function solicitarRecomendaciones(opciones = {}) {
-            const respuesta = await fetch(apiRecomendaciones, {
+            const { estado, ...configuracion } = opciones;
+            const url = estado
+                ? `${apiRecomendaciones}?estado=${encodeURIComponent(estado)}`
+                : apiRecomendaciones;
+            const respuesta = await fetch(url, {
                 headers: { "Accept": "application/json", ...(opciones.body ? { "Content-Type": "application/json" } : {}) },
-                ...opciones
+                ...configuracion
             });
             const texto = await respuesta.text();
             let resultado;
@@ -200,7 +205,10 @@ header('Expires: 0');
             recomendacionesCargadas = recomendaciones;
             if (!recomendacionesCargadas.length) {
                 paginadorRecomendaciones.ocultar();
-                listaRecomendaciones.innerHTML = "<p>No hay recomendaciones. Selecciona «Analizar ahora» para revisar las ventas.</p>";
+                const estadoSeleccionado = filtroEstadoRecomendacion.value;
+                listaRecomendaciones.innerHTML = estadoSeleccionado
+                    ? `<p>No hay recomendaciones con estado «${escaparRecomendacion(filtroEstadoRecomendacion.selectedOptions[0].textContent)}».</p>`
+                    : "<p>No hay recomendaciones. Selecciona «Analizar ahora» para revisar las ventas.</p>";
                 return;
             }
 
@@ -252,6 +260,9 @@ header('Expires: 0');
                         <button type="button" class="boton boton-borde" data-ia="${recomendacion.id_recomendacion}">Generar explicación con IA</button>
                     </div>`;
                 let acciones = "";
+                const textoComentario = recomendacion.estado === "REVISADA"
+                    ? "Comentario (obligatorio al descartar)"
+                    : "Observación para registrar la revisión";
                 if (recomendacion.estado === "PENDIENTE") {
                     acciones = `<button type="button" class="boton boton-borde" data-estado="REVISADA" data-id="${recomendacion.id_recomendacion}">Marcar revisada</button>`;
                 } else if (recomendacion.estado === "REVISADA") {
@@ -273,18 +284,33 @@ header('Expires: 0');
                     <details><summary>Historial de ventas</summary>${ventasDiarias}</details>
                     <details><summary>Historial de revisión y decisiones</summary>${historial}</details>
                     ${explicacionIA}
-                    ${acciones ? `<div class="recomendacion-acciones"><input class="recomendacion-comentario" maxlength="1000" placeholder="Observación / comentario" aria-label="Observación o comentario para ${escaparRecomendacion(recomendacion.producto)}">${acciones}</div>` : ""}
+                    ${acciones ? `<div class="recomendacion-acciones"><input class="recomendacion-comentario" maxlength="1000" placeholder="${textoComentario}" aria-label="${textoComentario} para ${escaparRecomendacion(recomendacion.producto)}">${acciones}</div>` : ""}
                 </article>`;
             }).join("");
         }
 
         async function cargarRecomendaciones() {
-            const resultado = await solicitarRecomendaciones();
+            const resultado = await solicitarRecomendaciones({
+                estado: filtroEstadoRecomendacion.value
+            });
             umbralUnidades.value = resultado.data.configuracion.umbral_unidades;
             fechaUmbral.textContent = `Actualizado: ${formatearFechaRecomendacion(resultado.data.configuracion.fecha_actualizacion)}`;
             totalRecomendaciones.textContent = resultado.data.conteos.total;
             recomendacionesPendientes.textContent = resultado.data.conteos.pendientes;
             recomendacionesRevisadas.textContent = resultado.data.conteos.revisadas;
+            const conteosPorEstado = {
+                PENDIENTE: resultado.data.conteos.pendientes,
+                REVISADA: resultado.data.conteos.revisadas,
+                ACEPTADA: resultado.data.conteos.aceptadas,
+                DESCARTADA: resultado.data.conteos.descartadas
+            };
+            [...filtroEstadoRecomendacion.options].forEach(opcion => {
+                if (!opcion.value) return;
+                const cantidad = conteosPorEstado[opcion.value];
+                const nombre = opcion.dataset.nombre || opcion.textContent.replace(/\s*\(\d+\)$/, "");
+                opcion.dataset.nombre = nombre;
+                opcion.textContent = `${nombre} (${cantidad})`;
+            });
             const tiendaActual = filtroTiendaRecomendacion.value;
             const tiendas = new Map(resultado.data.recomendaciones.map(recomendacion => [
                 String(recomendacion.id_tienda),
@@ -299,8 +325,15 @@ header('Expires: 0');
             renderizarRecomendaciones(resultado.data.recomendaciones);
         }
 
-        [filtroTiendaRecomendacion, filtroEstadoRecomendacion, ordenRecomendaciones].forEach(control => {
+        [filtroTiendaRecomendacion, ordenRecomendaciones].forEach(control => {
             control.addEventListener("change", () => renderizarRecomendaciones());
+        });
+        filtroEstadoRecomendacion.addEventListener("change", () => {
+            paginadorRecomendaciones.reiniciar();
+            cargarRecomendaciones().catch(error => {
+                mensajeRecomendaciones.textContent = error.message;
+                listaRecomendaciones.innerHTML = `<p>${escaparRecomendacion(error.message)}</p>`;
+            });
         });
 
         document.getElementById("generarRecomendaciones").addEventListener("click", async evento => {
@@ -363,7 +396,18 @@ header('Expires: 0');
             const boton = evento.target.closest("button[data-estado]");
             if (!boton) return;
             const articulo = boton.closest(".recomendacion-item");
-            const comentario = articulo.querySelector(".recomendacion-comentario")?.value || "";
+            const campoComentario = articulo.querySelector(".recomendacion-comentario");
+            const comentario = campoComentario?.value.trim() || "";
+            if (boton.dataset.estado === "REVISADA" && !comentario) {
+                mensajeRecomendaciones.textContent = "Agrega una observación para registrar la revisión.";
+                campoComentario?.focus();
+                return;
+            }
+            if (boton.dataset.estado === "DESCARTADA" && !comentario) {
+                mensajeRecomendaciones.textContent = "Agrega un comentario para explicar por qué descartas esta recomendación.";
+                campoComentario?.focus();
+                return;
+            }
             boton.disabled = true;
             try {
                 await solicitarRecomendaciones({
@@ -375,7 +419,14 @@ header('Expires: 0');
                         comentario
                     })
                 });
-                mensajeRecomendaciones.textContent = "Estado actualizado y registrado en la bitácora.";
+                if (boton.dataset.estado === "REVISADA") {
+                    filtroEstadoRecomendacion.value = "REVISADA";
+                    mensajeRecomendaciones.textContent = "Recomendación revisada y registrada. Se muestran las revisadas para que puedas aceptarla o descartarla.";
+                } else if (boton.dataset.estado === "ACEPTADA") {
+                    mensajeRecomendaciones.textContent = "Recomendación aceptada y decisión registrada en el historial y la bitácora.";
+                } else {
+                    mensajeRecomendaciones.textContent = "Recomendación descartada y motivo registrado en el historial y la bitácora.";
+                }
                 await cargarRecomendaciones();
             } catch (error) {
                 mensajeRecomendaciones.textContent = error.message;
