@@ -52,7 +52,7 @@ function responderRecomendaciones(bool $success, $data = null, string $message =
     exit;
 }
 
-final class ErrorOpenAIRecomendacion extends RuntimeException
+final class ErrorGroqRecomendacion extends RuntimeException
 {
 }
 
@@ -208,6 +208,40 @@ function listarRecomendaciones(PDO $pdo, ?string $estado = null): array
         $porRecomendacion[(int)$fila['id_recomendacion']][] = $fila;
     }
 
+    $alternativas = $pdo->prepare("
+        SELECT
+            a.id_alternativa,
+            a.id_recomendacion,
+            a.id_producto_sugerido,
+            ps.nombre AS producto_sugerido,
+            a.unidades_vendidas_original,
+            a.unidades_vendidas_sugerido,
+            a.stock_actual_sugerido,
+            a.score,
+            a.justificacion,
+            a.estado,
+            a.comentario_decision,
+            a.fecha_generacion,
+            a.fecha_actualizacion
+        FROM public.recomendacion_producto_alternativa a
+        JOIN public.producto ps ON ps.id_producto = a.id_producto_sugerido
+        WHERE a.id_recomendacion IN ($marcadores)
+        ORDER BY a.id_recomendacion, a.score DESC, a.id_alternativa
+    ");
+    $alternativas->execute($ids);
+
+    $alternativasPorRecomendacion = [];
+    foreach ($alternativas->fetchAll() as $fila) {
+        $fila['id_alternativa'] = (int)$fila['id_alternativa'];
+        $fila['id_recomendacion'] = (int)$fila['id_recomendacion'];
+        $fila['id_producto_sugerido'] = (int)$fila['id_producto_sugerido'];
+        $fila['unidades_vendidas_original'] = (int)$fila['unidades_vendidas_original'];
+        $fila['unidades_vendidas_sugerido'] = (int)$fila['unidades_vendidas_sugerido'];
+        $fila['stock_actual_sugerido'] = (int)$fila['stock_actual_sugerido'];
+        $fila['score'] = (float)$fila['score'];
+        $alternativasPorRecomendacion[$fila['id_recomendacion']][] = $fila;
+    }
+
     foreach ($recomendaciones as &$fila) {
         $fila['id_recomendacion'] = (int)$fila['id_recomendacion'];
         $fila['id_tienda'] = (int)$fila['id_tienda'];
@@ -217,13 +251,14 @@ function listarRecomendaciones(PDO $pdo, ?string $estado = null): array
         $fila['stock_actual'] = (int)$fila['stock_actual'];
         $fila['ventas_por_dia'] = json_decode((string)$fila['ventas_por_dia'], true) ?: [];
         $fila['historial'] = $porRecomendacion[$fila['id_recomendacion']] ?? [];
+        $fila['alternativas'] = $alternativasPorRecomendacion[$fila['id_recomendacion']] ?? [];
     }
     unset($fila);
 
     return $recomendaciones;
 }
 
-function generarExplicacionOpenAI(PDO $pdo, int $idUsuario, array $entrada): array
+function generarExplicacionIA(PDO $pdo, int $idUsuario, array $entrada): array
 {
     $idRecomendacion = filter_var(
         $entrada['id_recomendacion'] ?? null,
@@ -234,17 +269,17 @@ function generarExplicacionOpenAI(PDO $pdo, int $idUsuario, array $entrada): arr
         responderRecomendaciones(false, null, 'La recomendación indicada no es válida.', 400);
     }
 
-    $apiKey = getenv('OPENAI_API_KEY');
+    $apiKey = getenv('GROQ_API_KEY');
     if (!is_string($apiKey) || trim($apiKey) === '') {
         responderRecomendaciones(
             false,
             null,
-            'OpenAI no está configurado. Defina OPENAI_API_KEY en el entorno de PHP y reinicie Apache.',
+            'Groq no está configurado. Defina GROQ_API_KEY en el entorno de PHP y reinicie Apache.',
             503
         );
     }
     if (!function_exists('curl_init')) {
-        throw new ErrorOpenAIRecomendacion('La extensión cURL de PHP es necesaria para conectar con OpenAI.');
+        throw new ErrorGroqRecomendacion('La extensión cURL de PHP es necesaria para conectar con Groq.');
     }
 
     $consulta = $pdo->prepare("
@@ -273,9 +308,12 @@ function generarExplicacionOpenAI(PDO $pdo, int $idUsuario, array $entrada): arr
         responderRecomendaciones(false, null, 'No se encontró la recomendación.', 404);
     }
 
-    $modelo = trim((string)(getenv('OPENAI_MODEL') ?: ''));
+    $modelo = trim((string)(getenv('GROQ_MODEL') ?: ''));
     if ($modelo === '') {
-        $modelo = 'gpt-4.1-mini';
+        // qwen3.8-27b no razona internamente por defecto (a diferencia de los
+        // modelos openai/gpt-oss-*), así que no agota max_output_tokens antes
+        // de producir la explicación visible.
+        $modelo = 'qwen/qwen3.8-27b';
     }
     $datos = [
         'producto' => $recomendacion['producto'],
@@ -299,12 +337,12 @@ function generarExplicacionOpenAI(PDO $pdo, int $idUsuario, array $entrada): arr
         'max_output_tokens' => 180,
     ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     if ($payload === false) {
-        throw new ErrorOpenAIRecomendacion('No fue posible preparar los datos para OpenAI.');
+        throw new ErrorGroqRecomendacion('No fue posible preparar los datos para Groq.');
     }
 
-    $curl = curl_init('https://api.openai.com/v1/responses');
+    $curl = curl_init('https://api.groq.com/openai/v1/responses');
     if ($curl === false) {
-        throw new ErrorOpenAIRecomendacion('No fue posible inicializar la conexión segura con OpenAI.');
+        throw new ErrorGroqRecomendacion('No fue posible inicializar la conexión segura con Groq.');
     }
     curl_setopt_array($curl, [
         CURLOPT_POST => true,
@@ -323,21 +361,21 @@ function generarExplicacionOpenAI(PDO $pdo, int $idUsuario, array $entrada): arr
     $estadoHttp = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
     curl_close($curl);
     if ($respuesta === false) {
-        error_log('[recomendaciones] Error de conexión OpenAI: ' . $errorCurl);
-        throw new ErrorOpenAIRecomendacion('No se pudo conectar con OpenAI. Revise la conexión e inténtelo de nuevo.');
+        error_log('[recomendaciones] Error de conexión Groq: ' . $errorCurl);
+        throw new ErrorGroqRecomendacion('No se pudo conectar con Groq. Revise la conexión e inténtelo de nuevo.');
     }
     if ($estadoHttp < 200 || $estadoHttp >= 300) {
-        error_log('[recomendaciones] OpenAI respondió HTTP ' . $estadoHttp . '.');
-        throw new ErrorOpenAIRecomendacion(
+        error_log('[recomendaciones] Groq respondió HTTP ' . $estadoHttp . ': ' . $respuesta);
+        throw new ErrorGroqRecomendacion(
             $estadoHttp === 401 || $estadoHttp === 403
-                ? 'OpenAI rechazó la clave configurada. Revise OPENAI_API_KEY.'
-                : 'OpenAI no pudo generar la explicación (HTTP ' . $estadoHttp . ').'
+                ? 'Groq rechazó la clave configurada. Revise GROQ_API_KEY.'
+                : 'Groq no pudo generar la explicación (HTTP ' . $estadoHttp . ').'
         );
     }
 
     $respuestaJson = json_decode($respuesta, true);
     if (!is_array($respuestaJson)) {
-        throw new ErrorOpenAIRecomendacion('OpenAI no devolvió una respuesta válida. Inténtelo de nuevo.');
+        throw new ErrorGroqRecomendacion('Groq no devolvió una respuesta válida. Inténtelo de nuevo.');
     }
     $fragmentos = [];
     foreach (($respuestaJson['output'] ?? []) as $salida) {
@@ -349,7 +387,7 @@ function generarExplicacionOpenAI(PDO $pdo, int $idUsuario, array $entrada): arr
     }
     $explicacion = trim(implode("\n", $fragmentos));
     if (json_last_error() !== JSON_ERROR_NONE || $explicacion === '') {
-        throw new ErrorOpenAIRecomendacion('OpenAI no devolvió una explicación válida. Inténtelo de nuevo.');
+        throw new ErrorGroqRecomendacion('Groq no devolvió una explicación válida. Inténtelo de nuevo.');
     }
     if (mb_strlen($explicacion, 'UTF-8') > 2000) {
         $explicacion = mb_substr($explicacion, 0, 2000, 'UTF-8');
@@ -564,8 +602,92 @@ function generarRecomendaciones(PDO $pdo, int $idUsuario): array
                     NOW()
                 FROM insertadas
                 RETURNING id_evento
+            ),
+            candidatos_alternativa AS (
+                SELECT
+                    ins.id_recomendacion,
+                    ins.id_tienda,
+                    ins.unidades_vendidas AS unidades_original,
+                    pc.id_producto AS id_producto_candidato,
+                    COALESCE(vc.unidades_vendidas, 0) AS unidades_candidato,
+                    COALESCE(ic.stock_actual, 0) AS stock_candidato,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ins.id_recomendacion
+                        ORDER BY (COALESCE(vc.unidades_vendidas, 0) - ins.unidades_vendidas) DESC,
+                                 COALESCE(ic.stock_actual, 0) DESC
+                    ) AS orden
+                FROM insertadas ins
+                JOIN public.producto po ON po.id_producto = ins.id_producto
+                JOIN public.producto pc
+                  ON pc.id_categoria = po.id_categoria
+                 AND pc.id_producto <> ins.id_producto
+                 AND pc.estado = TRUE
+                LEFT JOIN ventas vc
+                  ON vc.id_tienda = ins.id_tienda AND vc.id_producto = pc.id_producto
+                LEFT JOIN inventario ic
+                  ON ic.id_tienda = ins.id_tienda AND ic.id_producto = pc.id_producto
+                WHERE COALESCE(ic.stock_actual, 0) > 0
+                  AND COALESCE(vc.unidades_vendidas, 0) >= ins.umbral_unidades
+                  AND COALESCE(vc.unidades_vendidas, 0) > ins.unidades_vendidas
+            ),
+            mejor_alternativa AS (
+                SELECT * FROM candidatos_alternativa WHERE orden = 1
+            ),
+            alternativas_insertadas AS (
+                INSERT INTO public.recomendacion_producto_alternativa (
+                    id_recomendacion, id_producto_sugerido, unidades_vendidas_original,
+                    unidades_vendidas_sugerido, stock_actual_sugerido, score, justificacion
+                )
+                SELECT
+                    id_recomendacion,
+                    id_producto_candidato,
+                    unidades_original,
+                    unidades_candidato,
+                    stock_candidato,
+                    (unidades_candidato - unidades_original)::NUMERIC,
+                    'Vendió ' || unidades_candidato || ' unidades frente a ' || unidades_original
+                        || ' del producto original en los últimos 30 días, con ' || stock_candidato
+                        || ' unidades disponibles en la misma tienda.'
+                FROM mejor_alternativa
+                ON CONFLICT (id_recomendacion, id_producto_sugerido) WHERE estado = 'PENDIENTE' DO NOTHING
+                RETURNING id_alternativa, id_recomendacion
+            ),
+            alternativas_historial AS (
+                INSERT INTO public.recomendacion_producto_alternativa_historial (
+                    id_alternativa, id_usuario, estado_anterior, estado_nuevo, comentario
+                )
+                SELECT id_alternativa, NULL, NULL, 'PENDIENTE',
+                       'Generada automáticamente junto con la recomendación de baja rotación.'
+                FROM alternativas_insertadas
+                RETURNING id_alternativa
+            ),
+            alternativas_auditoria AS (
+                INSERT INTO public.bitacora_auditoria (
+                    id_usuario, id_tienda, entidad, accion, valor_anterior,
+                    valor_nuevo, resultado, ip_origen, fecha
+                )
+                SELECT
+                    CAST(:id_usuario AS BIGINT),
+                    ma.id_tienda,
+                    'RECOMENDACION_PRODUCTO_ALTERNATIVA',
+                    'GENERACION',
+                    NULL,
+                    JSONB_BUILD_OBJECT(
+                        'id_alternativa', ai.id_alternativa,
+                        'id_recomendacion', ai.id_recomendacion,
+                        'id_producto_sugerido', ma.id_producto_candidato,
+                        'estado', 'PENDIENTE'
+                    ),
+                    'EXITOSO',
+                    NULL,
+                    NOW()
+                FROM alternativas_insertadas ai
+                JOIN mejor_alternativa ma ON ma.id_recomendacion = ai.id_recomendacion
+                RETURNING id_evento
             )
-            SELECT COUNT(*)::INTEGER AS creadas FROM insertadas
+            SELECT
+                (SELECT COUNT(*) FROM insertadas)::INTEGER AS creadas,
+                (SELECT COUNT(*) FROM alternativas_historial)::INTEGER AS alternativas_creadas
         ");
         $consulta->execute([
             ...$parametrosVentas,
@@ -575,11 +697,14 @@ function generarRecomendaciones(PDO $pdo, int $idUsuario): array
             ':umbral_filtro' => (int)$config['umbral_unidades'],
             ':id_usuario' => $idUsuario,
         ]);
-        $creadas = (int)$consulta->fetchColumn();
+        $resultado = $consulta->fetch();
+        $creadas = (int)($resultado['creadas'] ?? 0);
+        $alternativasCreadas = (int)($resultado['alternativas_creadas'] ?? 0);
 
         $pdo->commit();
         return [
             'creadas' => $creadas,
+            'alternativas_creadas' => $alternativasCreadas,
             'umbral_unidades' => (int)$config['umbral_unidades'],
             'periodo_inicio' => $inicio,
             'periodo_fin' => $hoy,
@@ -685,6 +810,96 @@ function cambiarEstadoRecomendacion(PDO $pdo, int $idUsuario, array $entrada): v
     }
 }
 
+function decidirAlternativa(PDO $pdo, int $idUsuario, array $entrada): void
+{
+    $idAlternativa = filter_var(
+        $entrada['id_alternativa'] ?? null,
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]
+    );
+    $estadoNuevo = strtoupper(trim((string)($entrada['estado'] ?? '')));
+    $comentario = trim((string)($entrada['comentario'] ?? ''));
+    if ($idAlternativa === false || !in_array($estadoNuevo, ['ACEPTADA', 'DESCARTADA'], true)) {
+        responderRecomendaciones(false, null, 'La alternativa o el estado indicados no son válidos.', 400);
+    }
+    if (mb_strlen($comentario, 'UTF-8') > 1000) {
+        responderRecomendaciones(false, null, 'El comentario no puede exceder 1000 caracteres.', 400);
+    }
+    if ($estadoNuevo === 'DESCARTADA' && $comentario === '') {
+        responderRecomendaciones(false, null, 'Agregue un comentario para explicar por qué descarta la alternativa.', 400);
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $consulta = $pdo->prepare("
+            SELECT a.estado, r.id_tienda
+            FROM public.recomendacion_producto_alternativa a
+            JOIN public.recomendacion_producto r ON r.id_recomendacion = a.id_recomendacion
+            WHERE a.id_alternativa = :id
+            FOR UPDATE OF a
+        ");
+        $consulta->execute([':id' => $idAlternativa]);
+        $actual = $consulta->fetch();
+        if (!$actual) {
+            $pdo->rollBack();
+            responderRecomendaciones(false, null, 'No se encontró la alternativa sugerida.', 404);
+        }
+
+        $estadoAnterior = (string)$actual['estado'];
+        if ($estadoAnterior !== 'PENDIENTE') {
+            $pdo->rollBack();
+            responderRecomendaciones(false, null, 'Esta alternativa ya tiene una decisión registrada y no se puede cambiar.', 409);
+        }
+
+        $actualizar = $pdo->prepare("
+            UPDATE public.recomendacion_producto_alternativa
+            SET estado = :estado,
+                id_usuario_decision = :usuario,
+                comentario_decision = :comentario,
+                fecha_actualizacion = NOW()
+            WHERE id_alternativa = :id
+        ");
+        $actualizar->execute([
+            ':estado' => $estadoNuevo,
+            ':usuario' => $idUsuario,
+            ':comentario' => $comentario !== '' ? $comentario : null,
+            ':id' => $idAlternativa,
+        ]);
+
+        $guardarHistorial = $pdo->prepare("
+            INSERT INTO public.recomendacion_producto_alternativa_historial (
+                id_alternativa, id_usuario, estado_anterior, estado_nuevo, comentario
+            )
+            VALUES (:id, :usuario, :anterior, :nuevo, :comentario)
+        ");
+        $guardarHistorial->execute([
+            ':id' => $idAlternativa,
+            ':usuario' => $idUsuario,
+            ':anterior' => $estadoAnterior,
+            ':nuevo' => $estadoNuevo,
+            ':comentario' => $comentario !== '' ? $comentario : null,
+        ]);
+        auditarRecomendacion(
+            $pdo,
+            $idUsuario,
+            (int)$actual['id_tienda'],
+            'ALTERNATIVA_DECISION',
+            ['estado' => $estadoAnterior],
+            [
+                'id_alternativa' => (int)$idAlternativa,
+                'estado' => $estadoNuevo,
+                'comentario' => $comentario !== '' ? $comentario : null,
+            ]
+        );
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
 $idUsuario = exigirAdministradorRecomendaciones();
 $metodo = $_SERVER['REQUEST_METHOD'] ?? '';
 
@@ -770,15 +985,20 @@ try {
         responderRecomendaciones(true, null, 'Estado de la recomendación actualizado.');
     }
 
+    if ($accion === 'alternativa_decision') {
+        decidirAlternativa($pdo, $idUsuario, $entrada);
+        responderRecomendaciones(true, null, 'Decisión sobre la alternativa sugerida registrada.');
+    }
+
     if ($accion === 'explicar_ia') {
-        $resultado = generarExplicacionOpenAI($pdo, $idUsuario, $entrada);
-        responderRecomendaciones(true, $resultado, 'Explicación generada con OpenAI.');
+        $resultado = generarExplicacionIA($pdo, $idUsuario, $entrada);
+        responderRecomendaciones(true, $resultado, 'Explicación generada con IA (Groq).');
     }
 
     responderRecomendaciones(false, null, 'La acción solicitada no es válida.', 400);
 } catch (Throwable $e) {
     error_log('[recomendaciones] ' . $e->getMessage());
-    if ($e instanceof ErrorOpenAIRecomendacion) {
+    if ($e instanceof ErrorGroqRecomendacion) {
         responderRecomendaciones(false, null, $e->getMessage(), 502);
     }
     responderRecomendaciones(false, null, 'No fue posible procesar las recomendaciones. Revise que la migración esté aplicada.', 500);

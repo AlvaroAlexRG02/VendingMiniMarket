@@ -269,6 +269,26 @@ header('Expires: 0');
                     acciones = `<button type="button" class="boton boton-azul" data-estado="ACEPTADA" data-id="${recomendacion.id_recomendacion}">Aceptar</button>
                         <button type="button" class="boton boton-borde" data-estado="DESCARTADA" data-id="${recomendacion.id_recomendacion}">Descartar</button>`;
                 }
+                const alternativaHtml = recomendacion.alternativas.length
+                    ? recomendacion.alternativas.map(alternativa => {
+                        const accionesAlternativa = alternativa.estado === "PENDIENTE"
+                            ? `<div class="recomendacion-acciones">
+                                <input class="recomendacion-comentario" data-alternativa-comentario maxlength="1000" placeholder="Comentario (obligatorio al descartar)" aria-label="Comentario sobre la alternativa ${escaparRecomendacion(alternativa.producto_sugerido)}">
+                                <button type="button" class="boton boton-azul" data-alternativa-estado="ACEPTADA" data-alternativa-id="${alternativa.id_alternativa}">Aceptar alternativa</button>
+                                <button type="button" class="boton boton-borde" data-alternativa-estado="DESCARTADA" data-alternativa-id="${alternativa.id_alternativa}">Descartar alternativa</button>
+                               </div>`
+                            : `<p>Decisión: <strong>${escaparRecomendacion(alternativa.estado)}</strong>${alternativa.comentario_decision ? ` — ${escaparRecomendacion(alternativa.comentario_decision)}` : ""} · ${escaparRecomendacion(formatearFechaRecomendacion(alternativa.fecha_actualizacion))}</p>`;
+                        return `<div class="recomendacion-ia" style="border-left-color:#0ea5e9;background:#f0f9ff;">
+                            <strong><i class="fa-solid fa-right-left"></i> Producto alternativo sugerido: ${escaparRecomendacion(alternativa.producto_sugerido)}</strong>
+                            <p>${escaparRecomendacion(alternativa.justificacion)}</p>
+                            <div class="recomendacion-meta">
+                                <span>Rotación sugerido: ${escaparRecomendacion(alternativa.unidades_vendidas_sugerido)} vs. original ${escaparRecomendacion(alternativa.unidades_vendidas_original)}</span>
+                                <span>Existencia sugerido: ${escaparRecomendacion(alternativa.stock_actual_sugerido)}</span>
+                            </div>
+                            ${accionesAlternativa}
+                        </div>`;
+                    }).join("")
+                    : "";
 
                 return `<article class="recomendacion-item">
                     <h3>${escaparRecomendacion(recomendacion.producto)} · ${escaparRecomendacion(recomendacion.tienda)}</h3>
@@ -280,7 +300,8 @@ header('Expires: 0');
                         <span>Ubicación: ${escaparRecomendacion(recomendacion.ubicaciones || "Sin existencia registrada")}</span>
                         <span>Periodo: ${escaparRecomendacion(recomendacion.periodo_inicio)} a ${escaparRecomendacion(recomendacion.periodo_fin)}</span>
                     </div>
-                    <p>La rotación está por debajo del umbral. Revisa si conviene reducir compras o considerar la posible sustitución del producto; el sistema no propone un sustituto.</p>
+                    <p>La rotación está por debajo del umbral. Revisa si conviene reducir compras, sustituir o eliminar el producto; el sistema no ejecuta ninguna acción automáticamente.</p>
+                    ${alternativaHtml || "<p>No se encontró un producto alternativo con mejor rotación y existencia en la misma categoría y tienda.</p>"}
                     <details><summary>Historial de ventas</summary>${ventasDiarias}</details>
                     <details><summary>Historial de revisión y decisiones</summary>${historial}</details>
                     ${explicacionIA}
@@ -374,7 +395,7 @@ header('Expires: 0');
             if (botonIA) {
                 botonIA.disabled = true;
                 botonIA.textContent = "Generando explicación...";
-                mensajeRecomendaciones.textContent = "Solicitando explicación a OpenAI...";
+                mensajeRecomendaciones.textContent = "Solicitando explicación a la IA (Groq)...";
                 try {
                     await solicitarRecomendaciones({
                         method: "POST",
@@ -389,6 +410,38 @@ header('Expires: 0');
                     mensajeRecomendaciones.textContent = error.message;
                     botonIA.disabled = false;
                     botonIA.textContent = "Reintentar explicación con IA";
+                }
+                return;
+            }
+
+            const botonAlternativa = evento.target.closest("button[data-alternativa-estado]");
+            if (botonAlternativa) {
+                const contenedorAlternativa = botonAlternativa.closest(".recomendacion-ia");
+                const campoComentarioAlt = contenedorAlternativa?.querySelector("[data-alternativa-comentario]");
+                const comentarioAlt = campoComentarioAlt?.value.trim() || "";
+                if (botonAlternativa.dataset.alternativaEstado === "DESCARTADA" && !comentarioAlt) {
+                    mensajeRecomendaciones.textContent = "Agrega un comentario para explicar por qué descartas esta alternativa.";
+                    campoComentarioAlt?.focus();
+                    return;
+                }
+                botonAlternativa.disabled = true;
+                try {
+                    await solicitarRecomendaciones({
+                        method: "POST",
+                        body: JSON.stringify({
+                            accion: "alternativa_decision",
+                            id_alternativa: botonAlternativa.dataset.alternativaId,
+                            estado: botonAlternativa.dataset.alternativaEstado,
+                            comentario: comentarioAlt
+                        })
+                    });
+                    mensajeRecomendaciones.textContent = botonAlternativa.dataset.alternativaEstado === "ACEPTADA"
+                        ? "Alternativa aceptada y decisión registrada."
+                        : "Alternativa descartada y motivo registrado.";
+                    await cargarRecomendaciones();
+                } catch (error) {
+                    mensajeRecomendaciones.textContent = error.message;
+                    botonAlternativa.disabled = false;
                 }
                 return;
             }
