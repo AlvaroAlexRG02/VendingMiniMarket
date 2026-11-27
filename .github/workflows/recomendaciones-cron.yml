@@ -1,0 +1,49 @@
+name: Generar recomendaciones de productos (automático)
+
+# HU-54/HU-55/HU-56: dispara diariamente el análisis de baja rotación y
+# alternativas sin que un administrador tenga que entrar y pulsar
+# "Analizar ahora" manualmente.
+#
+# Requiere un secret de repositorio llamado RECOMENDACIONES_CRON_TOKEN con
+# el mismo valor configurado como variable de entorno
+# RECOMENDACIONES_CRON_TOKEN en la app de DigitalOcean.
+
+on:
+  schedule:
+    # 06:15 UTC = 00:15 hora de Costa Rica, después del cierre del día anterior.
+    - cron: "15 6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar al endpoint de generación de recomendaciones
+        env:
+          RECOMENDACIONES_CRON_TOKEN: ${{ secrets.RECOMENDACIONES_CRON_TOKEN }}
+          RECOMENDACIONES_URL: https://goldfish-app-el59n.ondigitalocean.app/api/recomendaciones/recomendaciones.php
+        run: |
+          if [ -z "$RECOMENDACIONES_CRON_TOKEN" ]; then
+            echo "Falta configurar el secret RECOMENDACIONES_CRON_TOKEN en este repositorio." >&2
+            exit 1
+          fi
+
+          respuesta=$(curl -sS -w "\n%{http_code}" -X POST "$RECOMENDACIONES_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Token: $RECOMENDACIONES_CRON_TOKEN" \
+            -d '{"accion":"generar"}')
+
+          codigo="${respuesta##*$'\n'}"
+          cuerpo="${respuesta%$'\n'*}"
+          echo "HTTP $codigo"
+          echo "$cuerpo"
+
+          if [ "$codigo" -lt 200 ] || [ "$codigo" -ge 300 ]; then
+            echo "El endpoint respondió con un código de error." >&2
+            exit 1
+          fi
+
+          echo "$cuerpo" | grep -q '"success":true' || {
+            echo "El endpoint respondió success=false." >&2
+            exit 1
+          }
